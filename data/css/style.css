@@ -1,0 +1,55 @@
+notebook > stack {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+scrollbar.hover,
+scrollbar {
+    margin-left: 2px;
+}
+
+scrollbar trough {
+    min-width: 5pt;
+}
+
+scrollbar button {
+    min-height: 5pt;
+    min-width: 5pt;
+}
+
+scrollbar.right slider {
+    min-height: 70pt;
+    min-width: 5pt;
+}
+
+.spot-button {
+    background-color: @green_4;
+    color: @light_2;
+}
+
+.spot-button:hover {
+    background-color: @green_5;
+    color: @light_1;
+}
+
+banner {
+    background-color: @window_bg_color;
+}
+
+.icon-fill {
+    color: #fff;
+}
+
+.park-name-button {
+    text-align: left;
+    font-weight: normal;
+}
+
+.pinned {
+    background-color: color-mix(in srgb, @accent_color 10%, transparent);
+
+}
+
+.unhunted {
+    border: 2px solid var(--accent-green);
+}
+

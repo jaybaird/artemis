@@ -1,0 +1,8 @@
+# List of source files containing translatable strings.
+# Please keep this file sorted alphabetically.
+data/com.k0vcz.artemis.desktop.in
+data/com.k0vcz.artemis.metainfo.xml.in
+data/com.k0vcz.artemis.gschema.xml
+src/main.vala
+src/window.vala
+src/window.ui

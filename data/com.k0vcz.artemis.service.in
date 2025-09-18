@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=com.k0vcz.artemis
+Exec=@bindir@/artemis-vala --gapplication-service

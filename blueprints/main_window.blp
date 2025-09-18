@@ -1,0 +1,152 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $AppWindow : Window {
+  default-width: 1280;
+  default-height: 720;
+  title: _("Artemis");
+
+  [titlebar]
+  HeaderBar {
+    Button add_spot {
+      icon-name: "list-add-symbolic";
+      clicked => $on_add_button_clicked();
+    }
+
+    [end]
+    MenuButton button_menu {
+      menu-model: menu_app;
+      icon-name: "open-menu-symbolic";
+    }
+  }
+
+  Box {
+  orientation: vertical;
+
+  Adw.Banner refresh_banner {
+    title: _("Spots will refresh in 60 seconds");
+    button-label: _("Pause");
+    button-style: suggested;
+    revealed: true;
+  }
+
+  ProgressBar refresh_progress {
+    show-text: false;
+    height-request: 1;
+    fraction: 0.5;
+    styles ["osd"]
+  }
+
+  Box {
+    margin-bottom: 25;
+    margin-top: 5;
+    margin-start: 25;
+    margin-end: 25;
+    orientation: vertical;
+
+    styles ["toolbar"]
+
+    Adw.ToastOverlay toast_overlay {
+      Overlay {
+        hexpand: true;
+        vexpand: true;
+
+        margin-top: 15;
+
+        child:
+          Box root {
+            orientation: vertical;
+
+            Adw.ViewSwitcher switcher {
+              stack: band_stack;
+              policy: narrow;
+            }
+
+            Adw.ViewStack band_stack {
+              margin-top: 15;
+              hexpand: true;
+              vexpand: true;
+            }
+
+            Box {
+              margin-top: 25;
+              halign: center;
+              hexpand: true;
+              orientation: horizontal;
+
+              SearchEntry search_entry {
+                width-request: 300;
+                input-hints: no_spellcheck;
+                placeholder-text: _("Search for Park or Callsign");
+              }
+
+              Separator {
+                styles ["spacer"]
+              }
+
+              DropDown search_select {
+                model: StringList {
+                  strings [
+                    _("All"),
+                    _("SSB"),
+                    _("FM"),
+                    _("AM"),
+                    _("CW"),
+                    _("FT8"),
+                    _("FT4"),
+                    _("Data"),
+                    _("Phone")
+                  ]
+                };
+              }
+
+              Separator {
+                styles ["spacer"]
+              }
+
+              Label current_time {
+                styles ["monospace", "utc-time"]
+                label: "18:51:27 UTC";
+              }
+            }
+          };
+
+          [overlay]
+          Box loading_spinner {
+            halign: center;
+            valign: center;
+            visible: false;
+
+            Adw.Spinner {
+              width-request: 64;
+              height-request: 64;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+menu menu_app {
+  section {
+    item {
+      label: _("Preferences");
+      action: "app.preferences";
+    }
+  }
+
+  section {
+    item {
+      label: _("About Artemis");
+      action: "app.about";
+    }
+  }
+
+  section {
+    item {
+      label: _("Quit");
+      action: "app.quit";
+    }
+  }
+}

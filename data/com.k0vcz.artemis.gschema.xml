@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+	<schema id="com.k0vcz.artemis" path="/com/k0vcz/artemis/">
+        <key name="callsign" type="s">
+        <default>""</default>
+        <summary>User callsign</summary>
+        <description>Your amateur radio callsign.</description>
+        </key>
+
+        <key name="location" type="s">
+        <default>""</default>
+        <summary>Location</summary>
+        <description>Your station location or QTH.</description>
+        </key>
+
+        <key name="spot-message" type="s">
+        <default>""</default>
+        <summary>Spot message</summary>
+        <description>Default spot message to use when posting.</description>
+        </key>
+
+        <key name="update-interval" type="i">
+        <default>60</default>
+        <summary>Update interval</summary>
+        <description>How often to refresh spots, in seconds.</description>
+        <range min="60" max="3600"/>
+        </key>
+
+        <key name="default-band" type="s">
+        <default>"20m"</default>
+        <summary>Default band</summary>
+        <description>The default frequency band (in meters).</description>
+        <choices>
+            <choice value="160m"/>
+            <choice value="80m"/>
+            <choice value="60m"/>
+            <choice value="40m"/>
+            <choice value="30m"/>
+            <choice value="20m"/>
+            <choice value="17m"/>
+            <choice value="15m"/>
+            <choice value="12m"/>
+            <choice value="10m"/>
+            <choice value="6m"/>
+            <choice value="2m"/>
+            <choice value="70cm"/>
+        </choices>
+        </key>
+
+        <key name="default-mode" type="s">
+        <default>"SSB"</default>
+        <summary>Default mode</summary>
+        <description>The default operating mode.</description>
+        <choices>
+            <choice value="SSB"/>
+            <choice value="CW"/>
+            <choice value="FT8"/>
+            <choice value="FM"/>
+            <choice value="AM"/>
+            <choice value="RTTY"/>
+            <choice value="JT65"/>
+        </choices>
+        </key>
+
+        <key name="qrz-api-key" type="s">
+        <default>""</default>
+        <summary>QRZ API key</summary>
+        <description>API key for QRZ.com lookups.</description>
+        </key>
+
+        <!-- Radio Settings -->
+        <key name="radio-connection-type" type="s">
+        <default>"none"</default>
+        <summary>Radio connection type</summary>
+        <description>How to connect to the radio (none, serial, network, usb).</description>
+        <choices>
+            <choice value="none"/>
+            <choice value="serial"/>
+            <choice value="network"/>
+            <choice value="usb"/>
+        </choices>
+        </key>
+
+        <key name="radio-model" type="i">
+        <default>1</default>
+        <summary>Radio model ID</summary>
+        <description>Hamlib radio model ID number.</description>
+        </key>
+
+        <key name="radio-device" type="s">
+        <default>"/dev/ttyUSB0"</default>
+        <summary>Radio device path</summary>
+        <description>Device path for serial/USB connection (e.g., /dev/ttyUSB0 or COM3).</description>
+        </key>
+
+        <key name="radio-network-host" type="s">
+        <default>"localhost"</default>
+        <summary>Network host</summary>
+        <description>Hostname or IP address for network connection.</description>
+        </key>
+
+        <key name="radio-network-port" type="i">
+        <default>4532</default>
+        <summary>Network port</summary>
+        <description>Port number for network connection.</description>
+        <range min="1" max="65535"/>
+        </key>
+
+        <key name="radio-baud-rate" type="i">
+        <default>9600</default>
+        <summary>Serial baud rate</summary>
+        <description>Baud rate for serial connection.</description>
+        </key>
+
+        <key name="highlight-unhunted-parks" type="b">
+        <default>true</default>
+        <summary>Highlight unhunted parks</summary>
+        <description>Highlight spot cards for parks you haven't hunted before.</description>
+        </key>
+
+        <key name="enable-logging" type="b">
+        <default>false</default>
+        <summary>Enable automatic logging</summary>
+        <description>Automatically log QSOs to configured logbooks when spotting.</description>
+        </key>
+	</schema>
+</schemalist>

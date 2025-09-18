@@ -1,0 +1,54 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SpotHistoryDialog : Adw.Dialog {
+  content-width: 600;
+  content-height: 500;
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle title_widget {
+        title: _("Spot History");
+      };
+    }
+
+    content: Box {
+      orientation: vertical;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+      spacing: 12;
+
+      Adw.StatusPage loading_page {
+        visible: true;
+        icon-name: "content-loading-symbolic";
+        title: _("Loading spot history...");
+        description: _("Fetching data from POTA API");
+
+        child: Adw.Spinner {
+          width-request: 32;
+          height-request: 32;
+        };
+      }
+
+      ScrolledWindow history_scroll {
+        visible: false;
+        hexpand: true;
+        vexpand: true;
+        
+        child: ListBox history_list {
+          styles ["background"]
+        };
+      }
+
+      Adw.StatusPage error_page {
+        visible: false;
+        icon-name: "dialog-error-symbolic";
+        title: _("Error loading history");
+        description: _("Failed to fetch spot history from POTA API");
+      }
+    };
+  }
+}

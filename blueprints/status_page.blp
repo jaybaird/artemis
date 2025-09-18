@@ -1,0 +1,44 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $StatusPage : Box {
+  hexpand: true;
+  vexpand: true;
+  halign: center;
+  valign: center;
+
+  Adw.Clamp {
+    maximum-size: 1000;
+    tightening-threshold: 900;
+    
+    hexpand: true;
+    vexpand: true;
+
+    halign: center;
+    valign: center;
+
+    Box {
+      orientation: vertical;
+      halign: center;
+      valign: center;
+      hexpand: true;
+      vexpand: true;
+
+      Image status_icon {
+        pixel-size: 64;
+      }
+
+      Label status_title {
+        wrap: true;
+        styles ["title-1"]
+      }
+
+      Label status_body {
+        wrap: true;
+        wrap-mode: word_char;
+        
+        styles ["dim-label"]
+      }
+    }
+  }
+}

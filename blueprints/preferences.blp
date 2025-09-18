@@ -1,0 +1,231 @@
+using Gtk 4.0;
+using Adw 1;
+
+/* Simple models for the combo rows */
+Gtk.StringList bands_model {
+  strings: ["160m","80m","60m","40m","30m","20m","17m","15m","12m","10m","6m","2m","70cm"];
+}
+Gtk.StringList modes_model {
+  strings: ["SSB","CW","FT8","FM","AM","RTTY","JT65"];
+}
+
+/* Radio connection models */
+Gtk.StringList connection_types_model {
+  strings: ["None", "Serial", "Network", "USB"];
+}
+
+Gtk.StringList baud_rates_model {
+  strings: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"];
+}
+
+Gtk.StringList radio_models_model {
+  strings: ["Dummy Radio (Testing)"];
+}
+
+Adw.PreferencesDialog prefs_dialog {
+  title: _("Preferences");
+  search-enabled: true;
+
+  Adw.PreferencesPage general_page {
+    title: _("General");
+    icon-name: "emblem-system-symbolic";
+
+    Adw.PreferencesGroup identity_group {
+      title: _("Identity");
+
+      Adw.EntryRow row_callsign {
+        title: _("Callsign");
+      }
+
+      Adw.EntryRow row_location {
+        title: _("Location");
+      }
+    }
+
+    Adw.PreferencesGroup spots_group {
+      title: _("Spots");
+
+      Adw.EntryRow row_spot_message {
+        title: _("Default Spot Message");
+      }
+
+      /* Value is double; we’ll map int<->double in C via g_settings_bind_with_mapping */
+      Adw.SpinRow row_update_interval {
+        title: _("Update Interval (seconds)");
+        digits: 0;
+        climb-rate: 5.0;
+        adjustment: Adjustment {
+            step-increment: 10;
+            lower: 60;
+            upper: 3600;
+            value: 60;
+        };
+      }
+
+      Adw.ComboRow row_default_band {
+        title: _("Default Band");
+        model: bands_model;   // expression set in C
+      }
+
+      Adw.ComboRow row_default_mode {
+        title: _("Default Mode");
+        model: modes_model;   // expression set in C
+      }
+    }
+
+  }
+  Adw.PreferencesPage radio_page {
+    title: _("Radio");
+    icon-name: "radio-console-symbolic";
+
+    Adw.PreferencesGroup radio_connection_group {
+      title: _("Connection");
+      description: _("Configure how to connect to your radio via Hamlib");
+
+      Adw.ComboRow row_connection_type {
+        title: _("Connection Type");
+        model: connection_types_model;
+      }
+
+      Adw.ComboRow row_radio_model {
+        title: _("Radio Model");
+        subtitle: _("Select your radio model");
+        model: radio_models_model;
+        enable-search: true;
+      }
+
+      /* Serial/USB settings group */
+      Adw.PreferencesGroup serial_settings_group {
+        title: _("Serial/USB Settings");
+        
+        Adw.EntryRow row_device_path {
+          title: _("Device Path");
+          text: "/dev/ttyUSB0";
+        }
+
+        Adw.ComboRow row_baud_rate {
+          title: _("Baud Rate");
+          model: baud_rates_model;
+        }
+      }
+
+      /* Network settings group */
+      Adw.PreferencesGroup network_settings_group {
+        title: _("Network Settings");
+        
+        Adw.EntryRow row_network_host {
+          title: _("Host");
+          text: "localhost";
+        }
+
+        Adw.SpinRow row_network_port {
+          title: _("Port");
+          digits: 0;
+          adjustment: Adjustment {
+            step-increment: 1;
+            lower: 1;
+            upper: 65535;
+            value: 4532;
+          };
+        }
+      }
+    }
+
+    Adw.PreferencesGroup radio_test_group {
+      title: _("Connection Test");
+      
+      Adw.ActionRow test_connection_row {
+        title: _("Test Radio Connection");
+        subtitle: _("Verify that Artemis can communicate with your radio");
+
+        Box {
+          orientation: horizontal;
+          spacing: 12;
+          valign: center;
+
+          Image connection_status_icon {
+            icon-name: "network-offline-symbolic";
+            pixel-size: 16;
+          }
+
+          Label connection_status_label {
+            label: _("Not tested");
+          }
+
+          Button test_connection_button {
+            label: _("Test Connection");
+            styles ["suggested-action"]
+          }
+        }
+      }
+    }
+  }
+  Adw.PreferencesPage import_page {
+    title: _("Logbook");
+    icon-name: "user-bookmarks-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("Import Logbook");
+      description: _("Hunter log CSV location");
+      
+      Adw.ActionRow import_file_row {
+        title: _("Import file");
+        activatable: true;
+        subtitle: _("Click to select a CSV file to import");
+
+        Image {
+          icon-name: "document-open-symbolic";
+          styles ["dim-label"]
+        }
+      }
+    }
+
+    Adw.PreferencesGroup logbook_logging_group {
+      title: _("External Logging");
+      description: _("Configure logging to online logbooks");
+
+      Adw.SwitchRow row_enable_logging {
+        title: _("Enable Logging");
+        subtitle: _("Automatically log QSOs to configured logbooks when spotting");
+      }
+
+      /* Mask input but still bind to a plain string setting */
+      Adw.PasswordEntryRow row_qrz_api_key {
+        title: _("QRZ API Key");
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Display Options");
+      
+      Adw.SwitchRow row_highlight_unhunted {
+        title: _("Highlight Unhunted Parks");
+        subtitle: _("Show visual highlighting for parks you haven't hunted before");
+      }
+
+      Adw.SwitchRow row_hide_qrt {
+        title: _("Hide QRT");
+        subtitle: _("Hide stations that have marked themselves QRT");
+      }
+
+      Adw.SwitchRow row_hide_hunted {
+        title: _("Hide Hunted");
+        subtitle: _("Hide parks you've already hunted today");
+      }
+
+      Adw.SpinRow row_hide_older_than {
+        title: _("Hide Stale");
+        subtitle: _("Hide parks that haven't had an update this many minutes");
+        
+        digits: 0;
+        climb-rate: 5.0;
+        adjustment: Adjustment {
+            step-increment: 5;
+            lower: 20;
+            upper: 60;
+            value: 30;
+        };
+      }
+    }
+  }
+}

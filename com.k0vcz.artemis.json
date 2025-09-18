@@ -1,0 +1,81 @@
+{
+    "id" : "com.k0vcz.artemis",
+    "runtime" : "org.gnome.Platform",
+    "runtime-version" : "48",
+    "sdk" : "org.gnome.Sdk",
+    "sdk-extensions" : [
+    ],
+    "command" : "artemis",
+    "finish-args" : [
+        "--share=network",
+        "--share=ipc",
+        "--socket=fallback-x11",
+        "--device=dri",
+        "--socket=wayland"
+    ],
+    "build-options" : {
+        "append-path" : "/usr/lib/sdk/vala/bin",
+        "prepend-ld-library-path" : "/usr/lib/sdk/vala/lib"
+    },
+    "cleanup" : [
+        "/include",
+        "/lib/pkgconfig",
+        "/man",
+        "/share/doc",
+        "/share/gtk-doc",
+        "/share/man",
+        "/share/pkgconfig",
+        "/share/vala",
+        "*.la",
+        "*.a"
+    ],
+    "modules" : [
+        {
+            "name": "hamlib",
+            "buildsystem": "autotools",
+            "config-opts": [
+                "--disable-static",
+                "--without-cxx-binding",
+                "--disable-winradio",
+                "--without-indi",
+                "--without-readline"
+            ],
+            "cleanup": [
+                "/bin/ampctl",
+                "/bin/ampctld",
+                "/bin/rigctl",
+                "/bin/rigctlcom",
+                "/bin/rigctld",
+                "/bin/rigctlsync",
+                "/bin/rigctltcp",
+                "/bin/rigfreqwalk",
+                "/bin/rigmem",
+                "/bin/rigsmtr",
+                "/bin/rigswr",
+                "/bin/rigtestlibusb",
+                "/bin/rigtestmcast",
+                "/bin/rigtestmcastrx",
+                "/bin/rotctl",
+                "/bin/rotctld"
+            ],
+            "sources": [
+                {
+                    "type": "archive",
+                    "url": "https://github.com/Hamlib/Hamlib/releases/download/4.6.5/hamlib-4.6.5.tar.gz",
+                    "sha256": "90d6f1dba59417c00f8f4545131c7efd31930cd0e178598980a8210425e3852e"
+                }
+            ]
+        },
+        {
+            "name" : "artemis",
+            "builddir" : true,
+            "buildsystem" : "meson",
+            "sources" : [
+                {
+                    "type" : "dir",
+                    "path" : "/home/jbaird/projects/artemis-vala"
+                }
+            ]
+        }
+    ]
+}

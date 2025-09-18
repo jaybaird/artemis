@@ -1,0 +1,255 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $SpotCard : Box {
+  hexpand: false;
+  halign: start;
+  valign: start;
+
+  Adw.Clamp {
+    maximum-size: 300;
+    tightening-threshold: 280;
+
+    child:
+  Box {
+    width-request: 280;
+    height-request: 180;
+    orientation: vertical;
+
+    spacing: 6;
+
+    styles ["card", "frame"]
+
+    Overlay {
+      child: Box {
+        margin-start: 10;
+        margin-top: 10;
+        margin-bottom: 6;
+        margin-end: 10;
+        orientation: horizontal;
+
+        Adw.Avatar activator_avatar {
+          valign: center;
+          size: 32;
+          margin-end: 6;
+        }
+
+        Box {
+          orientation: vertical;
+          valign: center;
+
+          Label title {
+            halign: start;
+            justify: left;
+            label: "K0VCZ @ K-1234";
+            wrap-mode: word_char;
+            styles ["title-2"]
+          }
+
+          Label park_label {
+            halign: start;
+            wrap: true;
+            justify: left;
+            wrap-mode: word_char;
+          }
+        }
+      };
+
+      [overlay]
+      Image corner_image {
+        tooltip-text: _("Hunted today");
+        halign: end;
+        valign: center;
+        margin-end: 10;
+        icon-name: "bullseye-symbolic";
+        pixel-size: 24;
+      }
+    }
+
+    Separator {
+      styles ["horizontal"]
+    }
+
+    Box {
+      orientation: vertical;
+      margin-start: 10;
+      margin-end: 10;
+      margin-bottom: 10;
+      hexpand: false;
+      spacing: 12;
+
+      Box {
+        orientation: horizontal;
+        spacing: 10;
+        tooltip-text: _("Location");
+
+        Image {
+          pixel-size: 20;
+          icon-name: "mark-location-symbolic";
+          valign: baseline;
+        }
+
+        Label location_desc {
+          margin-bottom: 0;
+          label: "US-WY";
+          wrap: true;
+          wrap-mode: word_char;
+        }
+      }
+
+      Box {
+        orientation: horizontal;
+        spacing: 10;
+        tooltip-text: _("Frequency and mode");
+
+        Image {
+          icon-name: "sound-wave-alt-symbolic";
+          pixel-size: 20;
+          valign: baseline;
+        }
+
+        Label frequency {
+          halign: start;
+          valign: baseline;
+          label: "14074 kHz";
+        }
+
+        Label {
+          halign: start;
+          valign: baseline;
+          label: "//";
+        }
+
+        Label mode {
+          valign: baseline;
+          label: "FT8";
+          styles ["caption monospace pill"]
+
+        }
+      }
+
+      Box {
+        orientation: horizontal;
+        spacing: 10;
+        tooltip-text: _("Hunter callsign");
+
+        Adw.Avatar hunter_avatar {
+          size: 20;
+          valign: baseline;
+        }
+
+        Label hunter_callsign {
+          halign: start;
+          valign: baseline;
+          label: "K0VCZ";
+        }
+      }
+
+      Box {
+        orientation: horizontal;
+        spacing: 10;
+        tooltip-text: _("Age");
+
+        Image {
+          pixel-size: 20;
+          icon-name: "org.gnome.clocks-symbolic";
+          valign: baseline;
+        }
+
+        Label time {
+          halign: start;
+          valign: baseline;
+          label: "2 minutes ago";
+        }
+      }
+
+      Box {
+        orientation: horizontal;
+        spacing: 10;
+        tooltip-text: _("Spots");
+
+        Image {
+          pixel-size: 20;
+          icon-name: "history-undo-symbolic";
+          valign: baseline;
+        }
+
+        Label spots {
+          halign: start;
+          valign: baseline;
+          label: "16";
+          margin-bottom: 20;
+        }
+      }
+    }
+
+      Separator {
+        styles ["horizontal"]
+      }
+      
+      Box {
+        halign: fill;
+        hexpand: true;
+        margin-top: 10;
+        margin-bottom: 10;
+        margin-start: 10;
+        margin-end: 10;
+        orientation: horizontal;
+
+        Box {
+          halign: start;
+          spacing: 6;
+          Button history_button {
+            clicked => $on_history_button_clicked();
+            Image {
+              tooltip-text: _("History");
+              icon-name: "history-undo-symbolic";
+              icon-size: normal;
+            }
+          }
+
+          Button logbook_button {
+            Image {
+              tooltip-text: _("Logbook");
+              icon-name: "format-ordered-list-symbolic";
+              icon-size: normal;
+            }
+          }
+
+          Button park_details_button {
+            clicked => $on_park_details_button_clicked();
+            Image {
+              tooltip-text: _("Park details");
+              icon-name: "org.gnome.Maps-symbolic";
+              icon-size: normal;
+            }
+          }
+        }
+
+        Separator {
+          styles ["spacer"]
+        }
+
+        Box {
+          spacing: 6;
+          halign: end;
+          
+          Button tune_button {
+            tooltip-text: _("Tune your radio to this frequency");
+            label: _("Tune");
+            clicked => $on_tune_button_clicked();
+          }
+
+          Button spot_button {
+            tooltip-text: _("Re-spot this park");
+            label: _("Re-Spot");
+            styles ["suggested-action"]
+            clicked => $on_spot_button_clicked();
+          }
+
+          
+        }
+      }
+  };
+  }
+}

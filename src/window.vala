@@ -1,0 +1,191 @@
+/* window.vala
+ *
+ * Copyright 2025 Unknown
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gee;
+
+[GtkTemplate(ui = "/com/k0vcz/artemis/ui/main_window.ui")]
+public sealed class AppWindow : Gtk.Window {
+  [GtkChild]
+  public unowned Adw.Banner refresh_banner;
+
+  [GtkChild]
+  public unowned Gtk.ProgressBar refresh_progress;
+
+  [GtkChild]
+  public unowned Gtk.Label current_time;
+
+  [GtkChild]
+  public unowned Adw.ViewStack band_stack;
+
+  [GtkChild]
+  public unowned Gtk.Box loading_spinner;
+
+  [GtkChild]
+  public unowned Adw.ToastOverlay toast_overlay;
+
+  [GtkChild]
+  public unowned Gtk.SearchEntry search_entry;
+
+  [GtkChild]
+  public unowned Gtk.Widget search_select;
+
+  private Settings settings;
+  private uint timer_id = 0;
+  private uint current_ticks = 0;
+  private bool update_paused = false;
+
+  private SpotRepo spot_repo;
+  private ArrayList<BandView> band_pages;
+
+  public AppWindow(Gtk.Application app) {
+    Object(application: app);
+  }
+
+  construct {
+    spot_repo = new SpotRepo ();
+    settings = new Settings ("com.k0vcz.artemis");
+    band_pages = new ArrayList<BandView> ();
+    refresh_banner.button_clicked.connect (on_banner_button_clicked);
+
+    settings.changed["update-interval"].connect (() => {
+      setup_spot_updates ();
+    });
+
+    search_entry.search_changed.connect( () => {
+
+    });
+
+    search_entry.notify["selected"].connect ( () => {
+
+    });
+
+    spot_repo.busy_changed.connect ( (busy) => {
+      loading_spinner.visible = busy;
+    });
+
+    spot_repo.refreshed.connect ( (spots_updated) => {
+      string toast_title = ngettext (
+        "%u spot refreshed", 
+        "%u spots refreshed",
+        spots_updated
+      ).printf(spots_updated);
+
+      var toast = new Adw.Toast(toast_title);
+      toast.timeout = 5;
+      toast_overlay.add_toast (toast);
+    });
+
+    spot_repo.update_error.connect ( (error) => {
+      var alert_dialog = new Adw.AlertDialog (_("Unable to refresh spots"), null);
+      alert_dialog.format_body (_("Unable to refresh spots due to an error: %s"), error.message);
+      alert_dialog.add_responses (
+        "cancel", _("Cancel"),
+        "retry", _("Retry")
+      );
+      alert_dialog.set_default_response ("cancel");
+      alert_dialog.set_close_response ("cancel");
+      alert_dialog.present (this);
+    });
+
+    setup_spot_updates ();
+    build_band_stack ();
+
+    refresh_banner.title = "";
+    refresh_progress.fraction = 0;
+  }
+
+  private void initial_update () {
+    spot_repo.update_spots.begin ((obj, res) => {
+      spot_repo.update_spots.end (res);
+    });
+  }
+
+  private void setup_spot_updates() {
+    if (timer_id != 0) {
+      Source.remove (timer_id);
+    }
+
+    timer_id = Timeout.add_seconds (1, () => {
+      tick.begin ();
+      return Source.CONTINUE;
+    });
+
+    initial_update ();
+  }
+
+  private void build_band_stack () {
+    for (uint i = 0; i < RadioConstants.BANDS.length; i++) {
+      var band = RadioConstants.BANDS[i];
+      debug("spot repo is null: %s", (spot_repo == null).to_string());
+      var band_view = new BandView (spot_repo, band, "band-%s".printf(band));
+      band_pages.add (band_view);
+
+      band_stack.add_titled_with_icon (band_view, band, band, "band-%s".printf(band));
+    }
+  }
+
+  private async void tick () {
+    if (!update_paused) {
+      current_ticks += 1;
+      var update_time = settings.get_int ("update-interval");
+      if (current_ticks >= update_time) {
+        current_ticks = current_ticks - update_time;
+        
+        yield spot_repo.update_spots ();
+      }
+
+      var seconds_remaining = update_time - current_ticks;
+      refresh_banner.title = ngettext (
+        "Spots will refresh in %u seconds",
+        "Spots will refresh in %u seconds",
+        seconds_remaining
+      ).printf(seconds_remaining);
+
+      refresh_progress.fraction = (float)current_ticks / (float)update_time;
+
+      var now = new GLib.DateTime.now_utc ().format ("%H:%M:%S UTC");
+      current_time.label = now;
+    }
+  }
+
+  [GtkCallback]
+  private void on_add_button_clicked () {
+      AddSpot add_spot = new AddSpot ();
+      add_spot.present (this);
+  }
+
+  private void on_banner_button_clicked () {
+    update_paused = !update_paused;
+    if (update_paused) {
+      current_ticks = 0;
+      refresh_banner.button_label = _("Resume");
+      refresh_banner.title = "";
+      refresh_progress.fraction = 0;
+    } else {
+      refresh_banner.button_label = _("Pause");
+    }
+  }
+
+  ~AppWindow () {
+    if (timer_id != 0) {
+      Source.remove (timer_id);
+    }
+  }
+}

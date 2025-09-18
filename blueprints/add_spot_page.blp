@@ -1,0 +1,72 @@
+using Gtk 4.0;
+using Adw 1;
+
+Gtk.StringList modes_model {
+  strings: ["SSB","CW","FT8","FM","AM","RTTY","JT65"];
+}
+
+Box add_spot_content {
+  width-request: 500;
+  orientation: vertical;
+  spacing: 12;
+  margin-top: 12;
+  margin-bottom: 12;
+  margin-start: 12;
+  margin-end: 12;
+
+  Adw.PreferencesGroup {
+    title: _("Add Spot");
+
+    Adw.EntryRow activator_callsign {
+      title: _("Activator Callsign");
+    }
+
+    Adw.EntryRow spotter_callsign {
+      title: _("Spotter Callsign");
+    }
+
+    Adw.EntryRow frequency {
+      title: _("Frequency (kHz)");
+      text: "14280";
+    }
+
+    Adw.ComboRow mode {
+      title: _("Mode");
+      model: modes_model;
+    }
+
+    Adw.EntryRow park_ref {
+      title: _("Park Reference");
+    }
+
+    Adw.EntryRow rst_sent {
+      title: _("RST Sent");
+      text: "59";
+    }
+
+    Adw.EntryRow rst_received {
+      title: _("RST Received");
+      text: "59";
+    }
+
+    Adw.EntryRow spotter_comments {
+      title: _("Spotter Comments");
+    }
+  }
+
+  Box {
+    orientation: horizontal;
+    halign: end;
+    spacing: 6;
+    margin-bottom: 12;
+
+    Button cancel_button {
+      label: _("Cancel");
+    }
+
+    Button submit_button {
+      label: _("Add Spot");
+      styles ["suggested-action"]
+    }
+  }
+}

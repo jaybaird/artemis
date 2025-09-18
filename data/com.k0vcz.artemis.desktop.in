@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=artemis
+Exec=artemis
+Icon=com.k0vcz.artemis
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=GTK;
+StartupNotify=true
+DBusActivatable=true
