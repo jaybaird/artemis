@@ -40,3 +40,17 @@ gnome.post_install(
     gtk_update_icon_cache: true,
   update_desktop_database: true,
 )
+
+# Code formatting targets
+uncrustify = find_program('uncrustify', required: false)
+if uncrustify.found()
+  run_target('format',
+    command: [find_program('bash'), files('format.sh')],
+    depends: []
+  )
+
+  run_target('check-format',
+    command: [find_program('bash'), files('check-format.sh')],
+    depends: []
+  )
+endif

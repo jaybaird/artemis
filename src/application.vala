@@ -19,46 +19,51 @@
  */
 
 public sealed class Application : Adw.Application {
-  public Application() {
-    Object(
-      application_id: "com.k0vcz.artemis",
-      flags: ApplicationFlags.DEFAULT_FLAGS,
-      resource_base_path: "/com/k0vcz/artemis"
-    );
-  }
-
-  construct {
-    var preferences_action = new SimpleAction("preferences", null);
-    preferences_action.activate.connect(on_preferences_action);
-    add_action(preferences_action);
-
-    set_accels_for_action("app.preferences", {"<primary>comma"});
-  }
-
-  public override void activate() {
-    base.activate();
-
-    var adw_style_manager = Adw.StyleManager.get_default();
-    adw_style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT);
-
-    var css_provider = new Gtk.CssProvider();
-    css_provider.load_from_resource("/com/k0vcz/artemis/style.css");
-
-    Gtk.StyleContext.add_provider_for_display(
-      Gdk.Display.get_default(),
-      css_provider,
-      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    );
-
-    var win = this.active_window ?? new AppWindow(this);
-    win.present();
-  }
-
-  private void on_preferences_action() {
-    var window = active_window as AppWindow;
-    if (window != null) {
-      var preferences = new PreferencesDialog();
-      preferences.present(window);
+    public Application()
+    {
+        Object(
+            application_id: "com.k0vcz.artemis",
+            flags: ApplicationFlags.DEFAULT_FLAGS,
+            resource_base_path: "/com/k0vcz/artemis"
+            );
     }
-  }
-}
+
+    construct {
+        var preferences_action = new SimpleAction("preferences", null);
+        preferences_action.activate.connect(on_preferences_action);
+        add_action(preferences_action);
+
+        set_accels_for_action("app.preferences", { "<primary>comma" });
+    }
+
+    public override void activate()
+    {
+        base.activate();
+
+        var adw_style_manager = Adw.StyleManager.get_default();
+        adw_style_manager.set_color_scheme(Adw.ColorScheme.DEFAULT);
+
+        var css_provider = new Gtk.CssProvider();
+        css_provider.load_from_resource("/com/k0vcz/artemis/style.css");
+
+        Gtk.StyleContext.add_provider_for_display(
+            Gdk.Display.get_default(),
+            css_provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            );
+
+        var win = this.active_window ?? new AppWindow(this);
+        win.present();
+    }
+
+    private void on_preferences_action()
+    {
+        var window = active_window as AppWindow;
+
+        if (window != null)
+        {
+            var preferences = new PreferencesDialog();
+            preferences.present(window);
+        }
+    }
+} /* class Application */

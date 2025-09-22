@@ -2,7 +2,7 @@ using Gtk 4.0;
 using Adw 1;
 
 template $AppWindow : Window {
-  default-width: 1280;
+  default-width: 1300;
   default-height: 720;
   title: _("Artemis");
 
@@ -10,6 +10,7 @@ template $AppWindow : Window {
   HeaderBar {
     Button add_spot {
       icon-name: "list-add-symbolic";
+      tooltip-text: _("Add Spot");
       clicked => $on_add_button_clicked();
     }
 
@@ -85,6 +86,7 @@ template $AppWindow : Window {
               }
 
               DropDown search_select {
+                tooltip-text: _("Mode Selector");
                 model: StringList {
                   strings [
                     _("All"),
