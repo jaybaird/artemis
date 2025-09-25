@@ -50,6 +50,10 @@ banner {
 }
 
 .unhunted {
-    border: 2px solid var(--accent-green);
+    color: var(--green-1);
+}
+
+.hunted {
+    color: @accent-color;
 }
 

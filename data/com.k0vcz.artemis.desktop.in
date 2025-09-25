@@ -8,3 +8,4 @@ Categories=Utility;
 Keywords=GTK;
 StartupNotify=true
 DBusActivatable=true
+X-GNOME-UsesNotifications=true

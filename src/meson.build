@@ -11,6 +11,7 @@ artemis_vala_sources = [
   'src/band_view.vala',
   'src/status_page.vala',
   'src/database.vala',
+  'src/utils.vala',
 ]
 
 glib_dep = dependency('glib-2.0')
@@ -28,6 +29,9 @@ libradiocontrol = static_library(
   dependencies: [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
 )
 
+cc = meson.get_compiler('c')
+mathlib = cc.find_library('m', required: true)
+
 artemis_vala_deps = [
   config_dep,
   dependency('gtk4'),
@@ -38,7 +42,8 @@ artemis_vala_deps = [
   dependency('libdex-1'),
   dependency('gee-0.8'),
   dependency('webkitgtk-6.0'),
-  dependency('sqlite3')
+  dependency('sqlite3'),
+  mathlib
 ]
 
 artemis_vala_sources += gnome.compile_resources('artemis-vala-resources',

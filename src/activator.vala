@@ -16,7 +16,7 @@ public sealed class Activator : Object {
         uint qsos
         )
     {
-        Object(
+        Object (
             callsign: callsign,
             name: name,
             qth: qth,
@@ -27,17 +27,18 @@ public sealed class Activator : Object {
             );
     }
 
-    public Activator.from_json(Json.Object object)
+    public Activator.from_json (Json.Object object)
     {
-        Object(
-            callsign: object.get_string_member("callsign"),
-            name: object.get_string_member("name"),
-            qth: object.get_string_member("qth"),
-            gravatar_hash: object.get_string_member("gravatar"),
-            activations: (uint)object.get_int_member_with_default("activations",
+        Object (
+            callsign: object.get_string_member ("callsign"),
+            name: object.get_string_member ("name"),
+            qth: object.get_string_member ("qth"),
+            gravatar_hash: object.get_string_member ("gravatar"),
+            activations: (uint)object.get_int_member_with_default (
+                "activations",
                 0),
-            parks: (uint)object.get_int_member_with_default("parks", 0),
-            qsos: (uint)object.get_int_member_with_default("qsos", 0)
+            parks: (uint)object.get_int_member_with_default ("parks", 0),
+            qsos: (uint)object.get_int_member_with_default ("qsos", 0)
             );
     }
 

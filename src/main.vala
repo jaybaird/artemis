@@ -17,12 +17,12 @@
  *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
-int main(string[] args)
+int main (string[] args)
 {
-    Intl.bindtextdomain(Config.GETTEXT_PACKAGE, Config.LOCALEDIR);
-    Intl.bind_textdomain_codeset(Config.GETTEXT_PACKAGE, "UTF-8");
-    Intl.textdomain(Config.GETTEXT_PACKAGE);
+    Intl.bindtextdomain (Config.GETTEXT_PACKAGE, Config.LOCALEDIR);
+    Intl.bind_textdomain_codeset (Config.GETTEXT_PACKAGE, "UTF-8");
+    Intl.textdomain (Config.GETTEXT_PACKAGE);
 
-    var app = new Application();
-    return app.run(args);
+    var app = new Application ();
+    return app.run (args);
 }

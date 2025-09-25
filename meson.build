@@ -8,7 +8,8 @@ i18n = import('i18n')
 gnome = import('gnome')
 valac = meson.get_compiler('vala')
 
-
+prefix = get_option('prefix')
+data_dir = prefix / get_option('datadir')
 srcdir = meson.project_source_root() / 'src'
 
 config_h = configuration_data()
@@ -24,6 +25,7 @@ add_project_arguments('-DGETTEXT_PACKAGE="' + meson.project_name() + '"', langua
 
 subdir('blueprints')
 subdir('data')
+subdir('sql')
 subdir('src')
 subdir('po')
 
@@ -31,7 +33,7 @@ executable('artemis', artemis_vala_sources,
   dependencies: artemis_vala_deps,
   include_directories: config_inc,
   vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
-  link_with: libradiocontrol,
+  link_with: [libradiocontrol],
   install: true,
 )
 

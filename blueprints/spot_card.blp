@@ -11,7 +11,7 @@ template $SpotCard : Box {
     tightening-threshold: 280;
 
     child:
-  Box {
+  Box card_view {
     width-request: 280;
     height-request: 180;
     orientation: vertical;
@@ -59,10 +59,12 @@ template $SpotCard : Box {
       Image corner_image {
         tooltip-text: _("Hunted today");
         halign: end;
-        valign: center;
+        valign: start;
         margin-end: 10;
+        margin-top: 12;
         icon-name: "bullseye-symbolic";
-        pixel-size: 24;
+        pixel-size: 16;
+        visible: false;
       }
     }
 
@@ -94,6 +96,25 @@ template $SpotCard : Box {
           label: "US-WY";
           wrap: true;
           wrap-mode: word_char;
+        }
+      }
+
+      Box {
+        orientation: horizontal;
+        spacing: 10;
+        tooltip-text: _("Distance & Bearing");
+
+        Image {
+          pixel-size: 20;
+          icon-name: "compass2-symbolic";
+          valign: baseline;
+        }
+
+        Label distance_and_bearing {
+          halign: start;
+          valign: baseline;
+          label: "1660km @ 360°";
+          margin-bottom: 20;
         }
       }
 

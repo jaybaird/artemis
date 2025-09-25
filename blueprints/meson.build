@@ -7,6 +7,7 @@ inputs = files(
   'spot_page.blp',
   'status_page.blp',
   'band_view.blp',
+  'park_log_dialog.blp',
 )
 
 outs = [
@@ -18,6 +19,7 @@ outs = [
   'spot_page.ui',
   'status_page.ui',
   'band_view.ui',
+  'park_log_dialog.ui',
 ]
 
 blueprint_batch = custom_target(

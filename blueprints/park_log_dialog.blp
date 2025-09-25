@@ -1,0 +1,35 @@
+using Gtk 4.0;
+using Adw 1;
+
+template $ParkLogDialog : Adw.Dialog {
+  content-width: 600;
+  content-height: 500;
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle title_widget {
+        title: _("Park Logbook");
+      };
+    }
+
+    content: Box {
+      orientation: vertical;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+      spacing: 12;
+
+      ScrolledWindow qso_scroll {
+        visible: false;
+        hexpand: true;
+        vexpand: true;
+        
+        child: ListBox qso_list {
+          styles ["background"]
+        };
+      }
+    };
+  }
+}

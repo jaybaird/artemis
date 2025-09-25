@@ -20,26 +20,26 @@
 
 using WebKit;
 
-private string humanize_ago(GLib.DateTime dt)
+private string humanize_ago (GLib.DateTime dt)
 {
-    var now = new GLib.DateTime.now_utc();
-    int64 span_us = now.difference(dt);
+    var now = new GLib.DateTime.now_utc ();
+    int64 span_us = now.difference (dt);
 
     if (span_us < 0)
-        return _("in the future");
+        return _ ("in the future");
 
     int64 sec = span_us / GLib.TimeSpan.SECOND;
     int64 min = span_us / GLib.TimeSpan.MINUTE;
 
     if (sec < 5)
-        return _("just now");
+        return _ ("just now");
     if (sec < 60)
-        return _("%ld seconds ago").printf((long)sec);
+        return _ ("%ld seconds ago").printf ((long)sec);
     if (min == 1)
-        return _("a minute ago");
+        return _ ("a minute ago");
     if (min < 60)
-        return _("%ld minutes ago").printf((long)min);
-    return _("more than an hour ago");
+        return _ ("%ld minutes ago").printf ((long)min);
+    return _ ("more than an hour ago");
 }
 
 public sealed class AddSpot : Adw.Dialog {
@@ -57,12 +57,12 @@ public sealed class AddSpot : Adw.Dialog {
 
     public AddSpot()
     {
-        Object();
+        Object ();
     }
 
-    public AddSpot.from_spot(Spot spot)
+    public AddSpot.from_spot (Spot spot)
     {
-        Object();
+        Object ();
 
         activator_callsign.text = spot.callsign;
         activator_callsign.editable = false;
@@ -71,61 +71,64 @@ public sealed class AddSpot : Adw.Dialog {
     }
 
     construct {
-        Gtk.Builder builder = new Gtk.Builder.from_resource(
+        Gtk.Builder builder = new Gtk.Builder.from_resource (
             "/com/k0vcz/artemis/ui/add_spot_page.ui");
 
-        var content = builder.get_object("add_spot_content") as Gtk.Widget;
-        this.set_child(content);
+        var content = builder.get_object ("add_spot_content") as Gtk.Widget;
+        this.set_child (content);
 
-        activator_callsign = builder.get_object("activator_callsign") as Adw.
+        activator_callsign = builder.get_object ("activator_callsign") as Adw.
             EntryRow;
-        spotter_callsign = builder.get_object("spotter_callsign") as Adw.
+        spotter_callsign = builder.get_object ("spotter_callsign") as Adw.
             EntryRow;
-        frequency = builder.get_object("frequency") as Adw.EntryRow;
-        mode = builder.get_object("mode") as Adw.ComboRow;
-        park_ref = builder.get_object("park_ref") as Adw.EntryRow;
-        rst_sent = builder.get_object("rst_sent") as Adw.EntryRow;
-        rst_received = builder.get_object("rst_received") as Adw.EntryRow;
-        spotter_comments = builder.get_object("spotter_comments") as Adw.
+        frequency = builder.get_object ("frequency") as Adw.EntryRow;
+        mode = builder.get_object ("mode") as Adw.ComboRow;
+        park_ref = builder.get_object ("park_ref") as Adw.EntryRow;
+        rst_sent = builder.get_object ("rst_sent") as Adw.EntryRow;
+        rst_received = builder.get_object ("rst_received") as Adw.EntryRow;
+        spotter_comments = builder.get_object ("spotter_comments") as Adw.
             EntryRow;
 
-        var settings = new GLib.Settings("com.k0vcz.artemis");
-        spotter_callsign.text = settings.get_string("callsign");
-        spotter_comments.text = settings.get_string("spot-message");
+        var settings = new GLib.Settings ("com.k0vcz.artemis");
+        spotter_callsign.text = settings.get_string ("callsign");
+        spotter_comments.text = settings.get_string ("spot-message");
 
-        cancel_button = builder.get_object("cancel_button") as Gtk.Button;
-        cancel_button.clicked.connect(() => {
-            this.close();
+        cancel_button = builder.get_object ("cancel_button") as Gtk.Button;
+        cancel_button.clicked.connect (() => {
+            this.close ();
         });
 
-        submit_button = builder.get_object("submit_button") as Gtk.Button;
-        submit_button.clicked.connect(() => {
-            var spot = new Spot.from_add_spot(
+        submit_button = builder.get_object ("submit_button") as Gtk.Button;
+        submit_button.clicked.connect (() => {
+            var spot = new Spot.from_add_spot (
                 activator_callsign.text,
                 park_ref.text,
-                new DateTime.now_utc(),
+                new DateTime.now_utc (),
                 frequency.text,
-                ((Gtk.StringList)mode.get_model()).get_string(mode.selected),
+                ((Gtk.StringList)mode.get_model ()).get_string (mode.selected),
                 spotter_callsign.text,
                 spotter_comments.text);
 
-            this.close();
+            this.close ();
 
-            SpotRepo.instance().client.post_spot.begin(spot, (obj, res) => {
+            SpotRepo.instance ().client.post_spot.begin (spot, (obj, res) => {
                 try {
-                    SpotRepo.instance().client.post_spot.end(res);
-                    SpotRepo.instance().update_spots.begin();
+                    SpotRepo.instance ().client.post_spot.end (res);
+                    SpotRepo.instance ().update_spots.begin ();
                 } catch(Error err) {
                     var errmsg = err.message;
-                    error(@"Unable to post spot: $errmsg");
+                    error (@"Unable to post spot: $errmsg");
                 }
             });
         });
     }
 } /* class AddSpot */
 
-[GtkTemplate(ui = "/com/k0vcz/artemis/ui/spot_card.ui")]
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_card.ui")]
 public sealed class SpotCard : Gtk.Box {
+    [GtkChild]
+    public unowned Gtk.Box card_view;
+
     [GtkChild]
     public unowned Adw.Avatar activator_avatar;
 
@@ -180,148 +183,204 @@ public sealed class SpotCard : Gtk.Box {
     public Spot spot { get; construct; }
     public SpotCard ()
     {
-        Object();
+        Object ();
     }
 
-    public SpotCard.from_spot(Spot spot)
+    public SpotCard.from_spot (Spot spot)
     {
-        Object(
+        Object (
             spot: spot
             );
 
-        var escaped_park_ref = GLib.Uri.escape_string(
+        var escaped_park_ref = GLib.Uri.escape_string (
             spot.park_ref, null, false
             );
         park_url = @"http://pota.app/#/park/$escaped_park_ref";
         callsign = spot.callsign;
         park_ref = spot.park_ref;
 
-        title.label = "%s @ %s".printf(spot.callsign, spot.park_ref);
+        title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
         park_label.label = spot.park_name;
         location_desc.label = spot.location_desc;
-        frequency.label = "%d kHz".printf(spot.frequency_khz);
+        frequency.label = "%d kHz".printf (spot.frequency_khz);
         mode.label = spot.mode;
         hunter_callsign.label = spot.spotter;
-        spots.label = ngettext(
+        spots.label = ngettext (
             "%d spot",
             "%d spots",
             spot.spot_count
-            ).printf(spot.spot_count);
+            ).printf (spot.spot_count);
 
-        time.label = humanize_ago(spot.spot_time);
+        time.label = humanize_ago (spot.spot_time);
+
+        var settings = new GLib.Settings ("com.k0vcz.artemis");
+        refresh_highlight (settings);
+    }
+
+    public void refresh_highlight (GLib.Settings settings)
+    {
         corner_image.visible = false;
+
+        if (spot.is_new_park && settings.get_boolean (
+            "highlight-unhunted-parks"))
+        {
+            corner_image.icon_name = "starred-symbolic";
+            corner_image.tooltip_text = _ ("New park!");
+            corner_image.visible = true;
+            corner_image.add_css_class ("unhunted");
+            corner_image.remove_css_class ("hunted");
+        }
+
+        if (spot.was_hunted_today)
+        {
+            corner_image.tooltip_text = _ ("Hunted today");
+            corner_image.icon_name = "bullseye-symbolic";
+            corner_image.visible = true;
+            corner_image.remove_css_class ("unhunted");
+            corner_image.add_css_class ("hunted");
+            this.add_css_class ("dimmed");
+        }
     }
 
     [GtkCallback]
-    private void on_history_button_clicked()
+    private void on_history_button_clicked ()
     {
-        var client = new PotaClient();
-        var spot_history = new SpotHistoryDialog(callsign, park_ref);
+        var client = new PotaClient ();
+        var spot_history = new SpotHistoryDialog (callsign, park_ref);
 
-        spot_history.show_loading(true);
-        spot_history.present(this.get_root());
+        spot_history.show_loading (true);
+        spot_history.present (this.get_root ());
 
-        client.fetch_spot_history.begin(callsign, park_ref, (obj, res) => {
+        client.fetch_spot_history.begin (callsign, park_ref, (obj, res) => {
             try {
-                var history = client.fetch_spot_history.end(res);
-                spot_history.show_history(history);
+                var history = client.fetch_spot_history.end (res);
+                spot_history.show_history (history);
             } catch(Error err) {
-                spot_history.show_error(err.message);
+                spot_history.show_error (err.message);
             }
         });
     }
 
     [GtkCallback]
-    private void on_park_details_button_clicked()
+    private void on_park_details_button_clicked ()
     {
-        var park_details = new ParkDetailsView(park_url);
-        park_details.present(this.get_root());
+        var park_details = new ParkDetailsView (park_url);
+        park_details.present (this.get_root ());
     }
 
     [GtkCallback]
-    private void on_tune_button_clicked()
+    private void on_tune_button_clicked ()
     {
     }
 
     [GtkCallback]
-    private void on_spot_button_clicked()
+    private void on_spot_button_clicked ()
     {
         if (spot != null)
         {
-            AddSpot add_spot = new AddSpot.from_spot(spot);
-            add_spot.present(this.get_root());
+            AddSpot add_spot = new AddSpot.from_spot (spot);
+            add_spot.present (this.get_root ());
         }
     }
 } /* class SpotCard */
 
-private Gtk.Widget create_spot_row(Json.Object spot_obj)
+private Gtk.Widget create_spot_row (Json.Object spot_obj)
 {
-    string spotter = spot_obj.get_string_member_with_default("spotter", "");
-    string frequency = spot_obj.get_string_member_with_default("frequency", "");
-    string mode = spot_obj.get_string_member_with_default("mode", "");
-    string spot_time = spot_obj.get_string_member_with_default("spotTime", "");
-    string comments = spot_obj.get_string_member_with_default("comments", "");
+    string spotter = spot_obj.get_string_member_with_default ("spotter", "");
+    string frequency = spot_obj.get_string_member_with_default ("frequency", "")
+    ;
+    string mode = spot_obj.get_string_member_with_default ("mode", "");
+    string spot_time = spot_obj.get_string_member_with_default ("spotTime", "");
+    string comments = spot_obj.get_string_member_with_default ("comments", "");
 
-    var dt = new DateTime.from_iso8601(spot_time, new GLib.TimeZone.utc());
-    string spot_dt = dt != null ? dt.format("%x %X UTC") : spot_time;
+    var dt = new DateTime.from_iso8601 (spot_time, new GLib.TimeZone.utc ());
+    string spot_dt = dt != null ? dt.format ("%x %X UTC") : spot_time;
 
     // Main row
-    var row = new Gtk.ListBoxRow()
+    var row = new Gtk.ListBoxRow ()
     {
         margin_top = 6,
         margin_bottom = 6,
         margin_start = 6,
         margin_end = 6
     };
-    row.add_css_class("card");
+    row.add_css_class ("card");
 
     // Main content box
-    var main_box = new Gtk.Box(Gtk.Orientation.VERTICAL, 8)
+    var main_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 8)
     {
         margin_top = 12,
         margin_bottom = 12,
         margin_start = 12,
         margin_end = 12
     };
-    row.set_child(main_box);
+    row.set_child (main_box);
 
-    if ((comments != null) && (comments.strip() != ""))
+    if ((comments != null) && (comments.strip () != ""))
     {
-        var comment_label = new Gtk.Label(comments)
+        var comment_label = new Gtk.Label (comments)
         {
             xalign = 0,
             wrap = true,
             wrap_mode = Pango.WrapMode.WORD_CHAR,
             margin_top = 4
         };
-        comment_label.add_css_class("title-4");
-        main_box.append(comment_label);
+        comment_label.add_css_class ("title-4");
+        main_box.append (comment_label);
     }
-    var header_box = new Gtk.Box(Gtk.Orientation.HORIZONTAL, 12);
-    main_box.append(header_box);
+    var header_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12);
+    main_box.append (header_box);
 
-    var spotter_label = new Gtk.Label(spotter)
+    var spotter_label = new Gtk.Label (spotter)
     {
         xalign = 0
     };
-    header_box.append(spotter_label);
+    header_box.append (spotter_label);
 
-    var freq_label = new Gtk.Label(@"$frequency kHz $mode")
+    var freq_label = new Gtk.Label (@"$frequency kHz $mode")
     {
         xalign = 0, hexpand = true
     };
-    header_box.append(freq_label);
+    header_box.append (freq_label);
 
-    var time_label = new Gtk.Label(spot_dt)
+    var time_label = new Gtk.Label (spot_dt)
     {
         xalign = 1
     };
-    header_box.append(time_label);
+    header_box.append (time_label);
 
     return row;
 } /* create_spot_row */
 
-[GtkTemplate(ui = "/com/k0vcz/artemis/ui/spot_history_dialog.ui")]
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/park_log_dialog.ui")]
+public class ParkLogDialog : Adw.Dialog {
+    [GtkChild]
+    public unowned Gtk.ScrolledWindow qso_scroll;
+    [GtkChild]
+    public unowned Gtk.ListBox qso_list;
+
+    public string park_ref { get; construct; }
+    public ParkLogDialog (Spot spot)
+    {
+        Object (
+            park_ref: spot.park_ref
+            );
+    }
+
+    construct {
+        Error error = null;
+        var park = SpotDb.get_instance ().get_park_by_ref (park_ref, out error);
+        var all_qsos = SpotDb.get_instance ().all_qsos_for_park (park_ref, out
+            error);
+        foreach (var qso in all_qsos)
+        {
+            //var row = create_qso_row (qso);
+            //qso_list.append (row);
+        }
+    }
+} /* class ParkLogDialog */
+
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_history_dialog.ui")]
 public class SpotHistoryDialog : Adw.Dialog {
     [GtkChild]
     public unowned Adw.WindowTitle title_widget;
@@ -336,18 +395,18 @@ public class SpotHistoryDialog : Adw.Dialog {
 
     public SpotHistoryDialog (string callsign, string park_ref)
     {
-        Object();
+        Object ();
         title_widget.title = @"$callsign @ $park_ref";
     }
 
-    public void show_loading(bool loading)
+    public void show_loading (bool loading)
     {
         loading_page.visible = true;
         history_scroll.visible = false;
         error_page.visible = false;
     }
 
-    public void show_error(string? message)
+    public void show_error (string? message)
     {
         if (message != null)
             error_page.description = message;
@@ -356,30 +415,30 @@ public class SpotHistoryDialog : Adw.Dialog {
         error_page.visible = true;
     }
 
-    public void show_history(Json.Node history_data)
+    public void show_history (Json.Node history_data)
     {
-        history_list.remove_all();
+        history_list.remove_all ();
 
-        if (history_data.get_node_type() != Json.NodeType.ARRAY)
+        if (history_data.get_node_type () != Json.NodeType.ARRAY)
         {
-            show_error(_("Invalid response format from POTA API"));
+            show_error (_ ("Invalid response format from POTA API"));
             return;
         }
 
-        var spots_array = history_data.get_array();
-        if (spots_array.get_length() == 0)
+        var spots_array = history_data.get_array ();
+        if (spots_array.get_length () == 0)
         {
-            show_error(_("No spot history found"));
+            show_error (_ ("No spot history found"));
             return;
         }
 
-        for (uint i = 0; i < spots_array.get_length(); i++)
+        for (uint i = 0; i < spots_array.get_length (); i++)
         {
-            var spot_obj = spots_array.get_object_element(i);
+            var spot_obj = spots_array.get_object_element (i);
             if (spot_obj != null)
             {
-                var row = create_spot_row(spot_obj);
-                history_list.append(row);
+                var row = create_spot_row (spot_obj);
+                history_list.append (row);
             }
         }
 
@@ -395,32 +454,32 @@ public class ParkDetailsView : Adw.Dialog {
 
     public ParkDetailsView (string url)
     {
-        Object(
+        Object (
             content_width: 800,
             content_height: 600
             );
 
-        var toolbar_view = new Adw.ToolbarView();
+        var toolbar_view = new Adw.ToolbarView ();
 
-        var headerbar = new Adw.HeaderBar();
-        title_widget = new Adw.WindowTitle(_("Park Details"), "");
-        headerbar.set_title_widget(title_widget);
+        var headerbar = new Adw.HeaderBar ();
+        title_widget = new Adw.WindowTitle (_ ("Park Details"), "");
+        headerbar.set_title_widget (title_widget);
 
-        toolbar_view.add_top_bar(headerbar);
+        toolbar_view.add_top_bar (headerbar);
 
-        var scrolled = new Gtk.ScrolledWindow()
+        var scrolled = new Gtk.ScrolledWindow ()
         {
             hexpand = true,
             vexpand = true
         };
 
-        webview = new WebKit.WebView();
-        webview.load_uri(url);
+        webview = new WebKit.WebView ();
+        webview.load_uri (url);
 
-        scrolled.set_child(webview);
-        toolbar_view.set_content(scrolled);
+        scrolled.set_child (webview);
+        toolbar_view.set_content (scrolled);
 
         // Set main child
-        this.set_child(toolbar_view);
+        this.set_child (toolbar_view);
     }
 } /* class ParkDetailsView */

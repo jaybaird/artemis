@@ -1,4 +1,4 @@
-[GtkTemplate(ui = "/com/k0vcz/artemis/ui/status_page.ui")]
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/status_page.ui")]
 public sealed class StatusPage : Gtk.Box {
     public string icon_name { get; construct; }
     public string title { get; construct; }
@@ -12,7 +12,7 @@ public sealed class StatusPage : Gtk.Box {
 
     public StatusPage (string icon_name, string title, string description)
     {
-        Object(
+        Object (
             icon_name: icon_name,
             title: title,
             description: description
@@ -22,6 +22,6 @@ public sealed class StatusPage : Gtk.Box {
     construct {
         status_title.label = title;
         status_body.label = description;
-        status_icon.set_from_icon_name(icon_name);
+        status_icon.set_from_icon_name (icon_name);
     }
 } /* class StatusPage */

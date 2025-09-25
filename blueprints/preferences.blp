@@ -40,18 +40,18 @@ Adw.PreferencesDialog prefs_dialog {
       Adw.EntryRow row_location {
         title: _("Location");
       }
+
+      Adw.EntryRow row_spot_message {
+        title: _("Default Spot Message");
+      }
     }
 
     Adw.PreferencesGroup spots_group {
       title: _("Spots");
 
-      Adw.EntryRow row_spot_message {
-        title: _("Default Spot Message");
-      }
-
       /* Value is double; we’ll map int<->double in C via g_settings_bind_with_mapping */
       Adw.SpinRow row_update_interval {
-        title: _("Update Interval (seconds)");
+        title: _("Update Interval (in seconds)");
         digits: 0;
         climb-rate: 5.0;
         adjustment: Adjustment {
@@ -73,6 +73,38 @@ Adw.PreferencesDialog prefs_dialog {
       }
     }
 
+    Adw.PreferencesGroup {
+      title: _("Display Options");
+      
+      Adw.SwitchRow row_highlight_unhunted {
+        title: _("Highlight Unhunted Parks");
+        subtitle: _("Show visual highlighting for parks you haven't hunted before");
+      }
+
+      Adw.SwitchRow row_hide_qrt {
+        title: _("Hide QRT");
+        subtitle: _("Hide stations that have marked themselves QRT");
+      }
+
+      Adw.SwitchRow row_hide_hunted {
+        title: _("Hide Hunted");
+        subtitle: _("Hide parks you've hunted today");
+      }
+
+      Adw.SpinRow row_hide_older_than {
+        title: _("Hide Stale");
+        subtitle: _("Hide parks that haven't had an update (in minutes)");
+        
+        digits: 0;
+        climb-rate: 5.0;
+        adjustment: Adjustment {
+            step-increment: 5;
+            lower: 20;
+            upper: 60;
+            value: 30;
+        };
+      }
+    }
   }
   Adw.PreferencesPage radio_page {
     title: _("Radio");
@@ -165,8 +197,8 @@ Adw.PreferencesDialog prefs_dialog {
     icon-name: "user-bookmarks-symbolic";
 
     Adw.PreferencesGroup {
-      title: _("Import Logbook");
-      description: _("Hunter log CSV location");
+      title: _("Import POTA.app Log");
+      description: _("(available from POTA App My Stats page)");
       
       Adw.ActionRow import_file_row {
         title: _("Import file");
@@ -178,6 +210,13 @@ Adw.PreferencesDialog prefs_dialog {
           styles ["dim-label"]
         }
       }
+
+      Adw.ButtonRow import_log {
+        title: _("Import");
+        tooltip-text: _("Import hunted parks to logbook");
+        end-icon-name: "list-add-symbolic";
+      }
+      
     }
 
     Adw.PreferencesGroup logbook_logging_group {
@@ -186,45 +225,12 @@ Adw.PreferencesDialog prefs_dialog {
 
       Adw.SwitchRow row_enable_logging {
         title: _("Enable Logging");
-        subtitle: _("Automatically log QSOs to configured logbooks when spotting");
+        subtitle: _("Automatically log QSOs when spotting");
       }
 
       /* Mask input but still bind to a plain string setting */
       Adw.PasswordEntryRow row_qrz_api_key {
         title: _("QRZ API Key");
-      }
-    }
-
-    Adw.PreferencesGroup {
-      title: _("Display Options");
-      
-      Adw.SwitchRow row_highlight_unhunted {
-        title: _("Highlight Unhunted Parks");
-        subtitle: _("Show visual highlighting for parks you haven't hunted before");
-      }
-
-      Adw.SwitchRow row_hide_qrt {
-        title: _("Hide QRT");
-        subtitle: _("Hide stations that have marked themselves QRT");
-      }
-
-      Adw.SwitchRow row_hide_hunted {
-        title: _("Hide Hunted");
-        subtitle: _("Hide parks you've already hunted today");
-      }
-
-      Adw.SpinRow row_hide_older_than {
-        title: _("Hide Stale");
-        subtitle: _("Hide parks that haven't had an update this many minutes");
-        
-        digits: 0;
-        climb-rate: 5.0;
-        adjustment: Adjustment {
-            step-increment: 5;
-            lower: 20;
-            upper: 60;
-            value: 30;
-        };
       }
     }
   }

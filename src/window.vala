@@ -20,7 +20,7 @@
 
 using Gee;
 
-[GtkTemplate(ui = "/com/k0vcz/artemis/ui/main_window.ui")]
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/main_window.ui")]
 public sealed class AppWindow : Gtk.Window {
     [GtkChild]
     public unowned Adw.Banner refresh_banner;
@@ -46,6 +46,9 @@ public sealed class AppWindow : Gtk.Window {
     [GtkChild]
     public unowned Gtk.DropDown search_select;
 
+    [GtkChild]
+    public unowned Gtk.DropDown program_select;
+
     private Settings settings;
     private uint timer_id = 0;
     private uint current_ticks = 0;
@@ -54,34 +57,36 @@ public sealed class AppWindow : Gtk.Window {
 
     public AppWindow(Gtk.Application app)
     {
-        Object(application: app);
+        Object (application: app);
     }
 
     construct {
-        settings = new Settings("com.k0vcz.artemis");
+        settings = new Settings ("com.k0vcz.artemis");
         band_pages = new ArrayList<BandView> ();
-        refresh_banner.button_clicked.connect(on_banner_button_clicked);
+        refresh_banner.button_clicked.connect (on_banner_button_clicked);
 
-        settings.changed["update-interval"].connect(() => {
-            setup_spot_updates();
+        settings.changed["update-interval"].connect (() => {
+            setup_spot_updates ();
         });
 
-        search_entry.search_changed.connect( () => {
+        program_select.model = SpotRepo.instance ().program_model;
+
+        search_entry.search_changed.connect ( () => {
             foreach (var band_view in band_pages)
             {
                 band_view.current_search_text = search_entry.text;
             }
         });
 
-        search_select.notify["selected"].connect( () => {
+        search_select.notify["selected"].connect ( () => {
             var idx = search_select.selected;
 
-            var model = search_select.get_model() as Gtk.StringList;
+            var model = search_select.get_model () as Gtk.StringList;
             if (model != null)
             {
                 string? mode = null;
                 if (idx > 0)
-                    mode = model.get_string(idx);
+                    mode = model.get_string (idx);
                 foreach (var band_view in band_pages)
                 {
                     band_view.current_mode_filter = mode;
@@ -89,133 +94,174 @@ public sealed class AppWindow : Gtk.Window {
             }
         });
 
-        SpotRepo.instance().busy_changed.connect( (busy) => {
+        program_select.notify["selected"].connect ( () => {
+            var idx = program_select.selected;
+            var model = program_select.get_model () as Gtk.StringList;
+            if (model != null)
+            {
+                string? program = null;
+                if (idx > 0)
+                    program = model.get_string (idx);
+                foreach (var band_view in band_pages)
+                {
+                    band_view.current_program_filter = program;
+                }
+            }
+        });
+
+        SpotRepo.instance ().busy_changed.connect ( (busy) => {
             loading_spinner.visible = busy;
         });
 
-        SpotRepo.instance().refreshed.connect( (spots_updated) => {
-            string toast_title = ngettext(
+        SpotRepo.instance ().refreshed.connect ( (spots_updated) => {
+            string toast_title = ngettext (
                 "%u spot refreshed",
                 "%u spots refreshed",
                 spots_updated
-                ).printf(spots_updated);
+                ).printf (spots_updated);
 
-            var toast = new Adw.Toast(toast_title);
+            var toast = new Adw.Toast (toast_title);
             toast.timeout = 5;
-            toast_overlay.add_toast(toast);
+            toast_overlay.add_toast (toast);
         });
 
-        SpotRepo.instance().update_error.connect( (error) => {
-            var alert_dialog = new Adw.AlertDialog(_("Unable to refresh spots"),
+        SpotRepo.instance ().update_error.connect ( (error) => {
+            var alert_dialog = new Adw.AlertDialog (_ (
+                "Unable to refresh spots"),
                 null);
-            alert_dialog.format_body(_(
+            alert_dialog.format_body (_ (
                 "Unable to refresh spots due to an error: %s"), error.message);
-            alert_dialog.add_responses(
-                "cancel", _("Cancel"),
-                "retry", _("Retry")
+            alert_dialog.add_responses (
+                "cancel", _ ("Cancel"),
+                "retry", _ ("Retry")
                 );
-            alert_dialog.set_default_response("cancel");
-            alert_dialog.set_close_response("cancel");
-            alert_dialog.present(this);
+            alert_dialog.set_default_response ("cancel");
+            alert_dialog.set_close_response ("cancel");
+            alert_dialog.present (this);
         });
 
-        setup_spot_updates();
-        build_band_stack();
+        setup_spot_updates ();
+        build_band_stack ();
+
+        band_stack.set_visible_child_name (settings.get_string ("default-band"))
+        ;
+
+        var model = search_select.get_model () as Gtk.StringList;
+        if (model != null)
+        {
+            var default_mode = settings.get_string ("default-mode");
+            int idx = -1;
+
+            for (uint i = 0; i < model.get_n_items (); i++)
+            {
+                if (model.get_string (i) == default_mode)
+                {
+                    idx = (int)i;
+                    break;
+                }
+            }
+
+            if (idx >= 0)
+                search_select.set_selected (idx);
+            else
+                search_select.set_selected (0); // fallback
+        }
 
         refresh_banner.title = "";
         refresh_progress.fraction = 0;
     }
 
-    private void initial_update()
+    private void initial_update ()
     {
-        SpotRepo.instance().update_spots.begin((obj, res) => {
-            SpotRepo.instance().update_spots.end(res);
+        SpotRepo.instance ().update_spots.begin ((obj, res) => {
+            SpotRepo.instance ().update_spots.end (res);
         });
     }
 
-    private void setup_spot_updates()
+    private void setup_spot_updates ()
     {
         if (timer_id != 0)
-            Source.remove(timer_id);
+            Source.remove (timer_id);
 
-        timer_id = Timeout.add_seconds(1, () => {
-            tick.begin();
+        timer_id = Timeout.add_seconds (1, () => {
+            tick.begin ();
             return Source.CONTINUE;
         });
 
-        initial_update();
+        initial_update ();
     }
 
-    private void build_band_stack()
+    private void build_band_stack ()
     {
         for (uint i = 0; i < RadioConstants.BANDS.length; i++)
         {
             var band = RadioConstants.BANDS[i];
-            var band_view = new BandView(SpotRepo.instance(), band, "band-%s".
-                printf(band)
+            var band_view = new BandView (SpotRepo.instance (), band, "band-%s".
+                printf (band)
                 );
-            band_pages.add(band_view);
+            band_pages.add (band_view);
 
-            band_stack.add_titled_with_icon(band_view, band, band, "band-%s".
-                printf(band));
+            band_stack.add_titled_with_icon (band_view, band, band, "band-%s".
+                printf (band));
         }
     }
 
-    private async void tick()
+    private async void tick ()
     {
         if (!update_paused)
         {
             current_ticks += 1;
-            var update_time = settings.get_int("update-interval");
+            var update_time = settings.get_int ("update-interval");
             if (current_ticks >= update_time)
             {
                 current_ticks = current_ticks - update_time;
 
-                yield SpotRepo.instance().update_spots();
+                yield SpotRepo.instance ().update_spots ();
             }
 
             var seconds_remaining = update_time - current_ticks;
-            refresh_banner.title = ngettext(
-                "Spots will refresh in %u seconds",
+            refresh_banner.title = ngettext (
+                "Spots will refresh in %u second",
                 "Spots will refresh in %u seconds",
                 seconds_remaining
-                ).printf(seconds_remaining);
+                ).printf (seconds_remaining);
 
             refresh_progress.fraction = (float)current_ticks / (float)
                 update_time;
-
-            var now = new GLib.DateTime.now_utc().format("%H:%M:%S UTC");
-            current_time.label = now;
         }
+
+        var now = new GLib.DateTime.now_utc ().format ("%H:%M:%S UTC");
+        current_time.label = now;
     }
 
     [GtkCallback]
-    private void on_add_button_clicked()
+    private void on_add_button_clicked ()
     {
-        AddSpot add_spot = new AddSpot();
+        AddSpot add_spot = new AddSpot ();
 
-        add_spot.present(this);
+        add_spot.present (this);
     }
 
-    private void on_banner_button_clicked()
+    private void on_banner_button_clicked ()
     {
         update_paused = !update_paused;
         if (update_paused)
         {
             current_ticks = 0;
-            refresh_banner.button_label = _("Resume");
-            refresh_banner.title = "";
+            refresh_banner.button_label = _ ("Resume");
+            refresh_banner.title = _ ("Updates Paused");
             refresh_progress.fraction = 0;
         }
         else
         {
-            refresh_banner.button_label = _("Pause");
+            refresh_banner.button_label = _ ("Pause");
+            SpotRepo.instance ().update_spots.begin ();
         }
     }
 
     ~AppWindow ()
     {
         if (timer_id != 0)
-            Source.remove(timer_id);
+            Source.remove (timer_id);
     }
 } /* class AppWindow */

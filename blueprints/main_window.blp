@@ -85,6 +85,11 @@ template $AppWindow : Window {
                 styles ["spacer"]
               }
 
+              Label {
+                label: _("Mode");
+                margin-end: 5;
+              }
+
               DropDown search_select {
                 tooltip-text: _("Mode Selector");
                 model: StringList {
@@ -106,7 +111,30 @@ template $AppWindow : Window {
                 styles ["spacer"]
               }
 
+              Label {
+                label: _("Program");
+                margin-end: 5;
+              }
+
+              DropDown program_select {
+                tooltip-text: _("Program Selection");
+                model: StringList {
+                  strings [
+                    _("All"),
+                    _("US"),
+                    _("CA"),
+                    _("NZ"),
+                    _("JP")
+                  ]
+                };
+              }
+
+              Separator {
+                styles ["spacer"]
+              }
+
               Label current_time {
+                tooltip-text: _("Current Time");
                 styles ["monospace", "utc-time"]
                 label: "18:51:27 UTC";
               }

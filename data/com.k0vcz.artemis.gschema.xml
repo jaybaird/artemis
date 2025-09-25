@@ -9,9 +9,11 @@
 
         <key name="location" type="s">
         <default>""</default>
-        <summary>Location</summary>
+        <summary>Grid Square</summary>
         <description>Your station location or QTH.</description>
         </key>
+
+
 
         <key name="spot-message" type="s">
         <default>""</default>
@@ -31,6 +33,7 @@
         <summary>Default band</summary>
         <description>The default frequency band (in meters).</description>
         <choices>
+            <choice value="All"/>
             <choice value="160m"/>
             <choice value="80m"/>
             <choice value="60m"/>
@@ -52,6 +55,7 @@
         <summary>Default mode</summary>
         <description>The default operating mode.</description>
         <choices>
+            <choice value="All"/>
             <choice value="SSB"/>
             <choice value="CW"/>
             <choice value="FT8"/>
@@ -112,16 +116,34 @@
         <description>Baud rate for serial connection.</description>
         </key>
 
+        <key name="hide-older-than" type="i">
+        <default>30</default>
+        <summary>Hide Stale</summary>
+        <description>Hide parks that haven't had an update (in minutes)</description>
+        </key>
+
         <key name="highlight-unhunted-parks" type="b">
         <default>true</default>
         <summary>Highlight unhunted parks</summary>
         <description>Highlight spot cards for parks you haven't hunted before.</description>
         </key>
 
+        <key name="hide-qrt" type="b">
+        <default>false</default>
+        <summary>Hide QRT</summary>
+        <description>Hide stations that have marked themselves QRT</description>
+        </key>
+
+        <key name="hide-hunted" type="b">
+        <default>false</default>
+        <summary>Hide Hunted</summary>
+        <description>Hide parks you've hunted today</description>
+        </key>
+
         <key name="enable-logging" type="b">
         <default>false</default>
         <summary>Enable automatic logging</summary>
-        <description>Automatically log QSOs to configured logbooks when spotting.</description>
+        <description>Automatically log QSOs when spotting.</description>
         </key>
 	</schema>
 </schemalist>
