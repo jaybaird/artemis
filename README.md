@@ -28,7 +28,8 @@
 ### Linux (Flatpak recommended)
 ```bash
 flatpak install flathub com.k0vcz.artemis
-flatpak run com.k0vcz.artemis```
+flatpak run com.k0vcz.artemis
+```
 
 ## Build from Source
 
@@ -44,8 +45,8 @@ git clone https://github.com/<skatter/artemis.git
 cd artemis
 meson setup build
 meson compile -C build
-./build/artemis```
-
+./build/artemis
+```
 
 ## Usage
 
