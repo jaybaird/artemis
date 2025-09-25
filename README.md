@@ -34,18 +34,25 @@ flatpak run com.k0vcz.artemis
 ## Build from Source
 
 **Dependencies**
-- Vala >= 0.60
-- GTK4 / Libadwaita
-- GLib, Gee
+- Vala
+- GTK 4
+- Libadwaita
+- GLib
+- Gio
+- Gee
+- Hamlib
+- JSON-GLib
+- Dex
+- WebKitGtk
 - SQLite3
 
 **Build using Meson**
 ```bash
-git clone https://github.com/<skatter/artemis.git
-cd artemis
+git clone https://github.com/jaybaird/artemis-vala.git
+cd artemis-vala
 meson setup build
 meson compile -C build
-./build/artemis
+meson install -C build
 ```
 
 ## Usage
@@ -55,3 +62,9 @@ meson compile -C build
 3. View live POTA spots and add QSOs.
 4. Track which parks you’ve hunted and your activator activity.
 5. Use distance and bearing calculations for planning activations.
+
+** Contributions are welcome! Please submit pull requests or open issues for feature requests and bug reports. **
+
+## License
+
+Artemis is licensed under GPL-3.0-or-later. See LICENSE for details.
