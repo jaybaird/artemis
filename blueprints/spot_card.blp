@@ -229,22 +229,27 @@ template $SpotCard : Box {
       }
     }
 
-      Separator {
-        styles ["horizontal"]
-      }
-      
+    Separator {
+      styles ["horizontal"]
+    }
+    
+    Box {
+      halign: fill;
+      hexpand: true;
+      margin-top: 10;
+      margin-bottom: 10;
+      margin-start: 10;
+      margin-end: 10;
+
       Box {
-        halign: fill;
+        halign: start;
         hexpand: true;
-        margin-top: 10;
-        margin-bottom: 10;
-        margin-start: 10;
-        margin-end: 10;
         orientation: horizontal;
 
         Box {
           halign: start;
           spacing: 6;
+          
           Button history_button {
             clicked => $on_history_button_clicked();
             Image {
@@ -271,30 +276,25 @@ template $SpotCard : Box {
             }
           }
         }
+      }
 
-        Separator {
-          styles ["spacer"]
+      Box {
+        spacing: 6;
+        halign: end;
+        
+        Button tune_button {
+          tooltip-text: _("Tune your radio to this frequency");
+          label: _("Tune");
+          clicked => $on_tune_button_clicked();
         }
 
-        Box {
-          spacing: 6;
-          halign: end;
-          
-          Button tune_button {
-            tooltip-text: _("Tune your radio to this frequency");
-            label: _("Tune");
-            clicked => $on_tune_button_clicked();
-          }
-
-          Button spot_button {
-            tooltip-text: _("Re-spot this park");
-            label: _("Re-Spot");
-            styles ["suggested-action"]
-            clicked => $on_spot_button_clicked();
-          }
-
-          
+        Button spot_button {
+          tooltip-text: _("Re-spot this park");
+          label: _("Re-Spot");
+          styles ["suggested-action"]
+          clicked => $on_spot_button_clicked();
         }
       }
+    }
   }
 }
