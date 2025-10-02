@@ -140,6 +140,18 @@
         <description>Hide parks you've hunted today</description>
         </key>
 
+        <key name="show-map-scale" type="b">
+        <default>true</default>
+        <summary>Show Map Scale</summary>
+        <description>Use metric units for distance calculations and elsewhere in the app</description>
+        </key>
+
+        <key name="use-metric" type="b">
+        <default>false</default>
+        <summary>Metric Units</summary>
+        <description>Use metric units for distance calculations and elsewhere in the app</description>
+        </key>
+
         <key name="enable-logging" type="b">
         <default>false</default>
         <summary>Enable automatic logging</summary>

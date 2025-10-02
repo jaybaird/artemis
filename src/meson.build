@@ -12,6 +12,7 @@ artemis_vala_sources = [
   'src/status_page.vala',
   'src/database.vala',
   'src/utils.vala',
+  'src/map_window.vala',
 ]
 
 glib_dep = dependency('glib-2.0')
@@ -43,6 +44,7 @@ artemis_vala_deps = [
   dependency('gee-0.8'),
   dependency('webkitgtk-6.0'),
   dependency('sqlite3'),
+  dependency('shumate-1.0'),
   mathlib
 ]
 

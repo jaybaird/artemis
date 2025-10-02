@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="75mm"
+   height="75.000008mm"
+   viewBox="0 0 75 75.000008"
+   version="1.1"
+   id="svg1"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showguides="true">
+    <sodipodi:guide
+       position="220.07431,-39.182712"
+       orientation="0,-1"
+       id="guide2"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="-21.726252,236.85046"
+       orientation="0,-1"
+       id="guide3"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="188.05,45.570697"
+       orientation="1,0"
+       id="guide4"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="67.417487,116.32057"
+       orientation="1,0"
+       id="guide5"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="14.25994,38.060897"
+       orientation="0,-1"
+       id="guide6"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="24.686219,34.732797"
+       orientation="0,-1"
+       id="guide7"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="168.97343,-12.190072"
+       orientation="1,0"
+       id="guide8"
+       inkscape:locked="false" />
+    <inkscape:page
+       x="0"
+       y="0"
+       width="75"
+       height="75.000008"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(-5,-10.000001)">
+    <ellipse
+       style="fill:#222222;stroke-width:0.113851"
+       id="path1"
+       cx="12"
+       cy="77.897552"
+       inkscape:export-filename="mode-symbolic.svg"
+       inkscape:export-xdpi="16.356468"
+       inkscape:export-ydpi="16.356468"
+       rx="7"
+       ry="7.1024499" />
+    <ellipse
+       style="fill:#222222;stroke-width:0.113851"
+       id="path1-47"
+       cx="37.245094"
+       cy="57.632515"
+       rx="7"
+       ry="7.1024499" />
+    <ellipse
+       style="fill:#222222;stroke-width:0.113851"
+       id="path1-2-4"
+       cx="51.763142"
+       cy="57.404068"
+       rx="7"
+       ry="7.1024499" />
+    <rect
+       style="fill:#222222;stroke-width:0.137989;stroke-dasharray:none;paint-order:markers stroke fill"
+       id="rect7"
+       width="24.509806"
+       height="14.2049"
+       x="5"
+       y="10"
+       rx="3.6879003" />
+    <rect
+       style="fill:#222222;stroke-width:0.137989;stroke-dasharray:none;paint-order:markers stroke fill"
+       id="rect7-0"
+       width="24.509806"
+       height="14.2049"
+       x="30.245098"
+       y="10"
+       rx="3.6879003" />
+    <rect
+       style="fill:#222222;stroke-width:0.137989;stroke-dasharray:none;paint-order:markers stroke fill"
+       id="rect7-6"
+       width="24.509806"
+       height="14.2049"
+       x="5"
+       y="30.265034"
+       rx="3.6879003" />
+    <rect
+       style="fill:#222222;stroke-width:0.137989;stroke-dasharray:none;paint-order:markers stroke fill"
+       id="rect7-6-7"
+       width="24.509806"
+       height="14.2049"
+       x="5"
+       y="50.530067"
+       rx="3.6879003" />
+    <rect
+       style="fill:#222222;stroke-width:0.137989;stroke-dasharray:none;paint-order:markers stroke fill"
+       id="rect7-6-1"
+       width="24.509806"
+       height="14.2049"
+       x="30.245098"
+       y="30.265034"
+       rx="3.6879003" />
+    <rect
+       style="fill:#222222;stroke-width:0.137989;stroke-dasharray:none;paint-order:markers stroke fill"
+       id="rect7-6-6"
+       width="24.509806"
+       height="14.2049"
+       x="55.490196"
+       y="30.265034"
+       rx="3.6879003" />
+  </g>
+</svg>

@@ -1,27 +1,38 @@
 using Gee;
+using Gdk;
 
 public class CallsignCacheEntry : Object {
-    public Activator activator;
-    public uint64 expires_at;
-
+    public Activator activator { get; construct; }
+    public uint64 expires_at { get; construct; }
+    public Gdk.Texture? avatar { get; set; default = null; }
     public CallsignCacheEntry (Activator activator, uint64 expires_at)
     {
-        Object ();
-        this.activator = activator;
-        this.expires_at = expires_at;
+        Object (
+            activator: activator,
+            expires_at: expires_at
+            );
     }
 }
 
 public class CallsignCache : Object {
-    private unowned PotaClient pota_client;
     private HashTable<string, CallsignCacheEntry> ham_cache;
-    private uint ttl_seconds = 3600;
 
-    public CallsignCache (PotaClient pota_client, uint ttl_seconds)
+    public uint ttl_seconds { get; construct; default = 3600; }
+    private static CallsignCache? _instance = null;
+    public static CallsignCache instance ()
     {
-        Object ();
-        this.pota_client = pota_client;
-        this.ttl_seconds = ttl_seconds;
+        lock (_instance) {
+            if (_instance == null)
+                _instance = new CallsignCache (3600);
+        }
+        return _instance;
+    }
+
+    private CallsignCache (uint ttl_seconds)
+    {
+        Object (
+            ttl_seconds: ttl_seconds
+            );
     }
 
     construct {
@@ -40,6 +51,52 @@ public class CallsignCache : Object {
         ham_cache.remove_all ();
     }
 
+    public async void load_callsigns (HashSet<string> callsigns)
+    {
+        foreach (var callsign in callsigns)
+        {
+            yield get_callsign (callsign);
+        }
+    }
+
+    public async Gdk.Texture? get_avatar_for (string callsign)
+    {
+        var entry = yield get_callsign (callsign);
+
+        if (entry == null)
+            return null;
+
+        var cached_entry = ham_cache.lookup (callsign);
+        if ((cached_entry != null) && (cached_entry.avatar != null))
+            return cached_entry.avatar;
+
+        try {
+            var gravatar_hash = entry.gravatar_hash;
+            if ((gravatar_hash == null) || (gravatar_hash.strip () == ""))
+                return null;
+
+            var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
+                .printf (gravatar_hash);
+
+            var session = new Soup.Session ();
+            var message = new Soup.Message ("GET", url);
+
+            var stream = yield session.send_async (message, GLib.Priority.
+                DEFAULT, null);
+
+            var pixbuf = new Gdk.Pixbuf.from_stream (stream);
+            if (pixbuf != null)
+            {
+                var texture = Gdk.Texture.for_pixbuf (pixbuf);
+                cached_entry.avatar = texture;
+                return texture;
+            }
+        } catch(Error e) {
+            warning ("Failed to fetch avatar for %s: %s", callsign, e.message);
+        }
+        return null;
+    }
+
     public async Activator? get_callsign (string callsign)
     {
         var entry = ham_cache.lookup (callsign);
@@ -49,7 +106,8 @@ public class CallsignCache : Object {
 
         // cache miss, load from API
         try {
-            var result = yield pota_client.fetch_operator (callsign);
+            var result = yield Application.pota_client.fetch_operator (callsign)
+            ;
 
             var callsign_entry = new CallsignCacheEntry (
                 new Activator.from_json (result.get_object ()),
@@ -65,33 +123,20 @@ public class CallsignCache : Object {
 } /* class CallsignCache */
 
 public sealed class SpotRepo : Object {
-    public GLib.ListStore spot_store { get; construct; }
-    public CallsignCache callsign_cache { get; construct; }
-    public PotaClient client { get; construct; }
+    public GLib.ListStore store { get; construct; }
     public signal void busy_changed (bool busy);
     public signal void refreshed (uint spots_updated);
     public signal void update_error (Error err);
 
     public Gtk.StringList program_model { get; private set; }
     public uint64 tracked_spot_hash { get; set; default = uint64.MAX; }
-    private static SpotRepo? _instance = null;
-    public static SpotRepo instance ()
-    {
-        if (_instance == null)
-            _instance = new SpotRepo ();
-
-        return _instance;
-    }
-
-    private SpotRepo ()
+    public SpotRepo ()
     {
         Object ();
     }
 
     construct {
-        client = new PotaClient ();
-        callsign_cache = new CallsignCache (client, 3600);
-        spot_store = new GLib.ListStore (typeof(Spot));
+        store = new GLib.ListStore (typeof(Spot));
         program_model = new Gtk.StringList ({});
     }
 
@@ -103,11 +148,11 @@ public sealed class SpotRepo : Object {
         var spots_updated = 0u;
 
         try {
-            spot_store.remove_all ();
+            store.remove_all ();
             program_model.splice (0, program_model.get_n_items (), {});
 
             var programs = new HashSet<string> ();
-            var spots = yield client.fetch_spots ();
+            var spots = yield Application.pota_client.fetch_spots ();
 
             if ((spots != null) &&
                 (spots.get_node_type () == Json.NodeType.ARRAY) )
@@ -127,11 +172,12 @@ public sealed class SpotRepo : Object {
                         programs.add (program);
                     }
 
-                    spot_store.append (spot);
+                    store.append (spot);
                 }
-
                 spots_updated = spots_array.get_length ();
             }
+
+            // TODO: alert if watched callsign is seen in unique_callsigns
 
             var programs_sorted = new ArrayList<string> ();
             foreach (var program in programs)

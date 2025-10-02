@@ -22,8 +22,6 @@ using Gee;
 
 public sealed class PreferencesDialog : Object {
     private Adw.PreferencesDialog dialog;
-    private Settings settings;
-
     private Adw.EntryRow row_callsign;
     private Adw.EntryRow row_location;
     private Adw.EntryRow row_spot_message;
@@ -41,6 +39,8 @@ public sealed class PreferencesDialog : Object {
     private Adw.PreferencesGroup network_settings_group;
 
     private Adw.SwitchRow row_enable_logging;
+    private Adw.SwitchRow row_use_metric;
+    private Adw.SwitchRow row_show_scale;
     private Adw.SwitchRow row_hide_qrt;
     private Adw.SwitchRow row_hide_hunted;
     private Adw.SpinRow row_hide_older_than;
@@ -63,7 +63,6 @@ public sealed class PreferencesDialog : Object {
         dialog = builder.get_object ("prefs_dialog") as Adw.PreferencesDialog;
 
         get_widgets (builder);
-        settings = new Settings ("com.k0vcz.artemis");
         setup_bindings ();
         setup_signals ();
         update_connection_groups_visibility ();
@@ -99,6 +98,7 @@ public sealed class PreferencesDialog : Object {
             as
             Adw.PreferencesGroup;
         row_hide_qrt = builder.get_object ("row_hide_qrt") as Adw.SwitchRow;
+        row_show_scale = builder.get_object ("row_show_scale") as Adw.SwitchRow;
         row_hide_hunted = builder.get_object ("row_hide_hunted") as Adw.
             SwitchRow;
         row_hide_older_than = builder.get_object ("row_hide_older_than") as Adw.
@@ -110,6 +110,7 @@ public sealed class PreferencesDialog : Object {
         row_highlight_unhunted = builder.get_object ("row_highlight_unhunted")
             as
             Adw.SwitchRow;
+        row_use_metric = builder.get_object ("row_use_metric") as Adw.SwitchRow;
         import_file_row = builder.get_object ("import_file_row")
             as Adw.ActionRow;
         import_log = builder.get_object ("import_log") as Adw.ButtonRow;
@@ -131,13 +132,16 @@ public sealed class PreferencesDialog : Object {
 
     private void setup_bindings ()
     {
-        settings.bind ("callsign", row_callsign, "text", SettingsBindFlags.
+        Application.settings.bind ("callsign", row_callsign, "text",
+            SettingsBindFlags.
             DEFAULT);
-        settings.bind ("location", row_location, "text", SettingsBindFlags.
+        Application.settings.bind ("location", row_location, "text",
+            SettingsBindFlags.
             DEFAULT);
-        settings.bind ("spot-message", row_spot_message, "text",
+        Application.settings.bind ("spot-message", row_spot_message, "text",
             SettingsBindFlags.DEFAULT);
-        settings.bind ("update-interval", row_update_interval, "value",
+        Application.settings.bind ("update-interval", row_update_interval,
+            "value",
             SettingsBindFlags.DEFAULT);
 
         bind_combo_to_string_setting ("default-band", row_default_band);
@@ -145,31 +149,41 @@ public sealed class PreferencesDialog : Object {
         bind_combo_to_string_setting ("radio-connection-type",
             row_connection_type);
 
-        settings.bind ("radio-model", row_radio_model, "selected",
+        Application.settings.bind ("radio-model", row_radio_model, "selected",
             SettingsBindFlags.DEFAULT);
-        settings.bind ("radio-device", row_device_path, "text",
+        Application.settings.bind ("radio-device", row_device_path, "text",
             SettingsBindFlags
             .DEFAULT);
         bind_baud_rate_combo ();
-        settings.bind ("radio-network-host", row_network_host, "text",
+        Application.settings.bind ("radio-network-host", row_network_host,
+            "text",
             SettingsBindFlags.DEFAULT);
-        settings.bind ("radio-network-port", row_network_port, "value",
+        Application.settings.bind ("radio-network-port", row_network_port,
+            "value",
             SettingsBindFlags.DEFAULT);
 
-        settings.bind ("enable-logging", row_enable_logging, "active",
+        Application.settings.bind ("enable-logging", row_enable_logging,
+            "active",
             SettingsBindFlags.DEFAULT);
-
-        settings.bind ("hide-qrt", row_hide_qrt, "active", SettingsBindFlags.
+        Application.settings.bind ("use-metric", row_use_metric, "active",
+            SettingsBindFlags.DEFAULT);
+        Application.settings.bind ("hide-qrt", row_hide_qrt, "active",
+            SettingsBindFlags.
             DEFAULT);
-        settings.bind ("hide-hunted", row_hide_hunted, "active",
+        Application.settings.bind ("show-map-scale", row_show_scale, "active",
             SettingsBindFlags.DEFAULT);
-        settings.bind ("hide-older-than", row_hide_older_than, "value",
+        Application.settings.bind ("hide-hunted", row_hide_hunted, "active",
+            SettingsBindFlags.DEFAULT);
+        Application.settings.bind ("hide-older-than", row_hide_older_than,
+            "value",
             SettingsBindFlags.DEFAULT);
 
-        settings.bind ("qrz-api-key", row_qrz_api_key, "text", SettingsBindFlags
+        Application.settings.bind ("qrz-api-key", row_qrz_api_key, "text",
+            SettingsBindFlags
             .
             DEFAULT);
-        settings.bind ("highlight-unhunted-parks", row_highlight_unhunted,
+        Application.settings.bind ("highlight-unhunted-parks",
+            row_highlight_unhunted,
             "active", SettingsBindFlags.DEFAULT);
     } /* setup_bindings */
 
@@ -180,7 +194,7 @@ public sealed class PreferencesDialog : Object {
 
         if (model == null) return;
 
-        var current_value = settings.get_string (setting_key);
+        var current_value = Application.settings.get_string (setting_key);
         for (uint i = 0; i < model.get_n_items (); i++)
         {
             if (model.get_string (i) == current_value)
@@ -193,11 +207,12 @@ public sealed class PreferencesDialog : Object {
         combo_row.notify["selected"].connect (() => {
             var selected_text = model.get_string (combo_row.selected);
             if (selected_text != null)
-                settings.set_string (setting_key, selected_text.down ());
+                Application.settings.set_string (setting_key, selected_text.down
+                        ());
         });
 
-        settings.changed[setting_key].connect (() => {
-            var value = settings.get_string (setting_key);
+        Application.settings.changed[setting_key].connect (() => {
+            var value = Application.settings.get_string (setting_key);
             for (uint i = 0; i < model.get_n_items (); i++)
             {
                 if (model.get_string (i).down () == value)
@@ -215,7 +230,7 @@ public sealed class PreferencesDialog : Object {
 
         if (model == null) return;
 
-        var current_baud = settings.get_int ("radio-baud-rate");
+        var current_baud = Application.settings.get_int ("radio-baud-rate");
         var current_baud_str = current_baud.to_string ();
 
         for (uint i = 0; i < model.get_n_items (); i++)
@@ -232,12 +247,12 @@ public sealed class PreferencesDialog : Object {
             if (selected_text != null)
             {
                 var baud_rate = int.parse (selected_text);
-                settings.set_int ("radio-baud-rate", baud_rate);
+                Application.settings.set_int ("radio-baud-rate", baud_rate);
             }
         });
 
-        settings.changed["radio-baud-rate"].connect (() => {
-            var baud_rate = settings.get_int ("radio-baud-rate");
+        Application.settings.changed["radio-baud-rate"].connect (() => {
+            var baud_rate = Application.settings.get_int ("radio-baud-rate");
             var baud_str = baud_rate.to_string ();
             for (uint i = 0; i < model.get_n_items (); i++)
             {

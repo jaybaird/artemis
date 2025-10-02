@@ -58,12 +58,12 @@ meson install -C build
 ## Usage
 
 1. Configure your callsign, location, and radio settings via Preferences.
-2. Import any CSV logbooks you have.
-3. View live POTA spots and add QSOs.
-4. Track which parks you’ve hunted and your activator activity.
-5. Use distance and bearing calculations for planning activations.
+2. Import your hunter.csv from POTA.app
+3. View live POTA spots, filter by band, mode, and program. Track the spot to hold its position, tune your radio, rotate your beam, and add your spot!
+4. Track which parks you’ve hunted, filter parks, and get notified for calls, parks, or states/countries of interest.
+5. Use distance and bearing calculations for more efficient hunting.
 
-** Contributions are welcome! Please submit pull requests or open issues for feature requests and bug reports. **
+**Contributions are welcome! Please submit pull requests or open issues for feature requests and bug reports.**
 
 ## License
 

@@ -1,3 +1,5 @@
+using Shumate;
+
 public class RadioConstants {
     public const string[] BANDS = {
         "All", "160m", "80m", "60m", "40m", "30m", "20m", "17m",
@@ -58,8 +60,9 @@ public sealed class Spot : Object {
     public int spot_count           { get; construct; }
     public string grid4             { get; construct; }
     public string grid6             { get; construct; }
-    public int distance             { get; construct; }
-    public int bearing              { get; construct; }
+    public double distance          { get; construct; }
+    public double bearing           { get; construct; }
+    public Coordinate coordinate    { get; construct; }
     public Quark hash { get; construct; default = uint32.MAX; }
     public bool is_new_park { get; construct; }
     public bool was_hunted_today { get; construct; }
@@ -151,8 +154,7 @@ public sealed class Spot : Object {
         is_new_park = !SpotDb.get_instance ().is_park_hunted (park_ref, out
             error);
 
-        var settings = new Settings ("com.k0vcz.artemis");
-        var grid = settings.get_string ("location");
+        var grid = Application.settings.get_string ("location");
         if (grid != "")
         {
             try {
@@ -160,13 +162,14 @@ public sealed class Spot : Object {
                 var park_grid = (grid6 == "") ? grid4 : grid6;
                 if (park_grid != "")
                 {
-                    var park_latlon = Distance.maidenhead_to_latlon (park_grid);
-                    distance = (int)Distance.haversine_distance (latlon,
-                        park_latlon);
-                    bearing = (int)Distance.bearing (latlon, park_latlon);
+                    coordinate = Distance.maidenhead_to_latlon (park_grid);
+                    distance = Distance.haversine_distance_km (latlon,
+                        coordinate);
+                    bearing = Distance.bearing (latlon, coordinate);
                 }
             } catch(Error error) {
                 warning (error.message);
+                coordinate = null;
                 distance = 0;
                 bearing = 0;
             }

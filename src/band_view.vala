@@ -69,7 +69,7 @@ public sealed class BandView : Gtk.Box {
     }
 
     construct {
-        var settings = new Settings ("com.k0vcz.artemis");
+        var settings = Application.settings;
         filter = new Gtk.CustomFilter ((item) => {
             var spot = item as Spot;
             if (spot == null)
@@ -114,7 +114,7 @@ public sealed class BandView : Gtk.Box {
             return true;
         });
 
-        filtered = new Gtk.FilterListModel (SpotRepo.instance ().spot_store,
+        filtered = new Gtk.FilterListModel (Application.spot_repo.store,
             filter);
         var sorter = new Gtk.CustomSorter ((itemA, itemB) => {
             var spotA = itemA as Spot;
@@ -150,21 +150,37 @@ public sealed class BandView : Gtk.Box {
             status_page.visible = (items == 0);
         });
 
+        var items = sorted.get_n_items ();
+        band_spot_cards.visible = (items > 0);
+        status_page.visible = (items == 0);
+
+        Application.map_window.notify["map_window"].connect (() => {
+        });
+
         settings.changed["hide-qrt"].connect (_bounce_filter);
         settings.changed["hide-hunted"].connect (_bounce_filter);
         settings.changed["hide-older-than"].connect (_bounce_filter);
-        settings.changed["highlight-unhunted-parks"].connect (() => {
-            for (var child = band_spot_cards.get_first_child (); child != null;
-                 child = child.get_next_sibling ())
-            {
-                var fbchild = child as Gtk.FlowBoxChild;
-                if (fbchild == null) continue;
+        settings.changed["use-metric"].connect (_refresh_cards);
+        settings.changed["highlight-unhunted-parks"].connect (_refresh_cards);
+    }
 
-                var spot_card = fbchild.get_child () as SpotCard;
-                if (spot_card != null)
-                    spot_card.refresh_highlight (settings);
-            }
-        });
+    private void _refresh_cards ()
+    {
+        for (var child = band_spot_cards.get_first_child (); child != null;
+             child = child.get_next_sibling ())
+        {
+            var fbchild = child as Gtk.FlowBoxChild;
+            if (fbchild == null) continue;
+
+            var spot_card = fbchild.get_child () as SpotCard;
+            if (spot_card != null)
+                spot_card.refresh_highlight ();
+        }
+    }
+
+    public uint get_n_items ()
+    {
+        return sorted.get_n_items ();
     }
 
     private void _bounce_filter (string? key = null)

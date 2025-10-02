@@ -11,9 +11,10 @@ template $BandView : Box {
     FlowBox band_spot_cards {
       column-spacing: 6;
       row-spacing: 12;
-      selection-mode: none;
-      max-children-per-line: 4;
-      homogeneous: false;
+      selection-mode: single;
+      min-children-per-line: 2;
+      max-children-per-line: 8;
+      homogeneous: true;
     }
   }
 }

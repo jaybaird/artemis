@@ -1,4 +1,12 @@
 using GLib;
+using Shumate;
+
+public static T random_choice<T> (T[] array)
+{
+    if (array.length == 0)
+        critical ("Cannot choose from an empty array");
+    return array[Random.int_range (0, array.length)];
+}
 
 public static Gee.ArrayList<T> to_array<T> (Gee.Iterator<T> iter)
 {
@@ -23,12 +31,6 @@ public static GLib.Quark distance_error_quark ()
     return GLib.Quark.from_string ("maidenhead-error");
 }
 
-public struct LatLon
-{
-    public double lat;
-    public double lon;
-}
-
 public inline static double to_radians (double degrees)
 {
     return degrees * (Math.PI / 180.0);
@@ -41,7 +43,7 @@ public inline static double to_degrees (double radians)
 }
 
 // Parse a Maidenhead locator to decimal degrees (approx center of square)
-public static LatLon maidenhead_to_latlon (string grid) throws Error
+public static Coordinate maidenhead_to_latlon (string grid) throws Error
 {
     if (grid.length < 4)
         throw new Error (distance_error_quark (), MaidenheadError.TOO_SHORT,
@@ -69,31 +71,20 @@ public static LatLon maidenhead_to_latlon (string grid) throws Error
         lat += 0.5;
     }
 
-    return { lat, lon };
+    return new Coordinate.full (lat, lon);
 }
 
-// Haversine distance in kilometers
-public static double haversine_distance (LatLon a, LatLon b)
+public static double haversine_distance_km (Coordinate a, Coordinate b)
 {
-    double R = 6371.0;   // km
-    double dlat = to_radians (b.lat - a.lat);
-    double dlon = to_radians (b.lon - a.lon);
-    double lat1 = to_radians (a.lat);
-    double lat2 = to_radians (b.lat);
-
-    double h = Math.sin (dlat / 2) * Math.sin (dlat / 2) +
-        Math.sin (dlon / 2) * Math.sin (dlon / 2) * Math.cos (lat1) * Math.cos (
-        lat2);
-    double c = 2 * Math.atan2 (Math.sqrt (h), Math.sqrt (1 - h));
-    return R * c;
+    return a.distance (b) / 1000.0;
 }
 
 // Initial bearing from point A to B
-public static double bearing (LatLon a, LatLon b)
+public static double bearing (Coordinate a, Coordinate b)
 {
-    double lat1 = to_radians (a.lat);
-    double lat2 = to_radians (b.lat);
-    double dlon = to_radians (b.lon - a.lon);
+    double lat1 = to_radians (a.latitude);
+    double lat2 = to_radians (b.latitude);
+    double dlon = to_radians (b.longitude - a.longitude);
 
     double y = Math.sin (dlon) * Math.cos (lat2);
     double x = Math.cos (lat1) * Math.sin (lat2) - Math.sin (lat1) * Math.cos (

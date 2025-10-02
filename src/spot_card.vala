@@ -20,7 +20,7 @@
 
 using WebKit;
 
-private string humanize_ago (GLib.DateTime dt)
+private static string humanize_ago (GLib.DateTime dt)
 {
     var now = new GLib.DateTime.now_utc ();
     int64 span_us = now.difference (dt);
@@ -40,6 +40,18 @@ private string humanize_ago (GLib.DateTime dt)
     if (min < 60)
         return _ ("%ld minutes ago").printf ((long)min);
     return _ ("more than an hour ago");
+}
+
+private static string bearing_to_compass (double bearing)
+{
+    bearing = Math.fmod (bearing, 360.0);
+    if (bearing < 0)
+        bearing += 360.0;
+
+    string[] directions = { _ ("N"), _ ("NE"), _ ("E"), _ ("SE"), _ ("S"), _ (
+        "SW"), _ ("W"), _ ("NW") };
+    int index = (int)Math.floor ((bearing + 22.5) / 45.0) % 8;
+    return directions[index];
 }
 
 public sealed class AddSpot : Adw.Dialog {
@@ -111,10 +123,10 @@ public sealed class AddSpot : Adw.Dialog {
 
             this.close ();
 
-            SpotRepo.instance ().client.post_spot.begin (spot, (obj, res) => {
+            Application.pota_client.post_spot.begin (spot, (obj, res) => {
                 try {
-                    SpotRepo.instance ().client.post_spot.end (res);
-                    SpotRepo.instance ().update_spots.begin ();
+                    Application.pota_client.post_spot.end (res);
+                    Application.spot_repo.update_spots.begin ();
                 } catch(Error err) {
                     var errmsg = err.message;
                     error (@"Unable to post spot: $errmsg");
@@ -137,6 +149,12 @@ public sealed class SpotCard : Gtk.Box {
 
     [GtkChild]
     public unowned Gtk.Label park_label;
+
+    [GtkChild]
+    public unowned Gtk.Label distance_label;
+
+    [GtkChild]
+    public unowned Gtk.Label bearing_label;
 
     [GtkChild]
     public unowned Gtk.Image corner_image;
@@ -177,9 +195,9 @@ public sealed class SpotCard : Gtk.Box {
     [GtkChild]
     public unowned Gtk.Button spot_button;
 
-    public string park_url { get; private set; }
-    public string callsign { get; private set; }
-    public string park_ref { get; private set; }
+    public string park_url { get; construct; }
+    public string callsign { get; construct; }
+    public string park_ref { get; construct; }
     public Spot spot { get; construct; }
     public SpotCard ()
     {
@@ -188,16 +206,16 @@ public sealed class SpotCard : Gtk.Box {
 
     public SpotCard.from_spot (Spot spot)
     {
-        Object (
-            spot: spot
-            );
-
         var escaped_park_ref = GLib.Uri.escape_string (
             spot.park_ref, null, false
             );
-        park_url = @"http://pota.app/#/park/$escaped_park_ref";
-        callsign = spot.callsign;
-        park_ref = spot.park_ref;
+        var url = @"http://pota.app/#/park/$escaped_park_ref";
+        Object (
+            spot: spot,
+            park_url: url,
+            callsign: spot.callsign,
+            park_ref: spot.park_ref
+            );
 
         title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
         park_label.label = spot.park_name;
@@ -213,15 +231,52 @@ public sealed class SpotCard : Gtk.Box {
 
         time.label = humanize_ago (spot.spot_time);
 
-        var settings = new GLib.Settings ("com.k0vcz.artemis");
-        refresh_highlight (settings);
+        fetch_avatars.begin ((obj, res) => {
+            fetch_avatars.end (res);
+        });
+
+        refresh_highlight ();
     }
 
-    public void refresh_highlight (GLib.Settings settings)
+    private async void fetch_avatars ()
+    {
+        var ava_activator = yield CallsignCache.instance ().get_avatar_for (spot
+            .callsign);
+
+        var ava_spotter = yield CallsignCache.instance ().get_avatar_for (spot.
+            spotter);
+
+        if (ava_activator != null)
+            activator_avatar.set_custom_image (ava_activator);
+        if (ava_spotter != null) hunter_avatar.set_custom_image (ava_spotter);
+
+        var activator = yield CallsignCache.instance ().get_callsign (spot.
+            callsign);
+
+        if (activator != null)
+        {
+            bool has_name = activator.name != null && activator.name.length > 0;
+            bool has_qth = activator.qth != null && activator.qth.length > 0;
+
+            if (has_name && has_qth)
+                activator_avatar.tooltip_text = "%s (%s)".printf (activator.name
+                    , activator.qth);
+            else if (has_name)
+                activator_avatar.tooltip_text = activator.name;
+            else
+                activator_avatar.tooltip_text = null;
+        }
+        else
+        {
+            activator_avatar.tooltip_text = null;
+        }
+    }
+
+    public void refresh_highlight ()
     {
         corner_image.visible = false;
 
-        if (spot.is_new_park && settings.get_boolean (
+        if (spot.is_new_park && Application.settings.get_boolean (
             "highlight-unhunted-parks"))
         {
             corner_image.icon_name = "starred-symbolic";
@@ -240,20 +295,37 @@ public sealed class SpotCard : Gtk.Box {
             corner_image.add_css_class ("hunted");
             this.add_css_class ("dimmed");
         }
-    }
+
+        if (spot.distance != 0)
+        {
+            var use_metric = Application.settings.get_boolean ("use-metric");
+            var unit = _ ("km");
+            var distance = spot.distance;
+
+            if (!use_metric)
+            {
+                unit = _ ("mi");
+                distance = spot.distance * 0.6213712;
+            }
+            bearing_label.label = "%d° %s".printf ((int)spot.bearing,
+                bearing_to_compass (spot.bearing));
+            distance_label.label = "%'d %s".printf ((int)distance, unit);
+        }
+    } /* refresh_highlight */
 
     [GtkCallback]
     private void on_history_button_clicked ()
     {
-        var client = new PotaClient ();
         var spot_history = new SpotHistoryDialog (callsign, park_ref);
 
         spot_history.show_loading (true);
         spot_history.present (this.get_root ());
 
-        client.fetch_spot_history.begin (callsign, park_ref, (obj, res) => {
+        Application.pota_client.fetch_spot_history.begin (callsign, park_ref, (
+                obj, res) => {
             try {
-                var history = client.fetch_spot_history.end (res);
+                var history = Application.pota_client.fetch_spot_history.end (
+                    res);
                 spot_history.show_history (history);
             } catch(Error err) {
                 spot_history.show_error (err.message);
@@ -283,6 +355,39 @@ public sealed class SpotCard : Gtk.Box {
         }
     }
 } /* class SpotCard */
+
+private Gtk.Widget create_qso_row (QsoRow row)
+{
+    return new Gtk.Label ("");
+}
+
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/park_log_dialog.ui")]
+public class ParkLogDialog : Adw.Dialog {
+    [GtkChild]
+    public unowned Gtk.ScrolledWindow qso_scroll;
+    [GtkChild]
+    public unowned Gtk.ListBox qso_list;
+
+    public string park_ref { get; construct; }
+    public ParkLogDialog (Spot spot)
+    {
+        Object (
+            park_ref: spot.park_ref
+            );
+    }
+
+    construct {
+        Error error = null;
+        var park = SpotDb.get_instance ().get_park_by_ref (park_ref, out error);
+        var all_qsos = SpotDb.get_instance ().all_qsos_for_park (park_ref, out
+            error);
+        foreach (var qso in all_qsos)
+        {
+            //var row = create_qso_row (qso);
+            //qso_list.append (row);
+        }
+    }
+} /* class ParkLogDialog */
 
 private Gtk.Widget create_spot_row (Json.Object spot_obj)
 {
@@ -351,34 +456,6 @@ private Gtk.Widget create_spot_row (Json.Object spot_obj)
 
     return row;
 } /* create_spot_row */
-
-[GtkTemplate (ui = "/com/k0vcz/artemis/ui/park_log_dialog.ui")]
-public class ParkLogDialog : Adw.Dialog {
-    [GtkChild]
-    public unowned Gtk.ScrolledWindow qso_scroll;
-    [GtkChild]
-    public unowned Gtk.ListBox qso_list;
-
-    public string park_ref { get; construct; }
-    public ParkLogDialog (Spot spot)
-    {
-        Object (
-            park_ref: spot.park_ref
-            );
-    }
-
-    construct {
-        Error error = null;
-        var park = SpotDb.get_instance ().get_park_by_ref (park_ref, out error);
-        var all_qsos = SpotDb.get_instance ().all_qsos_for_park (park_ref, out
-            error);
-        foreach (var qso in all_qsos)
-        {
-            //var row = create_qso_row (qso);
-            //qso_list.append (row);
-        }
-    }
-} /* class ParkLogDialog */
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_history_dialog.ui")]
 public class SpotHistoryDialog : Adw.Dialog {

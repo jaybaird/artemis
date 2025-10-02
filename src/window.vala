@@ -49,8 +49,10 @@ public sealed class AppWindow : Gtk.Window {
     [GtkChild]
     public unowned Gtk.DropDown program_select;
 
-    private Settings settings;
     private uint timer_id = 0;
+    private uint progress_timer_id = 0;
+    private int64 last_refresh_time = 0;
+
     private uint current_ticks = 0;
     private bool update_paused = false;
     private ArrayList<BandView> band_pages;
@@ -61,15 +63,14 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     construct {
-        settings = new Settings ("com.k0vcz.artemis");
         band_pages = new ArrayList<BandView> ();
         refresh_banner.button_clicked.connect (on_banner_button_clicked);
 
-        settings.changed["update-interval"].connect (() => {
+        Application.settings.changed["update-interval"].connect (() => {
             setup_spot_updates ();
         });
 
-        program_select.model = SpotRepo.instance ().program_model;
+        program_select.model = Application.spot_repo.program_model;
 
         search_entry.search_changed.connect ( () => {
             foreach (var band_view in band_pages)
@@ -109,11 +110,11 @@ public sealed class AppWindow : Gtk.Window {
             }
         });
 
-        SpotRepo.instance ().busy_changed.connect ( (busy) => {
+        Application.spot_repo.busy_changed.connect ( (busy) => {
             loading_spinner.visible = busy;
         });
 
-        SpotRepo.instance ().refreshed.connect ( (spots_updated) => {
+        Application.spot_repo.refreshed.connect ( (spots_updated) => {
             string toast_title = ngettext (
                 "%u spot refreshed",
                 "%u spots refreshed",
@@ -125,7 +126,7 @@ public sealed class AppWindow : Gtk.Window {
             toast_overlay.add_toast (toast);
         });
 
-        SpotRepo.instance ().update_error.connect ( (error) => {
+        Application.spot_repo.update_error.connect ( (error) => {
             var alert_dialog = new Adw.AlertDialog (_ (
                 "Unable to refresh spots"),
                 null);
@@ -143,13 +144,14 @@ public sealed class AppWindow : Gtk.Window {
         setup_spot_updates ();
         build_band_stack ();
 
-        band_stack.set_visible_child_name (settings.get_string ("default-band"))
+        band_stack.set_visible_child_name (Application.settings.get_string (
+            "default-band"))
         ;
 
         var model = search_select.get_model () as Gtk.StringList;
         if (model != null)
         {
-            var default_mode = settings.get_string ("default-mode");
+            var default_mode = Application.settings.get_string ("default-mode");
             int idx = -1;
 
             for (uint i = 0; i < model.get_n_items (); i++)
@@ -173,8 +175,8 @@ public sealed class AppWindow : Gtk.Window {
 
     private void initial_update ()
     {
-        SpotRepo.instance ().update_spots.begin ((obj, res) => {
-            SpotRepo.instance ().update_spots.end (res);
+        Application.spot_repo.update_spots.begin ((obj, res) => {
+            Application.spot_repo.update_spots.end (res);
         });
     }
 
@@ -183,8 +185,18 @@ public sealed class AppWindow : Gtk.Window {
         if (timer_id != 0)
             Source.remove (timer_id);
 
+        if (progress_timer_id != 0)
+            Source.remove (progress_timer_id);
+
+        last_refresh_time = get_monotonic_time ();
+
         timer_id = Timeout.add_seconds (1, () => {
             tick.begin ();
+            return Source.CONTINUE;
+        });
+
+        progress_timer_id = Timeout.add (100, () => {
+            progress_tick ();
             return Source.CONTINUE;
         });
 
@@ -196,7 +208,8 @@ public sealed class AppWindow : Gtk.Window {
         for (uint i = 0; i < RadioConstants.BANDS.length; i++)
         {
             var band = RadioConstants.BANDS[i];
-            var band_view = new BandView (SpotRepo.instance (), band, "band-%s".
+            var band_view = new BandView (Application.spot_repo, band,
+                "band-%s".
                 printf (band)
                 );
             band_pages.add (band_view);
@@ -206,17 +219,29 @@ public sealed class AppWindow : Gtk.Window {
         }
     }
 
+    private void progress_tick ()
+    {
+        if (update_paused) return;
+        var now = get_monotonic_time ();
+        double elapsed = (now - last_refresh_time) / 1000000.0;
+        var update_time = Application.settings.get_int ("update-interval");
+
+        double fraction = elapsed / (double)update_time;
+        if (fraction > 1.0) fraction = 1.0;
+        refresh_progress.fraction = fraction;
+    }
+
     private async void tick ()
     {
         if (!update_paused)
         {
             current_ticks += 1;
-            var update_time = settings.get_int ("update-interval");
+            var update_time = Application.settings.get_int ("update-interval");
             if (current_ticks >= update_time)
             {
                 current_ticks = current_ticks - update_time;
-
-                yield SpotRepo.instance ().update_spots ();
+                last_refresh_time = get_monotonic_time ();
+                yield Application.spot_repo.update_spots ();
             }
 
             var seconds_remaining = update_time - current_ticks;
@@ -225,9 +250,6 @@ public sealed class AppWindow : Gtk.Window {
                 "Spots will refresh in %u seconds",
                 seconds_remaining
                 ).printf (seconds_remaining);
-
-            refresh_progress.fraction = (float)current_ticks / (float)
-                update_time;
         }
 
         var now = new GLib.DateTime.now_utc ().format ("%H:%M:%S UTC");
@@ -255,7 +277,7 @@ public sealed class AppWindow : Gtk.Window {
         else
         {
             refresh_banner.button_label = _ ("Pause");
-            SpotRepo.instance ().update_spots.begin ();
+            Application.spot_repo.update_spots.begin ();
         }
     }
 
@@ -263,5 +285,8 @@ public sealed class AppWindow : Gtk.Window {
     {
         if (timer_id != 0)
             Source.remove (timer_id);
+
+        if (progress_timer_id != 0)
+            Source.remove (progress_timer_id);
     }
 } /* class AppWindow */

@@ -22,6 +22,11 @@ install_data(
     'hicolor/symbolic/actions/sound-wave-alt-symbolic.svg',
     'hicolor/symbolic/actions/compass2-symbolic.svg',
     'hicolor/symbolic/actions/distance-symbolic.svg',
+    'hicolor/symbolic/actions/map-marker-symbolic.svg',
+    'hicolor/symbolic/actions/tree-circle-symbolic.svg',
+    'hicolor/symbolic/actions/tree-rectangle-symbolic.svg',
+    'hicolor/symbolic/actions/tree-triangle-symbolic.svg',
+    'hicolor/symbolic/actions/mode-symbolic.svg'
   ],
   install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'actions'
 )

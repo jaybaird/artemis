@@ -57,3 +57,58 @@ banner {
     color: @accent-color;
 }
 
+.map-marker-all {
+    color: @accent_bg_color;
+}
+
+.map-marker-160m {
+    color: #7cfc00;
+}
+
+.map-marker-80m {
+    color: #e550e5;
+}
+
+.map-marker-60m {
+    color: #00008b;
+}
+
+.map-marker-40m {
+    color: #5959ff;
+}
+
+.map-marker-30m {
+    color: #62d962;
+}
+
+.map-marker-20m {
+    color: #f2c40c;
+}
+
+.map-marker-17m {
+    color: #f2f261;
+}
+
+.map-marker-15m {
+    color: #cca166;
+}
+
+.map-marker-12m {
+    color: #b22222;
+}
+
+.map-marker-10m {
+    color: #ff69b4;
+}
+
+.map-marker-6m {
+    color: #ff0000;
+}
+
+.map-marker-2m {
+    color: #4ADE80;
+}
+
+.map-marker-70cm {
+    color: #999900;
+}

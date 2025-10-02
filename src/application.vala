@@ -19,6 +19,13 @@
  */
 
 public sealed class Application : Adw.Application {
+    public static SpotRepo spot_repo   { get; private set; }
+    public static Settings settings    { get; private set; }
+    public static PotaClient pota_client { get; private set; }
+    public static MapWindow?    map_window  { get;
+                                              private set;
+                                              default = null;
+    }
     public Application()
     {
         Object (
@@ -29,11 +36,27 @@ public sealed class Application : Adw.Application {
     }
 
     construct {
+        var map_action = new SimpleAction ("open-map", null);
         var preferences_action = new SimpleAction ("preferences", null);
-        preferences_action.activate.connect (on_preferences_action);
-        add_action (preferences_action);
+        var quit_action = new SimpleAction ("quit", null);
 
+        map_action.activate.connect (on_open_map_action);
+        preferences_action.activate.connect (on_preferences_action);
+        quit_action.activate.connect (() => {
+            this.quit ();
+        });
+
+        add_action (map_action);
+        add_action (preferences_action);
+        add_action (quit_action);
+
+        set_accels_for_action ("app.open-map", { "<primary>m" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
+        set_accels_for_action ("app.quit", { "<primary>q" });
+
+        settings = new Settings ("com.k0vcz.artemis");
+        spot_repo = new SpotRepo ();
+        pota_client = new PotaClient ();
     }
 
     public override void activate ()
@@ -54,6 +77,20 @@ public sealed class Application : Adw.Application {
 
         var win = this.active_window ?? new AppWindow (this);
         win.present ();
+    }
+
+    private void on_open_map_action ()
+    {
+        if (map_window == null)
+        {
+            map_window = new MapWindow ();
+            map_window.set_application (this);
+            map_window.close_request.connect (() => {
+                map_window = null;
+                return false;
+            });
+        }
+        map_window.present ();
     }
 
     private void on_preferences_action ()

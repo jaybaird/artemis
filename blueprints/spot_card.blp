@@ -2,18 +2,14 @@ using Gtk 4.0;
 using Adw 1;
 
 template $SpotCard : Box {
-  hexpand: false;
-  halign: start;
+  hexpand: true;
+  halign: fill;
   valign: start;
 
-  Adw.Clamp {
-    maximum-size: 300;
-    tightening-threshold: 280;
-
-    child:
   Box card_view {
-    width-request: 280;
     height-request: 180;
+    halign: fill;
+    hexpand: true;
     orientation: vertical;
 
     spacing: 6;
@@ -104,17 +100,37 @@ template $SpotCard : Box {
         spacing: 10;
         tooltip-text: _("Distance & Bearing");
 
-        Image {
-          pixel-size: 20;
-          icon-name: "compass2-symbolic";
-          valign: baseline;
+        Box {
+          orientation: horizontal;
+          spacing: 10;
+
+          Image {
+            pixel-size: 20;
+            icon-name: "compass2-symbolic";
+            valign: baseline;
+          }
+
+          Label bearing_label {
+            halign: start;
+            valign: baseline;
+            label: "360°";
+          }
         }
 
-        Label distance_and_bearing {
-          halign: start;
-          valign: baseline;
-          label: "1660km @ 360°";
-          margin-bottom: 20;
+        Box {
+          orientation: horizontal;
+          spacing: 10;
+          Image {
+            pixel-size: 20;
+            icon-name: "distance-symbolic";
+            valign: baseline;
+          }
+
+          Label distance_label {
+            halign: start;
+            valign: baseline;
+            label: "1660km";
+          }
         }
       }
 
@@ -123,29 +139,38 @@ template $SpotCard : Box {
         spacing: 10;
         tooltip-text: _("Frequency and mode");
 
-        Image {
-          icon-name: "sound-wave-alt-symbolic";
-          pixel-size: 20;
-          valign: baseline;
+        Box {
+          orientation: horizontal;
+          spacing: 10;
+          
+          Image {
+            icon-name: "sound-wave-alt-symbolic";
+            pixel-size: 20;
+            valign: baseline;
+          }
+
+          Label frequency {
+            halign: start;
+            valign: baseline;
+            label: "14074 kHz";
+          }
         }
-
-        Label frequency {
-          halign: start;
-          valign: baseline;
-          label: "14074 kHz";
-        }
-
-        Label {
-          halign: start;
-          valign: baseline;
-          label: "//";
-        }
-
-        Label mode {
-          valign: baseline;
-          label: "FT8";
-          styles ["caption monospace pill"]
-
+        
+        Box {
+          orientation: horizontal;
+          spacing: 10;
+          
+          Image {
+            icon-name: "mode-symbolic";
+            pixel-size: 20;
+            valign: baseline;
+          }
+        
+          Label mode {
+            valign: baseline;
+            label: "FT8";
+            styles ["caption monospace pill"]
+          }
         }
       }
 
@@ -271,6 +296,5 @@ template $SpotCard : Box {
           
         }
       }
-  };
   }
 }

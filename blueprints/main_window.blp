@@ -2,7 +2,7 @@ using Gtk 4.0;
 using Adw 1;
 
 template $AppWindow : Window {
-  default-width: 1300;
+  default-width: 1280;
   default-height: 720;
   title: _("Artemis");
 
@@ -65,6 +65,7 @@ template $AppWindow : Window {
 
             Adw.ViewStack band_stack {
               margin-top: 15;
+              enable-transitions: true;
               hexpand: true;
               vexpand: true;
             }
@@ -161,19 +162,21 @@ template $AppWindow : Window {
 menu menu_app {
   section {
     item {
+      label: _("Map");
+      action: "app.open-map";
+    }
+
+    item {
       label: _("Preferences");
       action: "app.preferences";
     }
-  }
 
-  section {
+
     item {
       label: _("About Artemis");
       action: "app.about";
     }
-  }
 
-  section {
     item {
       label: _("Quit");
       action: "app.quit";

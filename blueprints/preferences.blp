@@ -76,6 +76,16 @@ Adw.PreferencesDialog prefs_dialog {
     Adw.PreferencesGroup {
       title: _("Display Options");
       
+      Adw.SwitchRow row_use_metric {
+        title: _("Metric Units");
+        subtitle: _("Use metric units for distance calculations and in the map window");
+      }
+
+      Adw.SwitchRow row_show_scale {
+        title: _("Map Scale");
+        subtitle: _("Show unit scale on map window");
+      }
+
       Adw.SwitchRow row_highlight_unhunted {
         title: _("Highlight Unhunted Parks");
         subtitle: _("Show visual highlighting for parks you haven't hunted before");
