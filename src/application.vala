@@ -19,6 +19,7 @@
  */
 
 public sealed class Application : Adw.Application {
+    public static Quark current_spot_hash { get; set; }
     public static SpotRepo spot_repo   { get; private set; }
     public static Settings settings    { get; private set; }
     public static PotaClient pota_client { get; private set; }

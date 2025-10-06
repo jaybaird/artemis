@@ -151,6 +151,9 @@ public sealed class SpotCard : Gtk.Box {
     public unowned Gtk.Label park_label;
 
     [GtkChild]
+    public unowned Gtk.Box distance_bearing;
+
+    [GtkChild]
     public unowned Gtk.Label distance_label;
 
     [GtkChild]
@@ -296,8 +299,11 @@ public sealed class SpotCard : Gtk.Box {
             this.add_css_class ("dimmed");
         }
 
-        if (spot.distance != 0)
+        if (Application.settings.get_string("location") == "" || spot.distance < 0)
         {
+            distance_bearing.visible = false;
+        } else {
+            distance_bearing.visible = true;
             var use_metric = Application.settings.get_boolean ("use-metric");
             var unit = _ ("km");
             var distance = spot.distance;

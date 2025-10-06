@@ -7,10 +7,10 @@ public static double MAX_LONGITUDE = 180;
 
 // BoundingBox from GNOME Maps, Marcus Lundblad <ml@update.uu.se>
 public sealed class BoundingBox : Object {
-    public double left    { get; private set; }
-    public double bottom  { get; private set; }
-    public double right   { get; private set; }
-    public double top     { get; private set; }
+    public double left    { get; set; }
+    public double bottom  { get; set; }
+    public double right   { get; set; }
+    public double top     { get; set; }
     public BoundingBox (double? left, double? bottom, double? right, double? top
                         )
     {
@@ -20,6 +20,16 @@ public sealed class BoundingBox : Object {
             right: right ?? MIN_LONGITUDE,
             top: top ?? MIN_LATITUDE
             );
+    }
+
+    public BoundingBox.empty ()
+    {
+        Object (
+            left:  MAX_LONGITUDE,
+            bottom: MAX_LATITUDE,
+            right: MIN_LONGITUDE,
+            top: MIN_LATITUDE
+        );
     }
 
     public BoundingBox.centered_on (Coordinate coordinate, double range = 1.0)
@@ -205,7 +215,7 @@ public class MapWindow : Adw.ApplicationWindow {
                     .message);
             }
         }
-        bbox = new BoundingBox.centered_on (qth_coordinate);
+        bbox = new BoundingBox.empty ();
 
         var layer = new MapLayer (map_source, viewport);
         if (layer != null)
@@ -274,8 +284,8 @@ public class MapWindow : Adw.ApplicationWindow {
         debug ("Added %u spot markers".printf (spot_count));
 
         map_widget.insert_layer_above (marker_layer, map_layer);
-        viewport.set_location (qth_coordinate.latitude, qth_coordinate.longitude
-            );
+        var center = bbox.center ();
+        viewport.set_location (center.latitude, center.longitude);
         viewport.set_zoom_level (4);
     }
 } /* class MapWindow */

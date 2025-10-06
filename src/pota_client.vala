@@ -30,13 +30,9 @@ public sealed class PotaClient : Object {
         var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
             "artemis");
         var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
-        cache.set_max_size (50 * 1024 * 1024); // 50MB cache
+        cache.set_max_size (50 * 1024 * 1024);
         session.add_feature (cache);
-
-        // Set a reasonable timeout
         session.timeout = 30;
-
-        // Set user agent
         session.user_agent = "Artemis/0.1.0";
     }
 
@@ -71,8 +67,7 @@ public sealed class PotaClient : Object {
         message.request_headers.replace ("Accept", "application/json");
         message.request_headers.replace ("User-Agent", session.user_agent);
 
-        var response = yield session.send_and_read_async (message, Priority.
-            DEFAULT, null);
+        yield session.send_and_read_async (message, Priority.DEFAULT, null);
 
         if (message.get_status () != Soup.Status.OK)
         {

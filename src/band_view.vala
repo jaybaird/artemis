@@ -24,6 +24,8 @@ public sealed class BandView : Gtk.Box {
     private Gtk.FilterListModel filtered;
     private Gtk.SortListModel sorted;
 
+    private bool just_selected = false;
+
     private string? _current_program_filter = null;
     public string? current_program_filter {
         get {
@@ -116,6 +118,7 @@ public sealed class BandView : Gtk.Box {
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store,
             filter);
+
         var sorter = new Gtk.CustomSorter ((itemA, itemB) => {
             var spotA = itemA as Spot;
             var spotB = itemB as Spot;
@@ -123,8 +126,14 @@ public sealed class BandView : Gtk.Box {
             if ((spotA == null) || (spotB == null) )
                 return Gtk.Ordering.EQUAL;
 
+            var current_hash = Application.current_spot_hash;
+            if (spotA.hash == current_hash && spotB.hash != current_hash)
+                return Gtk.Ordering.SMALLER;
+            if (spotB.hash == current_hash && spotA.hash != current_hash)
+                return Gtk.Ordering.LARGER;
+
             int cmp = spotA.spot_time.compare (spotB.spot_time);
-            if (cmp > 0)
+            if (cmp > 0) 
                 return Gtk.Ordering.SMALLER;
             else if (cmp < 0)
                 return Gtk.Ordering.LARGER;
@@ -142,7 +151,36 @@ public sealed class BandView : Gtk.Box {
         band_spot_cards.bind_model (
             sorted,
             (Gtk.FlowBoxCreateWidgetFunc)create_spot_card
-            );
+        );
+        band_spot_cards.child_activated.connect ( (child) => {
+            var spot_card = child.get_child () as SpotCard;
+            if (spot_card != null && 
+                !just_selected &&
+                spot_card.spot.hash == Application.current_spot_hash) {
+                Application.current_spot_hash = 0;
+                band_spot_cards.unselect_all ();
+            }
+            if (just_selected) {
+                Idle.add( () => {
+                    just_selected = false;
+                    return Source.REMOVE;
+                });
+            }
+        });
+        band_spot_cards.selected_children_changed.connect (() => {
+            var selected = band_spot_cards.get_selected_children ();
+            if (selected != null && selected.length () > 0) {
+                var child = selected.nth_data (0) as Gtk.FlowBoxChild;
+                var spot_card = child.get_child () as SpotCard;
+                if (spot_card != null) {
+                    var spot_hash = spot_card.spot.hash;
+                    if (spot_hash != Application.current_spot_hash) {
+                        Application.current_spot_hash = spot_hash;
+                        just_selected = true;
+                    }
+                }   
+            }
+        });
 
         sorted.items_changed.connect ( (position, removed, added) => {
             var items = sorted.get_n_items ();
@@ -162,6 +200,21 @@ public sealed class BandView : Gtk.Box {
         settings.changed["hide-older-than"].connect (_bounce_filter);
         settings.changed["use-metric"].connect (_refresh_cards);
         settings.changed["highlight-unhunted-parks"].connect (_refresh_cards);
+    }
+
+    public void set_current_spot (Quark spot_hash) {
+        for (var child = band_spot_cards.get_first_child (); child != null;
+             child = child.get_next_sibling ())
+        {
+            var fbchild = child as Gtk.FlowBoxChild;
+            if (fbchild == null) continue;
+
+            var spot_card = fbchild.get_child () as SpotCard;
+            if (spot_card != null && spot_card.spot.hash == spot_hash) {
+                band_spot_cards.select_child (fbchild);
+                break;
+            }
+        }
     }
 
     private void _refresh_cards ()

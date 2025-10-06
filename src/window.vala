@@ -242,6 +242,12 @@ public sealed class AppWindow : Gtk.Window {
                 current_ticks = current_ticks - update_time;
                 last_refresh_time = get_monotonic_time ();
                 yield Application.spot_repo.update_spots ();
+                Idle.add (() => {
+                    foreach (var band_page in band_pages) {
+                        band_page.set_current_spot (Application.current_spot_hash);
+                    }
+                    return Source.REMOVE;
+                });
             }
 
             var seconds_remaining = update_time - current_ticks;

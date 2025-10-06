@@ -170,9 +170,12 @@ public sealed class Spot : Object {
             } catch(Error error) {
                 warning (error.message);
                 coordinate = null;
-                distance = 0;
-                bearing = 0;
+                distance = -1.0;
+                bearing = -1.0;
             }
+        } else {
+            distance = -1.0;
+            bearing = -1.0;
         }
     }
 
