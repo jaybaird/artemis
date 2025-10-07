@@ -21,43 +21,12 @@ public sealed class BandView : Gtk.Box {
     public unowned Gtk.FlowBox band_spot_cards;
 
     private Gtk.Filter filter;
+    private Gtk.CustomSorter sorter;
     private Gtk.FilterListModel filtered;
     private Gtk.SortListModel sorted;
 
     private bool just_selected = false;
 
-    private string? _current_program_filter = null;
-    public string? current_program_filter {
-        get {
-            return _current_program_filter;
-        } set {
-            if (_current_program_filter == value) return;
-            _current_program_filter = value;
-            _bounce_filter ();
-        }
-    }
-    private string? _current_search_text = null;
-    public string? current_search_text {
-        get {
-            return _current_search_text;
-        } set {
-            if (_current_search_text == value)
-                return;
-            _current_search_text = value;
-            _bounce_filter ();
-        }
-    }
-    private string? _current_mode_filter = null;
-    public string? current_mode_filter {
-        get {
-            return _current_mode_filter;
-        } set {
-            if (_current_mode_filter == value)
-                return;
-            _current_mode_filter = value;
-            _bounce_filter ();
-        }
-    }
     private StatusPage status_page;
 
     public SpotRepo spot_repo { get; construct; }
@@ -93,20 +62,26 @@ public sealed class BandView : Gtk.Box {
             if (now.compare (expires) > 0)
                 return false;
 
-            if ((current_program_filter != null) && (current_program_filter != _
-                                                         ("All")) &&
-                !spot.park_ref.down ().has_prefix (current_program_filter.down
+            if ((Application.current_program_filter != null) && (Application.
+                                                                 current_program_filter
+                                                                 != _
+                                                                     ("All")) &&
+                !spot.park_ref.down ().has_prefix (Application.
+                    current_program_filter.down
                         ()))
                 return false;
 
-            if ((current_mode_filter != null) && (current_mode_filter != _ (
-                "All")) &&
-                !spot.mode.down ().contains (current_mode_filter.down ()))
+            if ((Application.current_mode_filter != null) && (Application.
+                                                              current_mode_filter
+                                                              != _ (
+                                                                  "All")) &&
+                !spot.mode.down ().contains (Application.current_mode_filter.
+                    down ()))
                 return false;
 
-            if (current_search_text != null)
+            if (Application.current_search_text != null)
             {
-                var needle = current_search_text.down ();
+                var needle = Application.current_search_text.down ();
                 if (!(spot.callsign.down ().contains (needle) ||
                       spot.park_ref.down ().contains (needle) ||
                       spot.park_name.down ().contains (needle)))
@@ -119,7 +94,7 @@ public sealed class BandView : Gtk.Box {
         filtered = new Gtk.FilterListModel (Application.spot_repo.store,
             filter);
 
-        var sorter = new Gtk.CustomSorter ((itemA, itemB) => {
+        sorter = new Gtk.CustomSorter ((itemA, itemB) => {
             var spotA = itemA as Spot;
             var spotB = itemB as Spot;
 
@@ -127,13 +102,13 @@ public sealed class BandView : Gtk.Box {
                 return Gtk.Ordering.EQUAL;
 
             var current_hash = Application.current_spot_hash;
-            if (spotA.hash == current_hash && spotB.hash != current_hash)
+            if ((spotA.hash == current_hash) && (spotB.hash != current_hash))
                 return Gtk.Ordering.SMALLER;
-            if (spotB.hash == current_hash && spotA.hash != current_hash)
+            if ((spotB.hash == current_hash) && (spotA.hash != current_hash))
                 return Gtk.Ordering.LARGER;
 
             int cmp = spotA.spot_time.compare (spotB.spot_time);
-            if (cmp > 0) 
+            if (cmp > 0)
                 return Gtk.Ordering.SMALLER;
             else if (cmp < 0)
                 return Gtk.Ordering.LARGER;
@@ -151,17 +126,19 @@ public sealed class BandView : Gtk.Box {
         band_spot_cards.bind_model (
             sorted,
             (Gtk.FlowBoxCreateWidgetFunc)create_spot_card
-        );
+            );
         band_spot_cards.child_activated.connect ( (child) => {
             var spot_card = child.get_child () as SpotCard;
-            if (spot_card != null && 
+            if ((spot_card != null) &&
                 !just_selected &&
-                spot_card.spot.hash == Application.current_spot_hash) {
+                (spot_card.spot.hash == Application.current_spot_hash))
+            {
                 Application.current_spot_hash = 0;
                 band_spot_cards.unselect_all ();
             }
-            if (just_selected) {
-                Idle.add( () => {
+            if (just_selected)
+            {
+                Idle.add ( () => {
                     just_selected = false;
                     return Source.REMOVE;
                 });
@@ -169,16 +146,19 @@ public sealed class BandView : Gtk.Box {
         });
         band_spot_cards.selected_children_changed.connect (() => {
             var selected = band_spot_cards.get_selected_children ();
-            if (selected != null && selected.length () > 0) {
+            if ((selected != null) && (selected.length () > 0))
+            {
                 var child = selected.nth_data (0) as Gtk.FlowBoxChild;
                 var spot_card = child.get_child () as SpotCard;
-                if (spot_card != null) {
+                if (spot_card != null)
+                {
                     var spot_hash = spot_card.spot.hash;
-                    if (spot_hash != Application.current_spot_hash) {
+                    if (spot_hash != Application.current_spot_hash)
+                    {
                         Application.current_spot_hash = spot_hash;
                         just_selected = true;
                     }
-                }   
+                }
             }
         });
 
@@ -195,14 +175,15 @@ public sealed class BandView : Gtk.Box {
         Application.map_window.notify["map_window"].connect (() => {
         });
 
-        settings.changed["hide-qrt"].connect (_bounce_filter);
-        settings.changed["hide-hunted"].connect (_bounce_filter);
-        settings.changed["hide-older-than"].connect (_bounce_filter);
+        settings.changed["hide-qrt"].connect (bounce_filter);
+        settings.changed["hide-hunted"].connect (bounce_filter);
+        settings.changed["hide-older-than"].connect (bounce_filter);
         settings.changed["use-metric"].connect (_refresh_cards);
         settings.changed["highlight-unhunted-parks"].connect (_refresh_cards);
     }
 
-    public void set_current_spot (Quark spot_hash) {
+    public void set_current_spot (Quark spot_hash)
+    {
         for (var child = band_spot_cards.get_first_child (); child != null;
              child = child.get_next_sibling ())
         {
@@ -210,11 +191,14 @@ public sealed class BandView : Gtk.Box {
             if (fbchild == null) continue;
 
             var spot_card = fbchild.get_child () as SpotCard;
-            if (spot_card != null && spot_card.spot.hash == spot_hash) {
+            if ((spot_card != null) && (spot_card.spot.hash == spot_hash))
+            {
                 band_spot_cards.select_child (fbchild);
                 break;
             }
         }
+
+        //sorter.changed(Gtk.SorterChange.DIFFERENT);
     }
 
     private void _refresh_cards ()
@@ -236,7 +220,7 @@ public sealed class BandView : Gtk.Box {
         return sorted.get_n_items ();
     }
 
-    private void _bounce_filter (string? key = null)
+    public void bounce_filter (string? key = null)
     {
         filter.changed (Gtk.FilterChange.DIFFERENT);
     }

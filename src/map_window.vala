@@ -29,7 +29,7 @@ public sealed class BoundingBox : Object {
             bottom: MAX_LATITUDE,
             right: MIN_LONGITUDE,
             top: MIN_LATITUDE
-        );
+            );
     }
 
     public BoundingBox.centered_on (Coordinate coordinate, double range = 1.0)
@@ -42,6 +42,14 @@ public sealed class BoundingBox : Object {
             );
     }
 
+    public void clear_all ()
+    {
+        left = MAX_LONGITUDE;
+        bottom = MAX_LATITUDE;
+        right = MIN_LONGITUDE;
+        top = MIN_LATITUDE;
+    }
+
     public void compose (BoundingBox other)
     {
         if (other.left < this.left) this.left = other.left;
@@ -52,17 +60,37 @@ public sealed class BoundingBox : Object {
 
     public Coordinate center ()
     {
-        return new Coordinate.full ((this.top + this.bottom) / 2.0, (this.left +
-                                                                     this.right)
-            / 2.0);
+        var center_lat = (this.top + this.bottom) / 2.0;
+        var center_lon = (this.left + this.right) / 2.0;
+
+        // Normalize longitude if it's wrapped
+        if (center_lon > 180)
+            center_lon -= 360;
+        else if (center_lon < -180)
+            center_lon += 360;
+
+        return new Coordinate.full (center_lat, center_lon);
     }
 
     public void extend (double latitude, double longitude)
     {
-        if (longitude < this.left) this.left = longitude;
         if (latitude < this.bottom) this.bottom = latitude;
-        if (longitude > this.right) this.right = longitude;
         if (latitude > this.top) this.top = latitude;
+
+        // Handle longitude - bias toward 0° meridian for map display
+        if ((this.left == MAX_LONGITUDE) && (this.right == MIN_LONGITUDE))
+        {
+            // First point being added
+            this.left = longitude;
+            this.right = longitude;
+        }
+        else
+        {
+            // Always prefer normal bounding box (no wrap) for map display
+            // This biases toward the 0° meridian rather than 180°
+            if (longitude < this.left) this.left = longitude;
+            if (longitude > this.right) this.right = longitude;
+        }
     }
 
     public void extend_coordinate (Coordinate? coordinate)
@@ -73,8 +101,16 @@ public sealed class BoundingBox : Object {
 
     public bool covers (double latitude, double longitude)
     {
-        return (latitude >= this.bottom && latitude <= this.top) &&
-               (longitude >= this.left && longitude <= this.right);
+        if (!((latitude >= this.bottom) && (latitude <= this.top)))
+            return false;
+
+        // Handle longitude wrap-around
+        if (this.left <= this.right)
+            // Normal case - no wrap
+            return longitude >= this.left && longitude <= this.right;
+        else
+            // Wrapped case - across 180° meridian
+            return longitude >= this.left || longitude <= this.right;
     }
 
     public bool covers_coordinate (Coordinate? coordinate)
@@ -85,7 +121,7 @@ public sealed class BoundingBox : Object {
 
     public bool is_valid ()
     {
-        return this.left < this.right && this.bottom < this.top &&
+        return this.bottom < this.top &&
                this.left >= MIN_LONGITUDE &&
                this.left <= MAX_LONGITUDE &&
                this.right >= MIN_LONGITUDE &&
@@ -110,6 +146,9 @@ public class MapWindow : Adw.ApplicationWindow {
     private Coordinate qth_coordinate;
 
     private Gtk.Overlay overlay;
+
+    Gtk.Filter filter;
+    Gtk.FilterListModel filtered;
 
     public MapWindow ()
     {
@@ -235,6 +274,64 @@ public class MapWindow : Adw.ApplicationWindow {
             warning ("Base map layer is null!");
         }
 
+        filter = new Gtk.CustomFilter ((item) => {
+            var spot = item as Spot;
+            if (spot == null)
+                return false;
+
+            if ((Application.current_band_filter != "All") && (spot.band !=
+                                                               Application.
+                                                               current_band_filter) )
+
+                return false;
+
+            if (Application.settings.get_boolean ("hide-qrt") &&
+                spot.activator_comment.down ().contains ("qrt"))
+                return false;
+
+            if (Application.settings.get_boolean ("hide-hunted") && spot.
+                was_hunted_today)
+                return false;
+
+            var stale_minutes = Application.settings.get_int ("hide-older-than")
+            ;
+            var now = new DateTime.now_utc ();
+            var expires = spot.spot_time.add_minutes (stale_minutes);
+            if (now.compare (expires) > 0)
+                return false;
+
+            if ((Application.current_program_filter != null) && (Application.
+                                                                 current_program_filter
+                                                                 != _
+                                                                     ("All")) &&
+                !spot.park_ref.down ().has_prefix (Application.
+                    current_program_filter.down
+                        ()))
+                return false;
+
+            if ((Application.current_mode_filter != null) && (Application.
+                                                              current_mode_filter
+                                                              != _ (
+                                                                  "All")) &&
+                !spot.mode.down ().contains (Application.current_mode_filter.
+                    down ()))
+                return false;
+
+            if (Application.current_search_text != null)
+            {
+                var needle = Application.current_search_text.down ();
+                if (!(spot.callsign.down ().contains (needle) ||
+                      spot.park_ref.down ().contains (needle) ||
+                      spot.park_name.down ().contains (needle)))
+                    return false;
+            }
+
+            return true;
+        });
+
+        filtered = new Gtk.FilterListModel (Application.spot_repo.store,
+            filter);
+
         Application.spot_repo.refreshed.connect (load_spots);
         load_spots ();
     }
@@ -246,7 +343,7 @@ public class MapWindow : Adw.ApplicationWindow {
             pixel_size = 32
         };
 
-        image.add_css_class ("map-marker");
+        image.add_css_class ("map-marker-%s".printf (spot.band));
 
         var coordinate = spot.coordinate;
         if (coordinate == null) return;
@@ -258,11 +355,72 @@ public class MapWindow : Adw.ApplicationWindow {
             longitude = coordinate.longitude
         };
 
+        var click = new Gtk.GestureClick ();
+        click.pressed.connect (() => {
+            Application.current_spot_hash = spot.hash;
+        });
+        marker.add_controller (click);
+
+        var motion = new Gtk.EventControllerMotion ();
+        motion.enter.connect ( () => {
+            marker.set_opacity (0.5);
+            marker.set_cursor_from_name ("pointer");
+        });
+        motion.leave.connect ( () => {
+            marker.set_opacity (1.0);
+            marker.set_cursor_from_name (null);
+        });
+        marker.add_controller (motion);
+
         marker_layer.add_marker (marker);
+    } /* _create_marker */
+
+    public void bounce_filter ()
+    {
+        filter.changed (Gtk.FilterChange.DIFFERENT);
+        load_spots ();
     }
+
+    private double calculate_zoom_level (BoundingBox bbox)
+    {
+        if (!bbox.is_valid ())
+            return 4.0; // Default zoom if bounding box is invalid
+
+        // Calculate the geographic span
+        var lat_span = bbox.top - bbox.bottom;
+        var lon_span = bbox.right - bbox.left;
+
+        // Use the larger span (latitude or longitude) to determine zoom
+        var max_span = double.max (lat_span, lon_span);
+
+        // Convert geographic span to zoom level
+        // These values are approximate and can be adjusted based on testing
+        if (max_span > 180) return 1.0;   // Whole world
+        if (max_span > 90) return 2.0;    // Hemisphere
+        if (max_span > 45) return 3.0;    // Large continent
+        if (max_span > 22) return 4.0;    // Continent
+        if (max_span > 11) return 5.0;    // Large country
+        if (max_span > 5.5) return 6.0;   // Country
+        if (max_span > 2.7) return 7.0;   // Large state/province
+        if (max_span > 1.4) return 8.0;   // State/province
+        if (max_span > 0.7) return 9.0;   // Large region
+        if (max_span > 0.35) return 10.0; // Region
+        if (max_span > 0.17) return 11.0; // Large city area
+        if (max_span > 0.085) return 12.0; // City area
+        if (max_span > 0.042) return 13.0; // City
+        if (max_span > 0.021) return 14.0; // Neighborhood
+        if (max_span > 0.010) return 15.0; // Large block
+        if (max_span > 0.005) return 16.0; // Block
+        if (max_span > 0.002) return 17.0; // Street
+        if (max_span > 0.001) return 18.0; // Building
+
+        return 19.0; // Maximum detail
+    } /* calculate_zoom_level */
 
     public void load_spots ()
     {
+        bbox.clear_all ();
+
         if (marker_layer != null)
         {
             map_widget.remove_layer (marker_layer);
@@ -270,22 +428,31 @@ public class MapWindow : Adw.ApplicationWindow {
         }
 
         marker_layer = new MarkerLayer (viewport);
-        var spots = Application.spot_repo.store;
 
         uint spot_count = 0;
-        for (uint i = 0; i < spots.get_n_items (); i++)
+        for (uint i = 0; i < filtered.get_n_items (); i++)
         {
-            Spot spot = spots.get_item (i) as Spot;
+            Spot spot = filtered.get_item (i) as Spot;
             bbox.extend_coordinate (spot.coordinate);
             _create_marker (spot);
             spot_count++;
         }
 
-        debug ("Added %u spot markers".printf (spot_count));
-
         map_widget.insert_layer_above (marker_layer, map_layer);
-        var center = bbox.center ();
-        viewport.set_location (center.latitude, center.longitude);
-        viewport.set_zoom_level (4);
-    }
+
+        if ((spot_count > 0) && bbox.is_valid ())
+        {
+            var center = bbox.center ();
+            var zoom_level = calculate_zoom_level (bbox);
+            viewport.set_location (center.latitude, center.longitude);
+            viewport.set_zoom_level (zoom_level);
+        }
+        else
+        {
+            // No spots or invalid bbox, use default location/zoom
+            viewport.set_location (qth_coordinate.latitude, qth_coordinate.
+                longitude);
+            viewport.set_zoom_level (4);
+        }
+    } /* load_spots */
 } /* class MapWindow */

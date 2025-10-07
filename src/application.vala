@@ -19,14 +19,85 @@
  */
 
 public sealed class Application : Adw.Application {
-    public static Quark current_spot_hash { get; set; }
-    public static SpotRepo spot_repo   { get; private set; }
-    public static Settings settings    { get; private set; }
-    public static PotaClient pota_client { get; private set; }
+    private static Quark _current_spot_hash = 0;
+    public static Quark current_spot_hash { get {
+                                                return _current_spot_hash;
+                                            } set {
+                                                if (_current_spot_hash == value)
+                                                    return;
+                                                _current_spot_hash = value;
+                                                if (_spot_repo != null)
+                                                    _spot_repo.
+                                                    current_spot_changed (value)
+                                                    ;
+                                            } }
+    public static SpotRepo spot_repo        { get; private set; }
+    public static Settings settings         { get; private set; }
+    public static PotaClient pota_client    { get; private set; }
     public static MapWindow?    map_window  { get;
                                               private set;
                                               default = null;
     }
+    private static string? _current_mode_filter = null;
+    public static string? current_mode_filter       { get {
+                                                          return
+                                                              _current_mode_filter;
+                                                      } set {
+                                                          if (
+                                                              _current_mode_filter
+                                                              == value) return;
+                                                          _current_mode_filter =
+                                                              value;
+                                                          if (_map_window !=
+                                                              null)
+                                                              _map_window.
+                                                              bounce_filter ();
+                                                      } }
+    private static string? _current_program_filter = null;
+    public static string? current_program_filter    { get {
+                                                          return
+                                                              _current_program_filter;
+                                                      } set {
+                                                          if (
+                                                              _current_program_filter
+                                                              == value) return;
+                                                          _current_program_filter
+                                                              = value;
+                                                          if (_map_window !=
+                                                              null)
+                                                              _map_window.
+                                                              bounce_filter ();
+                                                      } }
+    private static string? _current_search_text = null;
+    public static string? current_search_text       { get {
+                                                          return
+                                                              _current_search_text;
+                                                      } set {
+                                                          if (
+                                                              _current_search_text
+                                                              == value) return;
+                                                          _current_search_text =
+                                                              value;
+                                                          if (_map_window !=
+                                                              null)
+                                                              _map_window.
+                                                              bounce_filter ();
+                                                      } }
+    private static string? _current_band_filter = null;
+    public static string? current_band_filter       { get {
+                                                          return
+                                                              _current_band_filter;
+                                                      } set {
+                                                          if (
+                                                              _current_band_filter
+                                                              == value) return;
+                                                          _current_band_filter =
+                                                              value;
+                                                          if (_map_window !=
+                                                              null)
+                                                              _map_window.
+                                                              bounce_filter ();
+                                                      } }
     public Application()
     {
         Object (
@@ -77,6 +148,11 @@ public sealed class Application : Adw.Application {
             );
 
         var win = this.active_window ?? new AppWindow (this);
+        win.close_request.connect (() => {
+            if (map_window != null)
+                map_window.close (); // closing the main window closes all the windows
+            return false;
+        });
         win.present ();
     }
 

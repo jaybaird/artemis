@@ -173,7 +173,9 @@ public sealed class Spot : Object {
                 distance = -1.0;
                 bearing = -1.0;
             }
-        } else {
+        }
+        else
+        {
             distance = -1.0;
             bearing = -1.0;
         }

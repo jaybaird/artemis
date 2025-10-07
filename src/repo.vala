@@ -124,9 +124,11 @@ public class CallsignCache : Object {
 
 public sealed class SpotRepo : Object {
     public GLib.ListStore store { get; construct; }
+    public Gtk.Filter spot_filter { get; construct; }
     public signal void busy_changed (bool busy);
     public signal void refreshed (uint spots_updated);
     public signal void update_error (Error err);
+    public signal void current_spot_changed (Quark spot_hash);
 
     public Gtk.StringList program_model { get; private set; }
     public uint64 tracked_spot_hash { get; set; default = uint64.MAX; }
@@ -138,6 +140,17 @@ public sealed class SpotRepo : Object {
     construct {
         store = new GLib.ListStore (typeof(Spot));
         program_model = new Gtk.StringList ({});
+    }
+
+    public Spot? get_spot (Quark spot_hash)
+    {
+        for (uint i = 0; i < store.get_n_items (); i++)
+        {
+            var spot = store.get_item (i) as Spot;
+            if ((spot != null) && (spot.hash == spot_hash)) return spot;
+        }
+
+        return null;
     }
 
     public async void update_spots ()

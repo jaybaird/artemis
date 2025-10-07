@@ -299,10 +299,14 @@ public sealed class SpotCard : Gtk.Box {
             this.add_css_class ("dimmed");
         }
 
-        if (Application.settings.get_string("location") == "" || spot.distance < 0)
+        if ((Application.settings.get_string ("location") == "") || (spot.
+                                                                     distance <
+                                                                     0))
         {
             distance_bearing.visible = false;
-        } else {
+        }
+        else
+        {
             distance_bearing.visible = true;
             var use_metric = Application.settings.get_boolean ("use-metric");
             var unit = _ ("km");
