@@ -180,9 +180,6 @@ public sealed class BandView : Gtk.Box {
         if (page != null)
             page.badge_number = sorted.get_n_items ();
 
-        Application.map_window.notify["map_window"].connect (() => {
-        });
-
         settings.changed["hide-qrt"].connect (bounce_filter);
         settings.changed["hide-hunted"].connect (bounce_filter);
         settings.changed["hide-older-than"].connect (bounce_filter);
@@ -192,26 +189,22 @@ public sealed class BandView : Gtk.Box {
 
     public void set_current_spot (Quark spot_hash)
     {
-        Gtk.FlowBoxChild? selected_child = null;
-        for (var child = band_spot_cards.get_first_child (); child != null;
-             child = child.get_next_sibling ())
-        {
-            var fbchild = child as Gtk.FlowBoxChild;
-            if (fbchild == null) continue;
-
-            var spot_card = fbchild.get_child () as SpotCard;
-            if ((spot_card != null) && (spot_card.spot.hash == spot_hash))
-            {
-                selected_child = fbchild;
-                break;
-            }
-        }
-
         sorter.changed (Gtk.SorterChange.DIFFERENT);
 
         Idle.add ( () => {
-            if (selected_child != null)
-                band_spot_cards.select_child (selected_child);
+            for (var child = band_spot_cards.get_first_child (); child != null;
+                 child = child.get_next_sibling ())
+            {
+                var fbchild = child as Gtk.FlowBoxChild;
+                if (fbchild == null) continue;
+
+                var spot_card = fbchild.get_child () as SpotCard;
+                if ((spot_card != null) && (spot_card.spot.hash == spot_hash))
+                {
+                    band_spot_cards.select_child (fbchild);
+                    break;
+                }
+            }
 
             return Source.REMOVE;
         });
