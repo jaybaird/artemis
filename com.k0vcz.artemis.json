@@ -67,6 +67,17 @@
             ]
         },
         {
+            "name": "shumate",
+            "buildsystem": "meson",
+            "sources": [
+                {
+                "type": "git",
+                "url": "https://gitlab.gnome.org/GNOME/libshumate.git",
+                "tag": "1.5.0"
+                }
+            ]
+        },
+        {
             "name" : "artemis",
             "builddir" : true,
             "buildsystem" : "meson",
