@@ -55,7 +55,7 @@ public sealed class AppWindow : Gtk.Window {
 
     private uint current_ticks = 0;
     private bool update_paused = false;
-    private ArrayList<BandView> band_pages;
+    private ArrayList<Adw.ViewStackPage> band_pages;
 
     private ulong program_select_handler = 0;
 
@@ -65,7 +65,7 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     construct {
-        band_pages = new ArrayList<BandView> ();
+        band_pages = new ArrayList<Adw.ViewStackPage> ();
         refresh_banner.button_clicked.connect (on_banner_button_clicked);
 
         Application.settings.changed["update-interval"].connect (() => {
@@ -77,8 +77,9 @@ public sealed class AppWindow : Gtk.Window {
         search_entry.search_changed.connect ( () => {
             Application.current_search_text = search_entry.text;
 
-            foreach (var band_view in band_pages)
+            foreach (var page in band_pages)
             {
+                var band_view = page.get_child () as BandView;
                 band_view.bounce_filter ();
             }
         });
@@ -95,8 +96,9 @@ public sealed class AppWindow : Gtk.Window {
                     mode = model.get_string (idx);
 
                 Application.current_mode_filter = mode;
-                foreach (var band_view in band_pages)
+                foreach (var page in band_pages)
                 {
+                    var band_view = page.get_child () as BandView;
                     band_view.bounce_filter ();
                 }
             }
@@ -123,10 +125,8 @@ public sealed class AppWindow : Gtk.Window {
 
             var idx = 0u;
             var model = program_select.get_model () as Gtk.StringList;
-            debug (Application.current_program_filter);
             for (uint i = 0; i < model.get_n_items (); i++)
             {
-                debug (model.get_string (i));
                 if (Application.current_program_filter == model.get_string (i))
                 {
                     idx = i;
@@ -235,13 +235,12 @@ public sealed class AppWindow : Gtk.Window {
         {
             var band = RadioConstants.BANDS[i];
             var band_view = new BandView (Application.spot_repo, band,
-                "band-%s".
-                printf (band)
-                );
-            band_pages.add (band_view);
+                @"band-$band");
 
-            band_stack.add_titled_with_icon (band_view, band, band, "band-%s".
-                printf (band));
+            var page = band_stack.add_titled_with_icon (band_view, band, band,
+                @"band-$band");
+            band_view.page = page; // page is unowned, so no circular reference
+            band_pages.add (page);
         }
     }
 
@@ -270,9 +269,10 @@ public sealed class AppWindow : Gtk.Window {
                 yield Application.spot_repo.update_spots ();
 
                 Idle.add (() => {
-                    foreach (var band_page in band_pages)
+                    foreach (var page in band_pages)
                     {
-                        band_page.set_current_spot (Application.
+                        var band_view = page.get_child () as BandView;
+                        band_view.set_current_spot (Application.
                             current_spot_hash);
                     }
                     return Source.REMOVE;
@@ -289,6 +289,12 @@ public sealed class AppWindow : Gtk.Window {
 
         var now = new GLib.DateTime.now_utc ().format ("%H:%M:%S UTC");
         current_time.label = now;
+    } /* tick */
+
+    [GtkCallback]
+    private void on_map_button_clicked ()
+    {
+        Application.open_map_window ();
     }
 
     [GtkCallback]
@@ -332,8 +338,9 @@ public sealed class AppWindow : Gtk.Window {
 
             Application.current_program_filter = program;
 
-            foreach (var band_view in band_pages)
+            foreach (var page in band_pages)
             {
+                var band_view = page.get_child () as BandView;
                 band_view.bounce_filter ();
             }
         }

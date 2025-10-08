@@ -15,9 +15,19 @@ template $AppWindow : Window {
     }
 
     [end]
-    MenuButton button_menu {
-      menu-model: menu_app;
-      icon-name: "open-menu-symbolic";
+    Box {
+      orientation: horizontal;
+
+      Button map_button {
+        icon-name: "map-symbolic";
+        tooltip-text: _("Open Map");
+        clicked => $on_map_button_clicked();
+      }
+
+      MenuButton button_menu {
+        menu-model: menu_app;
+        icon-name: "open-menu-symbolic";
+      }
     }
   }
 
@@ -39,8 +49,6 @@ template $AppWindow : Window {
   }
 
   Box {
-    margin-bottom: 25;
-    margin-top: 5;
     margin-start: 25;
     margin-end: 25;
     orientation: vertical;
@@ -52,32 +60,20 @@ template $AppWindow : Window {
         hexpand: true;
         vexpand: true;
 
-        margin-top: 15;
-
         child:
           Box root {
             orientation: vertical;
 
-            Adw.ViewSwitcher switcher {
-              stack: band_stack;
-              policy: narrow;
-            }
-
-            Adw.ViewStack band_stack {
-              margin-top: 15;
-              enable-transitions: true;
-              hexpand: true;
-              vexpand: true;
-            }
-
             Box {
-              margin-top: 25;
-              halign: center;
+              margin-top: 15;
+              halign: fill;
               hexpand: true;
               orientation: horizontal;
 
               SearchEntry search_entry {
-                width-request: 300;
+                hexpand: true;
+                halign: fill;
+                width-request: 500;
                 input-hints: no_spellcheck;
                 placeholder-text: _("Search for Park or Callsign");
               }
@@ -139,6 +135,19 @@ template $AppWindow : Window {
                 styles ["monospace", "utc-time"]
                 label: "18:51:27 UTC";
               }
+            }
+
+            Adw.ViewSwitcher switcher {
+              margin-top: 20;
+              stack: band_stack;
+              policy: narrow;
+            }
+
+            Adw.ViewStack band_stack {
+              margin-top: 20;
+              enable-transitions: true;
+              hexpand: true;
+              vexpand: true;
             }
           };
 

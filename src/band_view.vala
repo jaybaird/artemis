@@ -20,6 +20,8 @@ public sealed class BandView : Gtk.Box {
     [GtkChild]
     public unowned Gtk.FlowBox band_spot_cards;
 
+    public unowned Adw.ViewStackPage? page;
+
     private Gtk.Filter filter;
     private Gtk.CustomSorter sorter;
     private Gtk.FilterListModel filtered;
@@ -166,11 +168,17 @@ public sealed class BandView : Gtk.Box {
             var items = sorted.get_n_items ();
             band_spot_cards.visible = (items > 0);
             status_page.visible = (items == 0);
+
+            if (page != null)
+                page.badge_number = sorted.get_n_items ();
         });
 
         var items = sorted.get_n_items ();
         band_spot_cards.visible = (items > 0);
         status_page.visible = (items == 0);
+
+        if (page != null)
+            page.badge_number = sorted.get_n_items ();
 
         Application.map_window.notify["map_window"].connect (() => {
         });
@@ -184,6 +192,7 @@ public sealed class BandView : Gtk.Box {
 
     public void set_current_spot (Quark spot_hash)
     {
+        Gtk.FlowBoxChild? selected_child = null;
         for (var child = band_spot_cards.get_first_child (); child != null;
              child = child.get_next_sibling ())
         {
@@ -193,12 +202,19 @@ public sealed class BandView : Gtk.Box {
             var spot_card = fbchild.get_child () as SpotCard;
             if ((spot_card != null) && (spot_card.spot.hash == spot_hash))
             {
-                band_spot_cards.select_child (fbchild);
+                selected_child = fbchild;
                 break;
             }
         }
 
-        //sorter.changed(Gtk.SorterChange.DIFFERENT);
+        sorter.changed (Gtk.SorterChange.DIFFERENT);
+
+        Idle.add ( () => {
+            if (selected_child != null)
+                band_spot_cards.select_child (selected_child);
+
+            return Source.REMOVE;
+        });
     }
 
     private void _refresh_cards ()

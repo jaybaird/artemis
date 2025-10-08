@@ -1,141 +1,147 @@
 using Shumate;
 
-public static double MIN_LATITUDE = -85.0511287798;
-public static double MAX_LATITUDE = 85.0511287798;
-public static double MIN_LONGITUDE = -180;
-public static double MAX_LONGITUDE = 180;
+const double MIN_LATITUDE = -85.0511287798;
+const double MAX_LATITUDE = 85.0511287798;
+const double MIN_LONGITUDE = -180.0;
+const double MAX_LONGITUDE = 180.0;
 
-// BoundingBox from GNOME Maps, Marcus Lundblad <ml@update.uu.se>
-public sealed class BoundingBox : Object {
-    public double left    { get; set; }
-    public double bottom  { get; set; }
-    public double right   { get; set; }
-    public double top     { get; set; }
-    public BoundingBox (double? left, double? bottom, double? right, double? top
-                        )
+const double EARTH_RADIUS_M = 6378137.0;
+
+static double meters_to_deg_lat (double meters)
+{
+    return meters / 111320.0;
+}
+
+static double meters_to_deg_lon (double meters, double latitude_deg)
+{
+    double lat_rad = Distance.to_radians (latitude_deg);
+
+    return meters / (111320.0 * Math.cos (lat_rad));
+}
+
+public class BoundingBox : Object {
+    public double min_lat { get; private set; }
+    public double min_lon { get; private set; }
+    public double max_lat { get; private set; }
+    public double max_lon { get; private set; }
+    public BoundingBox ()
     {
-        Object (
-            left: left ?? MAX_LONGITUDE,
-            bottom: bottom ?? MAX_LATITUDE,
-            right: right ?? MIN_LONGITUDE,
-            top: top ?? MIN_LATITUDE
-            );
+        clear ();
     }
 
-    public BoundingBox.empty ()
+    public BoundingBox.from_points (Gee.Collection<Coordinate> coords)
     {
-        Object (
-            left:  MAX_LONGITUDE,
-            bottom: MAX_LATITUDE,
-            right: MIN_LONGITUDE,
-            top: MIN_LATITUDE
-            );
-    }
-
-    public BoundingBox.centered_on (Coordinate coordinate, double range = 1.0)
-    {
-        Object (
-            left: coordinate.longitude - range,
-            bottom: coordinate.latitude - range,
-            right: coordinate.longitude + range,
-            top: coordinate.latitude + range
-            );
-    }
-
-    public void clear_all ()
-    {
-        left = MAX_LONGITUDE;
-        bottom = MAX_LATITUDE;
-        right = MIN_LONGITUDE;
-        top = MIN_LATITUDE;
-    }
-
-    public void compose (BoundingBox other)
-    {
-        if (other.left < this.left) this.left = other.left;
-        if (other.right > this.right) this.right = other.right;
-        if (other.top > this.top) this.top = other.top;
-        if (other.bottom < this.bottom) this.bottom = other.bottom;
-    }
-
-    public Coordinate center ()
-    {
-        var center_lat = (this.top + this.bottom) / 2.0;
-        var center_lon = (this.left + this.right) / 2.0;
-
-        // Normalize longitude if it's wrapped
-        if (center_lon > 180)
-            center_lon -= 360;
-        else if (center_lon < -180)
-            center_lon += 360;
-
-        return new Coordinate.full (center_lat, center_lon);
-    }
-
-    public void extend (double latitude, double longitude)
-    {
-        if (latitude < this.bottom) this.bottom = latitude;
-        if (latitude > this.top) this.top = latitude;
-
-        // Handle longitude - bias toward 0° meridian for map display
-        if ((this.left == MAX_LONGITUDE) && (this.right == MIN_LONGITUDE))
+        clear ();
+        foreach (var c in coords)
         {
-            // First point being added
-            this.left = longitude;
-            this.right = longitude;
-        }
-        else
-        {
-            // Always prefer normal bounding box (no wrap) for map display
-            // This biases toward the 0° meridian rather than 180°
-            if (longitude < this.left) this.left = longitude;
-            if (longitude > this.right) this.right = longitude;
+            extend (c.latitude, c.longitude);
         }
     }
 
-    public void extend_coordinate (Coordinate? coordinate)
+    public void clear ()
     {
-        if (coordinate == null) return;
-        this.extend (coordinate.latitude, coordinate.longitude);
-    }
-
-    public bool covers (double latitude, double longitude)
-    {
-        if (!((latitude >= this.bottom) && (latitude <= this.top)))
-            return false;
-
-        // Handle longitude wrap-around
-        if (this.left <= this.right)
-            // Normal case - no wrap
-            return longitude >= this.left && longitude <= this.right;
-        else
-            // Wrapped case - across 180° meridian
-            return longitude >= this.left || longitude <= this.right;
-    }
-
-    public bool covers_coordinate (Coordinate? coordinate)
-    {
-        if (coordinate == null) return false;
-        return covers (coordinate.latitude, coordinate.longitude);
+        min_lat = MAX_LATITUDE;
+        max_lat = MIN_LATITUDE;
+        min_lon = MAX_LONGITUDE;
+        max_lon = MIN_LONGITUDE;
     }
 
     public bool is_valid ()
     {
-        return this.bottom < this.top &&
-               this.left >= MIN_LONGITUDE &&
-               this.left <= MAX_LONGITUDE &&
-               this.right >= MIN_LONGITUDE &&
-               this.right <= MAX_LONGITUDE &&
-               this.bottom >= MIN_LATITUDE &&
-               this.bottom <= MAX_LATITUDE &&
-               this.top >= MIN_LATITUDE &&
-               this.top <= MAX_LATITUDE;
+        return min_lat <= max_lat && min_lon <= max_lon;
+    }
+
+    public void extend (double lat, double lon)
+    {
+        lat = clamp (lat, MIN_LATITUDE, MAX_LATITUDE);
+        lon = normalize_longitude (lon);
+
+        if (!is_valid ())
+        {
+            min_lat = max_lat = lat;
+            min_lon = max_lon = lon;
+            return;
+        }
+
+        if (lat < min_lat) min_lat = lat;
+        if (lat > max_lat) max_lat = lat;
+
+        // handle wrap-around correctly
+        if (lon_distance (lon, min_lon) < lon_distance (lon, max_lon))
+        {
+            if (lon < min_lon) min_lon = lon;
+        }
+        else
+        {
+            if (lon > max_lon) max_lon = lon;
+        }
+    }
+
+    public void extend_coord (Coordinate coord)
+    {
+        extend (coord.latitude, coord.longitude);
+    }
+
+    public void expand (int padding_meters = 50000)
+    {
+        if (!is_valid ())
+            return;
+
+        double lat_center = (min_lat + max_lat) / 2.0;
+
+        double lat_pad = meters_to_deg_lat (padding_meters);
+        double lon_pad = meters_to_deg_lon (padding_meters, lat_center);
+
+        min_lat -= lat_pad;
+        max_lat += lat_pad;
+        min_lon -= lon_pad;
+        max_lon += lon_pad;
+
+        min_lat = clamp (min_lat, MIN_LATITUDE, MAX_LATITUDE);
+        max_lat = clamp (max_lat, MIN_LATITUDE, MAX_LATITUDE);
+        min_lon = clamp (min_lon, MIN_LONGITUDE, MAX_LONGITUDE);
+        max_lon = clamp (max_lon, MIN_LONGITUDE, MAX_LONGITUDE);
+    }
+
+    public Coordinate center ()
+    {
+        var c_lat = (min_lat + max_lat) * 0.5;
+        var c_lon = normalize_longitude ((min_lon + max_lon) * 0.5);
+        return new Coordinate.full (c_lat, c_lon);
+    }
+
+    public bool contains (double lat, double lon)
+    {
+        lat = clamp (lat, MIN_LATITUDE, MAX_LATITUDE);
+        lon = normalize_longitude (lon);
+        return lat >= min_lat && lat <= max_lat &&
+               lon >= min_lon && lon <= max_lon;
+    }
+
+    public string to_string ()
+    {
+        return "BBox(lat: %.5f–%.5f, lon: %.5f–%.5f)".printf (min_lat, max_lat,
+            min_lon, max_lon);
+    }
+
+    private static double normalize_longitude (double lon)
+    {
+        while (lon < -180.0) { lon += 360.0; }
+        while (lon > 180.0) { lon -= 360.0; }
+        return lon;
+    }
+
+    private static double lon_distance (double a, double b)
+    {
+        double d = Math.fabs (a - b);
+        return d > 180.0 ? 360.0 - d : d;
     }
 } /* class BoundingBox */
 
 public class MapWindow : Adw.ApplicationWindow {
     private Viewport viewport;
     private MapSourceRegistry registry;
+    private MapSource map_source;
     private Map map_widget;
 
     private Scale map_scale;
@@ -165,27 +171,20 @@ public class MapWindow : Adw.ApplicationWindow {
 
         registry = new MapSourceRegistry.with_defaults ();
 
-        if (VectorRenderer.is_supported ())
-        {
-            try {
-                var style_json = resources_lookup_data (
-                    "/com/k0vcz/artemis/map-style.json", ResourceLookupFlags.
-                    NONE);
-                var renderer = new VectorRenderer ("vector-tiles", (string)
-                    style_json.get_data ())
-                {
-                    max_zoom_level = 22,
-                    license = "© OpenMapTiles © OpenStreetMap contributors"
-                };
-                registry.add (renderer);
-            } catch(Error err) {
-                warning ("Failed to create vector map style: %s", err.message);
-            }
-        }
-        else
-        {
-            debug ("Vector renderer not supported.");
-        }
+        const string api_key = "78418e148d9b4447ae11c25d30a735e5";
+        string url_template =
+            @"https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=$api_key";
+        map_source = new Shumate.RasterRenderer.full_from_url (
+            "thunderforest-outdoors",
+            "Thunderforest Outdoors",
+            "© Thunderforest",
+            "https://www.thunderforest.com",
+            0u,
+            19u,
+            256u,
+            Shumate.MapProjection.MERCATOR,
+            url_template
+            );
 
         map_widget = new Map ()
         {
@@ -203,8 +202,6 @@ public class MapWindow : Adw.ApplicationWindow {
 
         overlay = new Gtk.Overlay ()
         {
-            width_request = 800,
-            height_request = 600,
             vexpand = true,
             hexpand = true
         };
@@ -212,10 +209,9 @@ public class MapWindow : Adw.ApplicationWindow {
 
         set_content (overlay);
 
-        var map_source = registry.get_by_id ("vector-tiles");
         viewport = map_widget.get_viewport ();
         viewport.set_reference_map_source (map_source);
-        viewport.set_max_zoom_level (22);
+        viewport.set_max_zoom_level (19);
         viewport.set_min_zoom_level (0);
 
         map_scale = new Scale (viewport)
@@ -254,7 +250,7 @@ public class MapWindow : Adw.ApplicationWindow {
                     .message);
             }
         }
-        bbox = new BoundingBox.empty ();
+        bbox = new BoundingBox ();
 
         var layer = new MapLayer (map_source, viewport);
         if (layer != null)
@@ -302,8 +298,8 @@ public class MapWindow : Adw.ApplicationWindow {
 
             if ((Application.current_program_filter != null) && (Application.
                                                                  current_program_filter
-                                                                 != _
-                                                                     ("All")) &&
+                                                                 != _ ("All"))
+                &&
                 !spot.park_ref.down ().has_prefix (Application.
                     current_program_filter.down
                         ()))
@@ -311,8 +307,7 @@ public class MapWindow : Adw.ApplicationWindow {
 
             if ((Application.current_mode_filter != null) && (Application.
                                                               current_mode_filter
-                                                              != _ (
-                                                                  "All")) &&
+                                                              != _ ("All")) &&
                 !spot.mode.down ().contains (Application.current_mode_filter.
                     down ()))
                 return false;
@@ -333,8 +328,48 @@ public class MapWindow : Adw.ApplicationWindow {
             filter);
 
         Application.spot_repo.refreshed.connect (load_spots);
+
         load_spots ();
     }
+
+    // pulled straight from https://gitlab.gnome.org/GNOME/gnome-maps/-/blob/main/src/mapView.js
+    private double get_zoom_level_fitting_bounds (BoundingBox bbox)
+    {
+        if (!bbox.is_valid ())
+            return viewport.min_zoom_level;
+
+        var good_size = false;
+        var zoom_level = viewport.max_zoom_level;
+        Graphene.Rect widget_bounds = {};
+        map_widget.compute_bounds (map_widget, out widget_bounds);
+
+        var width = (widget_bounds.size.width > 0) ? widget_bounds.size.width :
+            800;
+        var height = (widget_bounds.size.height > 0) ? widget_bounds.size.height
+        : 600;
+
+        do
+        {
+            var min_x = map_source.get_x (zoom_level, bbox.min_lon);
+            var min_y = map_source.get_y (zoom_level, bbox.min_lat);
+            var max_x = map_source.get_x (zoom_level, bbox.max_lon);
+            var max_y = map_source.get_y (zoom_level, bbox.max_lat);
+
+            if ((min_y - max_y <= height) && (max_x - min_x <= width))
+                good_size = true;
+            else
+                zoom_level = zoom_level - 1;
+
+            if (zoom_level <= viewport.min_zoom_level)
+            {
+                zoom_level = viewport.min_zoom_level;
+                good_size = true;
+            }
+        }
+        while (!good_size);
+
+        return zoom_level;
+    } /* get_zoom_level_fitting_bounds */
 
     private void _create_marker (Spot spot)
     {
@@ -381,45 +416,9 @@ public class MapWindow : Adw.ApplicationWindow {
         load_spots ();
     }
 
-    private double calculate_zoom_level (BoundingBox bbox)
-    {
-        if (!bbox.is_valid ())
-            return 4.0; // Default zoom if bounding box is invalid
-
-        // Calculate the geographic span
-        var lat_span = bbox.top - bbox.bottom;
-        var lon_span = bbox.right - bbox.left;
-
-        // Use the larger span (latitude or longitude) to determine zoom
-        var max_span = double.max (lat_span, lon_span);
-
-        // Convert geographic span to zoom level
-        // These values are approximate and can be adjusted based on testing
-        if (max_span > 180) return 1.0;   // Whole world
-        if (max_span > 90) return 2.0;    // Hemisphere
-        if (max_span > 45) return 3.0;    // Large continent
-        if (max_span > 22) return 4.0;    // Continent
-        if (max_span > 11) return 5.0;    // Large country
-        if (max_span > 5.5) return 6.0;   // Country
-        if (max_span > 2.7) return 7.0;   // Large state/province
-        if (max_span > 1.4) return 8.0;   // State/province
-        if (max_span > 0.7) return 9.0;   // Large region
-        if (max_span > 0.35) return 10.0; // Region
-        if (max_span > 0.17) return 11.0; // Large city area
-        if (max_span > 0.085) return 12.0; // City area
-        if (max_span > 0.042) return 13.0; // City
-        if (max_span > 0.021) return 14.0; // Neighborhood
-        if (max_span > 0.010) return 15.0; // Large block
-        if (max_span > 0.005) return 16.0; // Block
-        if (max_span > 0.002) return 17.0; // Street
-        if (max_span > 0.001) return 18.0; // Building
-
-        return 19.0; // Maximum detail
-    } /* calculate_zoom_level */
-
     public void load_spots ()
     {
-        bbox.clear_all ();
+        bbox.clear ();
 
         if (marker_layer != null)
         {
@@ -433,17 +432,19 @@ public class MapWindow : Adw.ApplicationWindow {
         for (uint i = 0; i < filtered.get_n_items (); i++)
         {
             Spot spot = filtered.get_item (i) as Spot;
-            bbox.extend_coordinate (spot.coordinate);
+            bbox.extend_coord (spot.coordinate);
             _create_marker (spot);
             spot_count++;
         }
+        bbox.expand ();
 
         map_widget.insert_layer_above (marker_layer, map_layer);
 
         if ((spot_count > 0) && bbox.is_valid ())
         {
             var center = bbox.center ();
-            var zoom_level = calculate_zoom_level (bbox);
+            var zoom_level = get_zoom_level_fitting_bounds (bbox);
+
             viewport.set_location (center.latitude, center.longitude);
             viewport.set_zoom_level (zoom_level);
         }

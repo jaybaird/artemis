@@ -1,6 +1,11 @@
 using GLib;
 using Shumate;
 
+public static inline double clamp (double v, double min, double max)
+{
+    return (v < min) ? min : (max < v) ? max : v;
+}
+
 public static T random_choice<T> (T[] array)
 {
     if (array.length == 0)

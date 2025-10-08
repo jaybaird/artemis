@@ -156,18 +156,27 @@ public sealed class Application : Adw.Application {
         win.present ();
     }
 
-    private void on_open_map_action ()
+    public static void open_map_window ()
     {
         if (map_window == null)
         {
-            map_window = new MapWindow ();
-            map_window.set_application (this);
+            map_window = new MapWindow ()
+            {
+                default_width = 800,
+                default_height = 600
+            };
+            //map_window.set_application (this);
             map_window.close_request.connect (() => {
                 map_window = null;
                 return false;
             });
         }
         map_window.present ();
+    }
+
+    private void on_open_map_action ()
+    {
+        open_map_window ();
     }
 
     private void on_preferences_action ()
