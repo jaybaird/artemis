@@ -1,11 +1,11 @@
 {
-    "id" : "com.k0vcz.artemis",
+    "id" : "com.k0vcz.Artemis",
     "runtime" : "org.gnome.Platform",
     "runtime-version" : "48",
     "sdk" : "org.gnome.Sdk",
     "sdk-extensions" : [
     ],
-    "command" : "artemis",
+    "command" : "com.k0vcz.Artemis",
     "finish-args" : [
         "--share=network",
         "--share=ipc",
@@ -70,10 +70,10 @@
             "name" : "artemis",
             "builddir" : true,
             "buildsystem" : "meson",
-            "sources" : [
+            "sources" : 
                 {
                     "type" : "dir",
-                    "path" : "/home/jbaird/projects/artemis-vala"
+                    "path" : "."
                 }
             ]
         }
