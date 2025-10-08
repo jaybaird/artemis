@@ -1,11 +1,13 @@
 [Desktop Entry]
-Name=artemis
-Exec=artemis
-Icon=com.k0vcz.artemis
-Terminal=false
 Type=Application
-Categories=Utility;
-Keywords=GTK;
+Name=Artemis
+Exec=com.k0vcz.Artemis
+Icon=com.k0vcz.Artemis
+Comment=A Parks on the Air Spotting Tool
+Terminal=false
+Categories=GNOME;GTK;Utility;
+Keywords=hamradio;amateurradio;ham;radio;pota;
 StartupNotify=true
 DBusActivatable=true
 X-GNOME-UsesNotifications=true
+X-GNOME-Gettext-Domain=com.k0vcz.Artemis
