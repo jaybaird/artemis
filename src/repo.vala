@@ -29,7 +29,7 @@ public class CallsignCache : Object {
             GLib.str_equal);
     }
 
-    private bool is_entry_expired (CallsignCacheEntry ? entry) {
+    private bool is_entry_expired (CallsignCacheEntry? entry) {
         if (entry == null)
             return true;
         return GLib.get_monotonic_time () > entry.expires_at;

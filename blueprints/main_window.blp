@@ -7,7 +7,7 @@ template $AppWindow : Window {
   title: _("Artemis");
 
   [titlebar]
-  HeaderBar {
+  Adw.HeaderBar {
     Button add_spot {
       icon-name: "list-add-symbolic";
       tooltip-text: _("Add Spot");
@@ -32,23 +32,9 @@ template $AppWindow : Window {
   }
 
   Box {
-  orientation: vertical;
+    orientation: vertical;
 
-  Adw.Banner refresh_banner {
-    title: _("Spots will refresh in 60 seconds");
-    button-label: _("Pause");
-    button-style: suggested;
-    revealed: true;
-  }
-
-  ProgressBar refresh_progress {
-    show-text: false;
-    height-request: 1;
-    fraction: 0.5;
-    styles ["osd"]
-  }
-
-  Box {
+    Box {
     margin-start: 25;
     margin-end: 25;
     orientation: vertical;
@@ -137,10 +123,13 @@ template $AppWindow : Window {
               }
             }
 
-            Adw.ViewSwitcher switcher {
+            Adw.InlineViewSwitcher switcher {
               margin-top: 20;
               stack: band_stack;
-              policy: narrow;
+              display-mode: both;
+              can-shrink: false;
+
+              styles ["round"]
             }
 
             Adw.ViewStack band_stack {
@@ -164,6 +153,20 @@ template $AppWindow : Window {
           }
         }
       }
+    }
+
+    ProgressBar refresh_progress {
+      show-text: false;
+      height-request: 1;
+      fraction: 0.5;
+      styles ["osd"]
+    }
+
+    Adw.Banner refresh_banner {
+      title: _("Spots will refresh in 60 seconds");
+      button-label: _("Pause");
+      button-style: suggested;
+      revealed: true;
     }
   }
 }

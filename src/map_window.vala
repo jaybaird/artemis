@@ -122,6 +122,12 @@ public class BoundingBox : Object {
 
         return lon;
     }
+
+    private static double lon_distance (double a, double b)
+    {
+        double d = Math.fabs (a - b);
+        return d > 180.0 ? 360.0 - d : d;
+    }
 } /* class BoundingBox */
 
 public class MapWindow : Adw.ApplicationWindow {
