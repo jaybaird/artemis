@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist>
-	<schema id="com.k0vcz.artemis" path="/com/k0vcz/artemis/">
+	<schema id="com.k0vcz.Artemis" path="/com/k0vcz/Artemis/" gettext-domain="com.k0vcz.Artemis">
         <key name="callsign" type="s">
         <default>""</default>
         <summary>User callsign</summary>
@@ -12,8 +12,6 @@
         <summary>Grid Square</summary>
         <description>Your station location or QTH.</description>
         </key>
-
-
 
         <key name="spot-message" type="s">
         <default>""</default>
@@ -29,7 +27,7 @@
         </key>
 
         <key name="default-band" type="s">
-        <default>"20m"</default>
+        <default>"All"</default>
         <summary>Default band</summary>
         <description>The default frequency band (in meters).</description>
         <choices>
@@ -51,7 +49,7 @@
         </key>
 
         <key name="default-mode" type="s">
-        <default>"SSB"</default>
+        <default>"All"</default>
         <summary>Default mode</summary>
         <description>The default operating mode.</description>
         <choices>
@@ -59,6 +57,7 @@
             <choice value="SSB"/>
             <choice value="CW"/>
             <choice value="FT8"/>
+            <choice value="FT4"/>
             <choice value="FM"/>
             <choice value="AM"/>
             <choice value="RTTY"/>

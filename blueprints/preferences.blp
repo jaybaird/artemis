@@ -2,11 +2,22 @@ using Gtk 4.0;
 using Adw 1;
 
 /* Simple models for the combo rows */
-Gtk.StringList bands_model {
-  strings: ["160m","80m","60m","40m","30m","20m","17m","15m","12m","10m","6m","2m","70cm"];
+StringList bands_model {
+  strings ["All", "160m","80m","60m","40m","30m","20m","17m","15m","12m","10m","6m","2m","70cm"]
 }
-Gtk.StringList modes_model {
-  strings: ["SSB","CW","FT8","FM","AM","RTTY","JT65"];
+
+StringList modes_model {
+  strings [
+    _("All"),
+    _("SSB"),
+    _("CW"),
+    _("FT8"),
+    _("FT4"),
+    _("FM"),
+    _("AM"),
+    _("RTTY"),
+    _("JT65"),
+  ]
 }
 
 /* Radio connection models */
@@ -64,12 +75,12 @@ Adw.PreferencesDialog prefs_dialog {
 
       Adw.ComboRow row_default_band {
         title: _("Default Band");
-        model: bands_model;   // expression set in C
+        model: bands_model;
       }
 
       Adw.ComboRow row_default_mode {
         title: _("Default Mode");
-        model: modes_model;   // expression set in C
+        model: modes_model;
       }
     }
 

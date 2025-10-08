@@ -40,6 +40,10 @@ public sealed class Application : Adw.Application {
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
     public static MapWindow? map_window { get; private set; default = null; }
+
+    public static Application app;
+    public static Gtk.Window win;
+
     private static string? _current_mode_filter = null;
     public static string? current_mode_filter {
         get {
@@ -86,34 +90,32 @@ public sealed class Application : Adw.Application {
         }
     }
 
+    private const GLib.ActionEntry[] APP_ENTRIES = {
+        { "add-spot", on_add_button_clicked },
+        { "about", about_activated },
+        { "open-map", on_open_map_action },
+        { "preferences", on_preferences_action },
+        { "refresh", refresh_activated },
+        { "quit", quit_activated }
+    };
+
     public Application () {
         Object (
-            application_id : "com.k0vcz.artemis",
-            flags: ApplicationFlags.DEFAULT_FLAGS,
-            resource_base_path: "/com/k0vcz/artemis"
+            application_id : Build.DOMAIN,
+            flags: ApplicationFlags.DEFAULT_FLAGS
         );
     }
 
     construct {
-        var map_action = new SimpleAction ("open-map", null);
-        var preferences_action = new SimpleAction ("preferences", null);
-        var quit_action = new SimpleAction ("quit", null);
-
-        map_action.activate.connect (on_open_map_action);
-        preferences_action.activate.connect (on_preferences_action);
-        quit_action.activate.connect (() => {
-            this.quit ();
-        });
-
-        add_action (map_action);
-        add_action (preferences_action);
-        add_action (quit_action);
-
+        set_accels_for_action ("app.add-spot", { "<primary>a" });
+        set_accels_for_action ("app.about", { "F1" });
         set_accels_for_action ("app.open-map", { "<primary>m" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
+        set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
         set_accels_for_action ("app.quit", { "<primary>q" });
+        add_action_entries (APP_ENTRIES, this);
 
-        settings = new Settings ("com.k0vcz.artemis");
+        settings = new Settings (Build.DOMAIN);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
         spot_database = new SpotDb ();
@@ -133,15 +135,56 @@ public sealed class Application : Adw.Application {
             Gdk.Display.get_default (),
             css_provider,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            );
+        );
 
-        var win = this.active_window ?? new AppWindow (this);
+        win = this.active_window ?? new AppWindow (this);
         win.close_request.connect (() => {
             if (map_window != null)
                 map_window.close ();   // closing the main window closes all the windows
             return false;
         });
         win.present ();
+    }
+
+    private void about_activated () {
+        const string[] ARTISTS = {
+        };
+
+        const string[] DESIGNERS = {
+        };
+
+        const string[] DEVELOPERS = {
+            "Jay Baird (K0VCZ)"
+        };
+
+        const string COPYRIGHT = "© 2025 Jay Baird (K0VCZ)";
+
+        var dialog = new Adw.AboutDialog.from_appdata ("/com/k0vcz/artemis/metainfo.xml", Build.PROFILE == "development" ? null : Build.VERSION) {
+            version = Build.VERSION,
+            copyright = COPYRIGHT,
+            developers = DEVELOPERS,
+            artists = ARTISTS,
+            designers = DESIGNERS,
+            translator_credits = _("translator-credits")
+        };
+
+        // translators: Wiki pages / Guides
+        dialog.add_link (_("Wiki"), Build.WIKI_WEBSITE);
+
+        dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
+        dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
+
+        dialog.present (win);
+    }
+
+    private void refresh_activated () {
+        spot_repo.update_spots.begin ((obj, res) => {
+            spot_repo.update_spots.end (res);
+        });
+    }
+
+    private void quit_activated () {
+        this.quit ();
     }
 
     public static void open_map_window () {
@@ -163,12 +206,25 @@ public sealed class Application : Adw.Application {
         open_map_window ();
     }
 
-    private void on_preferences_action () {
-        var window = active_window as AppWindow;
+    private void on_add_button_clicked () {
+        AddSpot add_spot = new AddSpot ();
 
-        if (window != null) {
-            var preferences = new PreferencesDialog ();
-            preferences.present (window);
-        }
+        add_spot.present (win);
     }
+
+    private void on_preferences_action () {
+        var preferences = new PreferencesDialog ();
+        preferences.present (win);
+    }
+
+    public static int main (string[] args) {
+        Intl.setlocale (LocaleCategory.ALL, "");
+        Intl.bindtextdomain (Build.GETTEXT_PACKAGE, Build.LOCALEDIR);
+        Intl.bind_textdomain_codeset (Build.GETTEXT_PACKAGE, "UTF-8");
+        Intl.textdomain (Build.GETTEXT_PACKAGE);
+
+        app = new Application ();
+        return app.run (args);
+    }
+
 } /* class Application */

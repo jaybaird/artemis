@@ -1,7 +1,12 @@
-project('artemis', ['c', 'vala'],
-          version: '0.1.0',
-    meson_version: '>= 1.0.0',
-  default_options: ['werror=false', ],
+project(
+  'com.k0vcz.Artemis', 
+  ['c', 'vala'],
+  version: '0.1.0',
+  meson_version: '>= 1.0.0',
+  default_options: [
+    'warning_level=2',
+    'werror=false', 
+  ],
 )
 
 i18n = import('i18n')
@@ -12,14 +17,39 @@ prefix = get_option('prefix')
 data_dir = prefix / get_option('datadir')
 srcdir = meson.project_source_root() / 'src'
 
-config_h = configuration_data()
-config_h.set_quoted('PACKAGE_VERSION', meson.project_version ())
-config_h.set_quoted('GETTEXT_PACKAGE', 'artemis')
-config_h.set_quoted('LOCALEDIR', get_option('prefix') / get_option('localedir'))
-configure_file(output: 'config.h', configuration: config_h)
+# https://gitlab.gnome.org/GNOME/vala/-/issues/1413#note_1707480
+if meson.get_compiler ('c').get_id () == 'clang'
+  add_project_arguments('-Wno-incompatible-function-pointer-types', language: 'c')
+endif
 
-config_dep = valac.find_library ('config', dirs: srcdir)
-config_inc = include_directories('.')
+devel = get_option('debug')
+
+# Setup configuration file
+config = configuration_data()
+config.set('EXEC_NAME', meson.project_name())
+config.set('GETTEXT_PACKAGE', meson.project_name())
+config.set('BINDIR', join_paths(get_option('prefix'), get_option('bindir')))
+config.set('LOCALEDIR', join_paths(get_option('prefix'), get_option('localedir')))
+config.set('DOMAIN', meson.project_name ())
+config.set('G_LOG_DOMAIN', 'Artemis')
+config.set('RESOURCES', '/' + '/'.join(meson.project_name().split('.')) + '/')
+config.set('VERSION', meson.project_version())
+config.set('PREFIX', get_option('prefix'))
+config.set('NAME', 'Artemis')
+config.set('WEBSITE', '')
+config.set('DONATE_WEBSITE', '')
+config.set('TRANSLATE_WEBSITE', '')
+config.set('PROFILE', devel ? 'development' : 'release')
+
+if devel
+  git = find_program('git')
+  if git.found()
+    branch = run_command('git', 'branch', '--show-current', check: true).stdout().strip()
+    revision = run_command('git', 'rev-parse', '--short', 'HEAD', check: true).stdout().strip()
+    version = '@0@-@1@'.format(branch, revision)
+    config.set('VERSION', version)
+  endif
+endif
 
 add_project_arguments('-DGETTEXT_PACKAGE="' + meson.project_name() + '"', language: 'c')
 
@@ -31,7 +61,6 @@ subdir('po')
 
 executable('artemis', artemis_vala_sources,
   dependencies: artemis_vala_deps,
-  include_directories: config_inc,
   vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
   link_with: [libradiocontrol],
   install: true,
@@ -42,17 +71,3 @@ gnome.post_install(
     gtk_update_icon_cache: true,
   update_desktop_database: true,
 )
-
-# Code formatting targets
-uncrustify = find_program('uncrustify', required: false)
-if uncrustify.found()
-  run_target('format',
-    command: [find_program('bash'), files('format.sh')],
-    depends: []
-  )
-
-  run_target('check-format',
-    command: [find_program('bash'), files('check-format.sh')],
-    depends: []
-  )
-endif

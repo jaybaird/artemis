@@ -131,6 +131,9 @@ public sealed class AppWindow : Gtk.Window {
             program_select.set_selected (idx);
             program_select_handler = program_select.notify["selected"].connect (
                 on_program_selected);
+
+            last_refresh_time = get_monotonic_time ();
+            current_ticks = 0;
         });
 
         Application.spot_repo.current_spot_changed.connect ((spot_hash) => {

@@ -1,5 +1,4 @@
 artemis_vala_sources = [
-  'src/main.vala',
   'src/application.vala',
   'src/window.vala',
   'src/pota_client.vala',
@@ -34,7 +33,6 @@ cc = meson.get_compiler('c')
 mathlib = cc.find_library('m', required: true)
 
 artemis_vala_deps = [
-  config_dep,
   dependency('gtk4'),
   dependency('libsoup-3.0'),
   dependency('json-glib-1.0'),
@@ -47,6 +45,12 @@ artemis_vala_deps = [
   dependency('shumate-1.0'),
   mathlib
 ]
+
+artemis_vala_sources += configure_file(
+  input: 'build.vala.in',
+  output: 'build.vala',
+  configuration: config
+)
 
 artemis_vala_sources += gnome.compile_resources('artemis-vala-resources',
   '../data/artemis-vala.gresource.xml',

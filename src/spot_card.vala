@@ -97,7 +97,7 @@ public sealed class AddSpot : Adw.Dialog {
         spotter_comments = builder.get_object ("spotter_comments") as Adw.
             EntryRow;
 
-        var settings = new GLib.Settings ("com.k0vcz.artemis");
+        var settings = Application.settings;
         spotter_callsign.text = settings.get_string ("callsign");
         spotter_comments.text = settings.get_string ("spot-message");
 

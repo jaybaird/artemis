@@ -67,7 +67,7 @@ public sealed class PreferencesDialog : Object {
         update_connection_groups_visibility ();
     }
 
-    private void get_widgets (Gtk.Builder builder) {
+    void get_widgets (Gtk.Builder builder) {
         row_callsign = builder.get_object ("row_callsign") as Adw.EntryRow;
         row_location = builder.get_object ("row_location") as Adw.EntryRow;
         row_spot_message = builder.get_object ("row_spot_message") as Adw.
@@ -127,7 +127,7 @@ public sealed class PreferencesDialog : Object {
         dialog.present (parent);
     }
 
-    private void setup_bindings () {
+    void setup_bindings () {
         Application.settings.bind ("callsign", row_callsign, "text",
             SettingsBindFlags.
             DEFAULT);
@@ -181,10 +181,10 @@ public sealed class PreferencesDialog : Object {
         Application.settings.bind ("highlight-unhunted-parks",
             row_highlight_unhunted,
             "active", SettingsBindFlags.DEFAULT);
+
     } /* setup_bindings */
 
-    private void bind_combo_to_string_setting (string setting_key, Adw.ComboRow
-        combo_row) {
+    void bind_combo_to_string_setting (string setting_key, Adw.ComboRow combo_row) {
         var model = combo_row.model as Gtk.StringList;
 
         if (model == null)
@@ -201,14 +201,13 @@ public sealed class PreferencesDialog : Object {
         combo_row.notify["selected"].connect (() => {
             var selected_text = model.get_string (combo_row.selected);
             if (selected_text != null)
-                Application.settings.set_string (setting_key, selected_text.down
-                        ());
+                Application.settings.set_string (setting_key, selected_text.up ());
         });
 
         Application.settings.changed[setting_key].connect (() => {
             var value = Application.settings.get_string (setting_key);
             for (uint i = 0 ; i < model.get_n_items () ; i++) {
-                if (model.get_string (i).down () == value) {
+                if (model.get_string (i).up () == value) {
                     combo_row.selected = i;
                     break;
                 }
@@ -216,7 +215,7 @@ public sealed class PreferencesDialog : Object {
         });
     } /* bind_combo_to_string_setting */
 
-    private void bind_baud_rate_combo () {
+    void bind_baud_rate_combo () {
         var model = row_baud_rate.model as Gtk.StringList;
 
         if (model == null)
@@ -252,7 +251,7 @@ public sealed class PreferencesDialog : Object {
         });
     } /* bind_baud_rate_combo */
 
-    private void setup_signals () {
+    void setup_signals () {
         row_connection_type.notify["selected"].connect (
             update_connection_groups_visibility);
         test_connection_button.clicked.connect (on_test_connection);
@@ -260,7 +259,7 @@ public sealed class PreferencesDialog : Object {
         import_log.activated.connect (do_import_file);
     }
 
-    private void update_connection_groups_visibility () {
+    void update_connection_groups_visibility () {
         var model = row_connection_type.model as Gtk.StringList;
 
         if (model == null)
@@ -285,7 +284,7 @@ public sealed class PreferencesDialog : Object {
         }
     }
 
-    private void on_test_connection () {
+    void on_test_connection () {
         test_connection_button.sensitive = false;
         connection_status_icon.icon_name = "content-loading-symbolic";
         connection_status_label.label = _ ("Testing…");
@@ -304,11 +303,11 @@ public sealed class PreferencesDialog : Object {
         });
     }
 
-    private async bool test_radio_connection () {
+    async bool test_radio_connection () {
         return false;
     }
 
-    private void do_import_file () {
+    void do_import_file () {
         if (logbook_csv == null)
             return;
 
@@ -359,13 +358,13 @@ public sealed class PreferencesDialog : Object {
         alert.present (dialog.get_root ());
     } /* do_import_file */
 
-    private string _strip_quotes (string s) {
+    string _strip_quotes (string s) {
         if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
             return s.substring (1, s.length - 2);
         return s;
     }
 
-    private void on_import_file () {
+    void on_import_file () {
         var file_dialog = new Gtk.FileDialog ();
 
         file_dialog.title = _ ("Select Logbook CSV File");

@@ -70,7 +70,10 @@
             "name" : "artemis",
             "builddir" : true,
             "buildsystem" : "meson",
-            "sources" : 
+            "config-opts":[
+                "-Dbuildtype=release"
+            ],
+            "sources" : [
                 {
                     "type" : "dir",
                     "path" : "."

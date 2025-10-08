@@ -79,13 +79,13 @@ template $AppWindow : Window {
                   strings [
                     _("All"),
                     _("SSB"),
-                    _("FM"),
-                    _("AM"),
                     _("CW"),
                     _("FT8"),
                     _("FT4"),
-                    _("Data"),
-                    _("Phone")
+                    _("FM"),
+                    _("AM"),
+                    _("RTTY"),
+                    _("JT65"),
                   ]
                 };
               }
@@ -157,7 +157,6 @@ template $AppWindow : Window {
 
     ProgressBar refresh_progress {
       show-text: false;
-      height-request: 1;
       fraction: 0.5;
       styles ["osd"]
     }
@@ -174,10 +173,22 @@ template $AppWindow : Window {
 menu menu_app {
   section {
     item {
+      label: _("Add Spot");
+        action: "app.add-spot";
+      }
+
+    item {
+      label: _("Refresh");
+      action: "app.refresh";
+    }
+
+    item {
       label: _("Map");
       action: "app.open-map";
     }
+  }
 
+  section {
     item {
       label: _("Preferences");
       action: "app.preferences";
