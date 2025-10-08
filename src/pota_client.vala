@@ -22,8 +22,7 @@ public sealed class PotaClient : Object {
     private Soup.Session session;
     private const string POTA_BASE_URL = "https://api.pota.app";
 
-    public PotaClient()
-    {
+    public PotaClient () {
         session = new Soup.Session ();
 
         // Configure caching
@@ -36,7 +35,7 @@ public sealed class PotaClient : Object {
         session.user_agent = "Artemis/0.1.0";
     }
 
-    private async Json.Node? fetch_worker (string url) throws Error {
+    private async Json.Node ? fetch_worker (string url) throws Error {
         var message = new Soup.Message ("GET", url);
 
         var response = yield session.send_and_read_async (message, Priority.
@@ -53,10 +52,8 @@ public sealed class PotaClient : Object {
         return parser.get_root ();
     }
 
-    public async void post_spot (Spot spot) throws Error
-    {
-        var url = POTA_BASE_URL + "/spot";
-        var message = new Soup.Message ("POST", url);
+    public async void post_spot (Spot spot) throws Error {
+        var message = new Soup.Message ("POST", "%s/spot".printf (POTA_BASE_URL));
         size_t len = 0;
         var generator = new Json.Generator ();
 
@@ -69,33 +66,35 @@ public sealed class PotaClient : Object {
 
         yield session.send_and_read_async (message, Priority.DEFAULT, null);
 
-        if (message.get_status () != Soup.Status.OK)
-        {
+        if (message.get_status () != Soup.Status.OK) {
             warning ("POST failed: %u %s", message.get_status (), message.
                 get_reason_phrase ());
             return;
         }
     }
 
-    public async Json.Node? fetch_spot_history (string callsign, string park_ref
-        )
-    throws Error {
+    public async Json.Node? fetch_spot_history (
+        string callsign,
+        string park_ref
+    ) throws Error {
         var escaped_callsign = GLib.Uri.escape_string (callsign, null, false);
         var escaped_park_ref = GLib.Uri.escape_string (park_ref, null, false);
-        var url = POTA_BASE_URL + "/v1/spots/" + escaped_callsign + "/" +
-            escaped_park_ref;
+        var url = "%s/v1/spots/%s/%s".printf (
+            POTA_BASE_URL,
+            escaped_callsign,
+            escaped_park_ref);
 
         return yield fetch_worker (url);
     }
 
     public async Json.Node? fetch_operator (string callsign) throws Error {
-        var url = POTA_BASE_URL + "/stats/user/" + GLib.Uri.escape_string (
-            callsign, null, false);
+        var url = "%s/stats/user/%s".printf (POTA_BASE_URL, GLib.Uri.escape_string (
+            callsign, null, false));
         return yield fetch_worker (url);
     }
 
     public async Json.Node? fetch_spots () throws Error {
-        var url = POTA_BASE_URL + "/v1/spots";
+        string url = "%s/v1/spots".printf (POTA_BASE_URL);
 
         return yield fetch_worker (url);
     }

@@ -2,16 +2,33 @@ using Gee;
 using GLib;
 using Sqlite;
 
+static string iso8601_day_start (DateTime utc_any) {
+    return utc_any.format ("%Y-%m-%dT00:00:00Z");
+}
+
+static string iso8601_next_day_start (DateTime utc_any) {
+    DateTime next = utc_any.add_days (1);
+
+    return next.format ("%Y-%m-%dT00:00:00Z");
+}
+
+static string? iso8601_from_borrowed_utc (DateTime? dt) {
+    if (dt == null)
+        return null;
+    DateTime utc = dt.to_utc ();
+    return utc.format ("%Y-%m-%dT%H:%M:%SZ");
+}
+
 public sealed class QsoRow : Object {
     public int64 id;
-    public string? park_ref;
-    public string? callsign;
-    public string? mode;
+    public string ? park_ref;
+    public string ? callsign;
+    public string ? mode;
     public int frequency_khz;
-    public string? created_utc;
-    public string? spotter;
-    public string? spotter_comment;
-    public string? activator_comment;
+    public string ? created_utc;
+    public string ? spotter;
+    public string ? spotter_comment;
+    public string ? activator_comment;
 }
 
 public sealed class ParkRow : Object {
@@ -26,8 +43,7 @@ public sealed class ParkRow : Object {
                     string name,
                     string location_desc,
                     double latitude,
-                    double longitude)
-    {
+                    double longitude) {
         Object (
             id: id,
             reference: reference,
@@ -39,65 +55,27 @@ public sealed class ParkRow : Object {
     }
 } /* class ParkRow */
 
-public enum DatabaseError
-{
+public enum DatabaseError {
     DB_NOT_INITIALIZED,
     INVALID_ARGUMENT,
     SQLITE_FAILED
 }
 
-public static GLib.Quark spot_db_error_quark ()
-{
+public static GLib.Quark spot_db_error_quark () {
     return GLib.Quark.from_string ("spot-db-error");
 }
 
 public class SpotDb : Object {
     private Sqlite.Database? db = null;
 
-    private static SpotDb? _instance = null;
+    public SpotDb () {}
 
-    private SpotDb ()
-    {
-    }
-
-    public static SpotDb? get_instance ()
-    {
-        lock (_instance) {
-            if (_instance == null)
-            {
-                _instance = new SpotDb ();
-                Error? init_error;
-                if (!_instance.init (out init_error))
-                {
-                    if (init_error != null)
-                        critical ("Failed to initialize DB instance: %s",
-                            init_error.
-                            message);
-                    else
-                        warning ("Failed to initialize DB instance");
-                    _instance = null;
-                }
-            }
-        }
-        return _instance;
-    }
-
-    public static void cleanup_instance ()
-    {
-        lock (_instance) {
-            if (_instance != null)
-                _instance = null;
-        }
-    }
-
-    private bool init (out Error? error)
-    {
+    private bool init (out Error? error) {
         error = null;
         // build paths
         string data_dir = Environment.get_user_data_dir ();
         string app_dir = Path.build_filename (data_dir, "artemis");
-        if (GLib.DirUtils.create_with_parents (app_dir, 0700) != 0)
-        {
+        if (GLib.DirUtils.create_with_parents (app_dir, 0700) != 0) {
             critical ("Failed to create app dir %s: %s", app_dir, strerror (
                 errno)
                 );
@@ -111,8 +89,7 @@ public class SpotDb : Object {
         string db_path = Path.build_filename (app_dir, "spots.db");
 
         int rc = Database.open (db_path, out db);
-        if (rc != Sqlite.OK)
-        {
+        if (rc != Sqlite.OK) {
             critical ("Cannot open DB at %s: %s", db_path, db.errmsg ());
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
@@ -121,15 +98,14 @@ public class SpotDb : Object {
             return false;
         }
 
-        string pragmas =
+        const string PRAGMAS =
             """
             PRAGMA journal_mode=WAL;
             PRAGMA synchronous=NORMAL;
             PRAGMA foreign_keys=ON;
             PRAGMA busy_timeout=3000;
         """;
-        if (db.exec (pragmas) != Sqlite.OK)
-        {
+        if (db.exec (PRAGMAS) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to set database pragmas: %s".printf (db.errmsg ()));
@@ -138,8 +114,7 @@ public class SpotDb : Object {
         }
 
         Error? schema_error;
-        if (!spot_db_init_schema (out schema_error))
-        {
+        if (!spot_db_init_schema (out schema_error)) {
             error = schema_error;
             db = null;
             return false;
@@ -150,11 +125,9 @@ public class SpotDb : Object {
     } /* init */
 
     /* ----- schema ----- */
-    private bool spot_db_init_schema (out Error? error)
-    {
+    private bool spot_db_init_schema (out Error? error) {
         error = null;
-        string schema =
-            """
+        const string SCHEMA = """
         CREATE TABLE IF NOT EXISTS parks (
           reference TEXT PRIMARY KEY,
           park_name TEXT,
@@ -202,8 +175,7 @@ public class SpotDb : Object {
                 first_qso_date = (SELECT MIN(created_utc) FROM qsos WHERE park_ref = OLD.park_ref)
           WHERE reference = OLD.park_ref;
         END;""";
-        if (db.exec (schema) != Sqlite.OK)
-        {
+        if (db.exec (SCHEMA) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to create database schema: %s".printf (db.errmsg ()));
@@ -213,26 +185,16 @@ public class SpotDb : Object {
         return true;
     }
 
-    private string? iso8601_from_borrowed_utc (DateTime? dt)
-    {
-        if (dt == null) return null;
-        DateTime utc = dt.to_utc ();
-        return utc.format ("%Y-%m-%dT%H:%M:%SZ");
-    }
-
-    public bool add_qso_from_spot (Spot spot, out Error? error)
-    {
+    public bool add_qso_from_spot (Spot spot, out Error ? error) {
         error = null;
 
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return false;
         }
 
-        if (spot == null)
-        {
+        if (spot == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Spot is null");
             return false;
@@ -240,15 +202,13 @@ public class SpotDb : Object {
 
         if ((spot.park_ref == null) || (spot.callsign == null) || (spot.
                                                                    spot_time
-                                                                   == null))
-        {
+                                                                   == null)) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Required spot fields are null");
             return false;
         }
 
-        if (db.exec ("BEGIN IMMEDIATE;") != Sqlite.OK)
-        {
+        if (db.exec ("BEGIN IMMEDIATE;") != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED, "BEGIN transaction failed: %s".printf (db.
                     errmsg ()));
@@ -256,15 +216,14 @@ public class SpotDb : Object {
         }
 
         Sqlite.Statement st;
-        const string park_sql =
+        const string PARK_SQL =
             """
             INSERT INTO parks(reference, park_name, location) VALUES(?, ?, ?)
             ON CONFLICT(reference) DO UPDATE SET
             park_name = COALESCE(excluded.park_name, parks.park_name),
             location  = COALESCE(excluded.location,  parks.location);
             """;
-        if (db.prepare_v2 (park_sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (PARK_SQL, -1, out st) != Sqlite.OK) {
             db.exec ("ROLLBACK;");
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED, "Failed to prepare park insert: %s".printf (
@@ -273,14 +232,16 @@ public class SpotDb : Object {
             return false;
         }
         st.bind_text (1, spot.park_ref);
-        if (spot.park_name != null) st.bind_text (2, spot.park_name); else
+        if (spot.park_name != null)
+            st.bind_text (2, spot.park_name);
+        else
             st.bind_null (2);
         if (spot.location_desc != null)
             st.bind_text (3, spot.location_desc);
-        else st.bind_null (3);
+        else
+            st.bind_null (3);
 
-        if (st.step () != Sqlite.DONE)
-        {
+        if (st.step () != Sqlite.DONE) {
             db.exec ("ROLLBACK;");
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED, "Park insert failed: %s".printf (db.errmsg ()
@@ -289,14 +250,14 @@ public class SpotDb : Object {
             return false;
         }
 
-        const string qso_sql =
+        const string QSO_SQL =
             """
             INSERT INTO qsos(
             park_ref, callsign, mode, frequency_khz, created_utc,
             spotter, spotter_comment, activator_comment
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
             """;
-        db.prepare_v2 (qso_sql, qso_sql.length, out st);
+        db.prepare_v2 (QSO_SQL, -1, out st);
 
         st.bind_text (1, spot.park_ref);
         st.bind_text (2, spot.callsign);
@@ -307,8 +268,7 @@ public class SpotDb : Object {
         st.bind_text (7, spot.spotter_comment);
         st.bind_text (8, spot.activator_comment);
 
-        if (st.step () != Sqlite.DONE)
-        {
+        if (st.step () != Sqlite.DONE) {
             db.exec ("ROLLBACK;");
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED, "QSO insert failed: %s".printf (db.errmsg
@@ -316,8 +276,7 @@ public class SpotDb : Object {
             return false;
         }
 
-        if (db.exec ("COMMIT;") != Sqlite.OK)
-        {
+        if (db.exec ("COMMIT;") != Sqlite.OK) {
             db.exec ("ROLLBACK;");
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED, "COMMIT failed: %s".printf (db.errmsg ()));
@@ -329,37 +288,33 @@ public class SpotDb : Object {
 
     /* ----- add park ----- */
     public bool add_park (string reference,
-        string? park_name,
-        string? dx_entity,
-        string? location,
-        string? hasc,
-        string? first_qso_date,
+        string ? park_name,
+        string ? dx_entity,
+        string ? location,
+        string ? hasc,
+        string ? first_qso_date,
         int qso_count,
-        out Error? error)
-    {
+        out Error ? error) {
         error = null;
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return false;
         }
-        if ((reference == null) || (reference.strip () == ""))
-        {
+        if ((reference == null) || (reference.strip () == "")) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Park reference cannot be empty");
             return false;
         }
 
-        string sql =
+        const string SQL =
             """
         INSERT OR REPLACE INTO parks(reference, park_name, dx_entity, location, hasc, first_qso_date, qso_count)
         VALUES(?, ?, ?, ?, ?, ?, ?);
         """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare add park query: %s".printf (db.errmsg ()));
@@ -372,8 +327,7 @@ public class SpotDb : Object {
         st.bind_text (5, hasc != null ? hasc : "");
         st.bind_text (6, first_qso_date);
         st.bind_int (7, qso_count >= 0 ? qso_count : 0);
-        if (st.step () != Sqlite.DONE)
-        {
+        if (st.step () != Sqlite.DONE) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to execute add park query: %s".printf (db.errmsg ()));
@@ -383,27 +337,23 @@ public class SpotDb : Object {
     } /* add_park */
 
     /* ----- is park hunted ----- */
-    public bool is_park_hunted (string park_reference, out Error? error)
-    {
+    public bool is_park_hunted (string park_reference, out Error? error) {
         error = null;
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return false;
         }
-        if ((park_reference == null) || (park_reference.strip () == ""))
-        {
+        if ((park_reference == null) || (park_reference.strip () == "")) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Park reference cannot be empty");
             return false;
         }
 
-        string sql =
+        const string SQL =
             "SELECT qso_count FROM parks WHERE reference = ? AND qso_count > 0;";
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare park hunted query: %s".printf (db.errmsg ()
@@ -418,8 +368,7 @@ public class SpotDb : Object {
     }
 
     /* ----- helpers to read rows from a prepared statement ----- */
-    private ParkRow park_row_from_stmt (Sqlite.Statement st)
-    {
+    private ParkRow park_row_from_stmt (Sqlite.Statement st) {
         int id = st.column_int (0);
         string reference = st.column_text (1);
         string name = st.column_text (2);
@@ -431,15 +380,13 @@ public class SpotDb : Object {
             longitude);
     }
 
-    private QsoRow qso_row_from_stmt (Statement st)
-    {
+    private QsoRow qso_row_from_stmt (Statement st) {
         var r = new QsoRow ();
 
         r.id = st.column_int64 (0);
         r.park_ref = st.column_text (1);
         r.callsign = st.column_text (2);
-        r.mode = (st.column_type (3) == Sqlite.NULL) ? null : st.column_text (
-            3);
+        r.mode = (st.column_type (3) == Sqlite.NULL) ? null : st.column_text (3);
         r.frequency_khz = (st.column_type (4) == Sqlite.NULL) ? 0 : st.
             column_int (4);
         r.created_utc = st.column_text (5);
@@ -452,27 +399,24 @@ public class SpotDb : Object {
         return r;
     }
 
-    public ParkRow? get_park_by_ref (string park_ref, out Error? error)
-    {
+    public ParkRow ? get_park_by_ref (string park_ref, out Error? error) {
         error = null;
 
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (),
                 DatabaseError.DB_NOT_INITIALIZED,
                 "DB not initialized");
             return null;
         }
 
-        if ((park_ref == null) || (park_ref.strip () == ""))
-        {
+        if ((park_ref == null) || (park_ref.strip () == "")) {
             error = new Error (spot_db_error_quark (),
                 DatabaseError.INVALID_ARGUMENT,
                 "Park reference cannot be empty");
             return null;
         }
 
-        string sql =
+        const string SQL =
             """
             SELECT id, reference, name, location_desc, latitude, longitude
             FROM parks
@@ -481,8 +425,7 @@ public class SpotDb : Object {
         """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (),
                 DatabaseError.SQLITE_FAILED,
                 "Failed to prepare get_park_by_ref query: %s".printf (db.errmsg
@@ -499,18 +442,16 @@ public class SpotDb : Object {
         return null;
     } /* get_park_by_ref */
 
-    public Gee.ArrayList<QsoRow> latest_qso_per_park (out Error? error)
-    {
+    public Gee.ArrayList<QsoRow> latest_qso_per_park (out Error ? error) {
         error = null;
         var rows = new Gee.ArrayList<QsoRow> ();
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return rows;
         }
 
-        string sql =
+        const string SQL =
             """
           SELECT q.id, q.park_ref, q.callsign, q.mode, q.frequency_khz,
                 q.created_utc, q.spotter, q.spotter_comment, q.activator_comment
@@ -525,34 +466,31 @@ public class SpotDb : Object {
           """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare latest_qso_per_park query: %s".printf (db.
                     errmsg ()));
             return rows;
         }
-        while (st.step () == Sqlite.ROW)
-        {
+        while (st.step () == Sqlite.ROW) {
             rows.add (qso_row_from_stmt (st));
         }
         return rows;
     }
 
-    public Gee.ArrayList<QsoRow> latest_qsos (int limit, out Error? error)
-    {
+    public Gee.ArrayList<QsoRow> latest_qsos (int limit, out Error? error) {
         error = null;
         var rows = new Gee.ArrayList<QsoRow> ();
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return rows;
         }
-        if (limit <= 0) limit = 50;
+        if (limit <= 0)
+            limit = 50;
 
-        string sql =
+        const string SQL =
             """
           SELECT id, park_ref, callsign, mode, frequency_khz, created_utc,
                 spotter, spotter_comment, activator_comment
@@ -562,8 +500,7 @@ public class SpotDb : Object {
           """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare latest_qsos query: %s".printf (db.errmsg ()
@@ -572,33 +509,28 @@ public class SpotDb : Object {
             return rows;
         }
         st.bind_int (1, limit);
-        while (st.step () == Sqlite.ROW)
-        {
+        while (st.step () == Sqlite.ROW) {
             rows.add (qso_row_from_stmt (st));
         }
         return rows;
     }
 
-    public ArrayList<QsoRow>? all_qsos_for_park (string park_ref, out Error?
-        error)
-    {
+    public ArrayList<QsoRow> ? all_qsos_for_park (string park_ref, out Error? error) {
         var list = new ArrayList<QsoRow> ();
 
         error = null;
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return null;
         }
-        if ((park_ref == null) || (park_ref.strip () == ""))
-        {
+        if ((park_ref == null) || (park_ref.strip () == "")) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Park reference cannot be empty");
             return null;
         }
 
-        string sql =
+        const string SQL =
             """
         SELECT id, park_ref, callsign, mode, frequency_khz, created_utc,
               spotter, spotter_comment, activator_comment
@@ -608,8 +540,7 @@ public class SpotDb : Object {
         """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare latest_qso_for_park query: %s".printf (db.
@@ -618,31 +549,27 @@ public class SpotDb : Object {
         }
         st.bind_text (1, park_ref);
 
-        while (st.step () == Sqlite.ROW)
-        {
+        while (st.step () == Sqlite.ROW) {
             var row = qso_row_from_stmt (st);
             list.add (row);
         }
         return list;
     } /* all_qsos_for_park */
 
-    public QsoRow? latest_qso_for_park (string park_ref, out Error? error)
-    {
+    public QsoRow ? latest_qso_for_park (string park_ref, out Error ? error) {
         error = null;
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return null;
         }
-        if ((park_ref == null) || (park_ref.strip () == ""))
-        {
+        if ((park_ref == null) || (park_ref.strip () == "")) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Park reference cannot be empty");
             return null;
         }
 
-        string sql =
+        const string SQL =
             """
         SELECT id, park_ref, callsign, mode, frequency_khz, created_utc,
               spotter, spotter_comment, activator_comment
@@ -653,8 +580,7 @@ public class SpotDb : Object {
         """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare latest_qso_for_park query: %s".printf (db.
@@ -662,24 +588,22 @@ public class SpotDb : Object {
             return null;
         }
         st.bind_text (1, park_ref);
-        QsoRow? row = null;
+        QsoRow ? row = null;
         if (st.step () == Sqlite.ROW)
             row = qso_row_from_stmt (st);
         return row;
     } /* latest_qso_for_park */
 
     public bool had_qso_with_park_on_utc_day (string park_ref, DateTime
-        utc_when_in_day, out Error? error)
-    {
+        utc_when_in_day, out Error ? error) {
         error = null;
-        if (db == null)
-        {
+        if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 DB_NOT_INITIALIZED, "DB not initialized");
             return false;
         }
-        if ((park_ref == null) || (park_ref.strip () == ""))
-        {
+
+        if ((park_ref == null) || (park_ref.strip () == "")) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 INVALID_ARGUMENT, "Park reference cannot be empty");
             return false;
@@ -689,7 +613,7 @@ public class SpotDb : Object {
         string start_iso = iso8601_day_start (utc);
         string next_iso = iso8601_next_day_start (utc);
 
-        string sql =
+        const string SQL =
             """
           SELECT EXISTS (
             SELECT 1
@@ -699,8 +623,7 @@ public class SpotDb : Object {
           """;
 
         Statement st;
-        if (db.prepare_v2 (sql, -1, out st) != Sqlite.OK)
-        {
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare had_qso_with_park_on_utc_day query: %s".
@@ -716,16 +639,4 @@ public class SpotDb : Object {
         return exists;
     } /* had_qso_with_park_on_utc_day */
 
-    /* ----- tiny datetime helpers ----- */
-    private string iso8601_day_start (DateTime utc_any)
-    {
-        return utc_any.format ("%Y-%m-%dT00:00:00Z");
-    }
-
-    private string iso8601_next_day_start (DateTime utc_any)
-    {
-        DateTime next = utc_any.add_days (1);
-
-        return next.format ("%Y-%m-%dT00:00:00Z");
-    }
 } /* class SpotDb */

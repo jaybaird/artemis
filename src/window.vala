@@ -59,8 +59,7 @@ public sealed class AppWindow : Gtk.Window {
 
     private ulong program_select_handler = 0;
 
-    public AppWindow(Gtk.Application app)
-    {
+    public AppWindow (Gtk.Application app) {
         Object (application: app);
     }
 
@@ -74,30 +73,28 @@ public sealed class AppWindow : Gtk.Window {
 
         program_select.model = Application.spot_repo.program_model;
 
-        search_entry.search_changed.connect ( () => {
+        search_entry.search_changed.connect (() => {
             Application.current_search_text = search_entry.text;
 
-            foreach (var page in band_pages)
-            {
+            foreach (var page in band_pages) {
                 var band_view = page.get_child () as BandView;
                 band_view.bounce_filter ();
             }
         });
 
-        search_select.notify["selected"].connect ( () => {
+        search_select.notify["selected"].connect (() => {
             var idx = search_select.selected;
-            if (idx == Gtk.INVALID_LIST_POSITION) return;
+            if (idx == Gtk.INVALID_LIST_POSITION)
+                return;
 
             var model = search_select.get_model () as Gtk.StringList;
-            if (model != null)
-            {
-                string? mode = null;
+            if (model != null) {
+                string ? mode = null;
                 if (idx > 0)
                     mode = model.get_string (idx);
 
                 Application.current_mode_filter = mode;
-                foreach (var page in band_pages)
-                {
+                foreach (var page in band_pages) {
                     var band_view = page.get_child () as BandView;
                     band_view.bounce_filter ();
                 }
@@ -107,12 +104,12 @@ public sealed class AppWindow : Gtk.Window {
         program_select_handler = program_select.notify["selected"].connect (
             on_program_selected);
 
-        Application.spot_repo.busy_changed.connect ( (busy) => {
+        Application.spot_repo.busy_changed.connect ((busy) => {
             loading_spinner.visible = busy;
             program_select.disconnect (program_select_handler);
         });
 
-        Application.spot_repo.refreshed.connect ( (spots_updated) => {
+        Application.spot_repo.refreshed.connect ((spots_updated) => {
             string toast_title = ngettext (
                 "%u spot refreshed",
                 "%u spots refreshed",
@@ -125,10 +122,8 @@ public sealed class AppWindow : Gtk.Window {
 
             var idx = 0u;
             var model = program_select.get_model () as Gtk.StringList;
-            for (uint i = 0; i < model.get_n_items (); i++)
-            {
-                if (Application.current_program_filter == model.get_string (i))
-                {
+            for (uint i = 0 ; i < model.get_n_items () ; i++) {
+                if (Application.current_program_filter == model.get_string (i)) {
                     idx = i;
                     break;
                 }
@@ -138,19 +133,21 @@ public sealed class AppWindow : Gtk.Window {
                 on_program_selected);
         });
 
-        Application.spot_repo.current_spot_changed.connect ( (spot_hash) => {
+        Application.spot_repo.current_spot_changed.connect ((spot_hash) => {
             var spot = Application.spot_repo.get_spot (spot_hash);
-            if (spot == null) return;
+            if (spot == null)
+                return;
 
             if (band_stack.get_visible_child_name () != _ ("All"))
                 band_stack.set_visible_child_name (spot.band);
 
             var band_view = band_stack.get_visible_child () as BandView;
-            if (band_view == null) return;
+            if (band_view == null)
+                return;
             band_view.set_current_spot (spot_hash);
         });
 
-        Application.spot_repo.update_error.connect ( (error) => {
+        Application.spot_repo.update_error.connect ((error) => {
             var alert_dialog = new Adw.AlertDialog (_ (
                 "Unable to refresh spots"),
                 null);
@@ -175,15 +172,12 @@ public sealed class AppWindow : Gtk.Window {
         });
 
         var model = search_select.get_model () as Gtk.StringList;
-        if (model != null)
-        {
+        if (model != null) {
             var default_mode = Application.settings.get_string ("default-mode");
             int idx = -1;
 
-            for (uint i = 0; i < model.get_n_items (); i++)
-            {
-                if (model.get_string (i) == default_mode)
-                {
+            for (uint i = 0 ; i < model.get_n_items () ; i++) {
+                if (model.get_string (i) == default_mode) {
                     idx = (int)i;
                     break;
                 }
@@ -192,22 +186,20 @@ public sealed class AppWindow : Gtk.Window {
             if (idx >= 0)
                 search_select.set_selected (idx);
             else
-                search_select.set_selected (0); // fallback
+                search_select.set_selected (0);   // fallback
         }
 
         refresh_banner.title = "";
         refresh_progress.fraction = 0;
     }
 
-    private void initial_update ()
-    {
+    private void initial_update () {
         Application.spot_repo.update_spots.begin ((obj, res) => {
             Application.spot_repo.update_spots.end (res);
         });
     }
 
-    private void setup_spot_updates ()
-    {
+    private void setup_spot_updates () {
         if (timer_id != 0)
             Source.remove (timer_id);
 
@@ -229,48 +221,43 @@ public sealed class AppWindow : Gtk.Window {
         initial_update ();
     }
 
-    private void build_band_stack ()
-    {
-        for (uint i = 0; i < RadioConstants.BANDS.length; i++)
-        {
+    private void build_band_stack () {
+        for (uint i = 0 ; i < RadioConstants.BANDS.length ; i++) {
             var band = RadioConstants.BANDS[i];
             var band_view = new BandView (Application.spot_repo, band,
                 @"band-$band");
 
             var page = band_stack.add_titled_with_icon (band_view, band, band,
                 @"band-$band");
-            band_view.page = page; // page is unowned, so no circular reference
+            band_view.page = page;  // page is unowned, so no circular reference
             band_pages.add (page);
         }
     }
 
-    private void progress_tick ()
-    {
-        if (update_paused) return;
+    private void progress_tick () {
+        if (update_paused)
+            return;
         var now = get_monotonic_time ();
         double elapsed = (now - last_refresh_time) / 1000000.0;
         var update_time = Application.settings.get_int ("update-interval");
 
         double fraction = elapsed / (double)update_time;
-        if (fraction > 1.0) fraction = 1.0;
+        if (fraction > 1.0)
+            fraction = 1.0;
         refresh_progress.fraction = fraction;
     }
 
-    private async void tick ()
-    {
-        if (!update_paused)
-        {
+    private async void tick () {
+        if (!update_paused) {
             current_ticks += 1;
             var update_time = Application.settings.get_int ("update-interval");
-            if (current_ticks >= update_time)
-            {
+            if (current_ticks >= update_time) {
                 current_ticks = current_ticks - update_time;
                 last_refresh_time = get_monotonic_time ();
                 yield Application.spot_repo.update_spots ();
 
                 Idle.add (() => {
-                    foreach (var page in band_pages)
-                    {
+                    foreach (var page in band_pages) {
                         var band_view = page.get_child () as BandView;
                         band_view.set_current_spot (Application.
                             current_spot_hash);
@@ -292,62 +279,53 @@ public sealed class AppWindow : Gtk.Window {
     } /* tick */
 
     [GtkCallback]
-    private void on_map_button_clicked ()
-    {
+    private void on_map_button_clicked () {
         Application.open_map_window ();
     }
 
     [GtkCallback]
-    private void on_add_button_clicked ()
-    {
+    private void on_add_button_clicked () {
         AddSpot add_spot = new AddSpot ();
 
         add_spot.present (this);
     }
 
-    private void on_banner_button_clicked ()
-    {
+    private void on_banner_button_clicked () {
         update_paused = !update_paused;
-        if (update_paused)
-        {
+        if (update_paused) {
             current_ticks = 0;
             refresh_banner.button_label = _ ("Resume");
             refresh_banner.title = _ ("Updates Paused");
             refresh_progress.fraction = 0;
-        }
-        else
-        {
+        } else {
             last_refresh_time = get_monotonic_time ();
             refresh_banner.button_label = _ ("Pause");
             Application.spot_repo.update_spots.begin ();
         }
     }
 
-    private void on_program_selected ()
-    {
+    private void on_program_selected () {
         var idx = program_select.selected;
 
-        if (idx == Gtk.INVALID_LIST_POSITION) return;
+        if (idx == Gtk.INVALID_LIST_POSITION)
+            return;
 
         var model = program_select.get_model () as Gtk.StringList;
-        if (model != null)
-        {
-            string? program = null;
+        if (model != null) {
+            string ? program = null;
             if (idx > 0)
                 program = model.get_string (idx);
 
             Application.current_program_filter = program;
 
-            foreach (var page in band_pages)
-            {
+            foreach (var page in band_pages) {
                 var band_view = page.get_child () as BandView;
                 band_view.bounce_filter ();
             }
         }
     }
 
-    ~AppWindow ()
-    {
+    ~AppWindow () {
         if (timer_id != 0)
             Source.remove (timer_id);
 

@@ -20,91 +20,78 @@
 
 public sealed class Application : Adw.Application {
     private static Quark _current_spot_hash = 0;
-    public static Quark current_spot_hash { get {
-                                                return _current_spot_hash;
-                                            } set {
-                                                if (_current_spot_hash == value)
-                                                    return;
-                                                _current_spot_hash = value;
-                                                if (_spot_repo != null)
-                                                    _spot_repo.
-                                                    current_spot_changed (value)
-                                                    ;
-                                            } }
-    public static SpotRepo spot_repo        { get; private set; }
-    public static Settings settings         { get; private set; }
-    public static PotaClient pota_client    { get; private set; }
-    public static MapWindow?    map_window  { get;
-                                              private set;
-                                              default = null;
+    public static Quark current_spot_hash {
+        get {
+            return _current_spot_hash;
+        } set {
+            if (_current_spot_hash == value)
+                return;
+            _current_spot_hash = value;
+            if (_spot_repo != null) {
+                _spot_repo.
+                current_spot_changed (value)
+                ;
+            }
+        }
     }
+    public static CallsignCache callsign_cache { get; private set; }
+    public static SpotDb spot_database { get; private set; }
+    public static SpotRepo spot_repo { get; private set; }
+    public static Settings settings { get; private set; }
+    public static PotaClient pota_client { get; private set; }
+    public static MapWindow? map_window { get; private set; default = null; }
     private static string? _current_mode_filter = null;
-    public static string? current_mode_filter       { get {
-                                                          return
-                                                              _current_mode_filter;
-                                                      } set {
-                                                          if (
-                                                              _current_mode_filter
-                                                              == value) return;
-                                                          _current_mode_filter =
-                                                              value;
-                                                          if (_map_window !=
-                                                              null)
-                                                              _map_window.
-                                                              bounce_filter ();
-                                                      } }
+    public static string? current_mode_filter {
+        get {
+            return _current_mode_filter;
+        } set {
+            if (_current_mode_filter == value) return;
+            _current_mode_filter = value;
+            if (_map_window != null)
+                _map_window.bounce_filter ();
+        }
+    }
     private static string? _current_program_filter = null;
-    public static string? current_program_filter    { get {
-                                                          return
-                                                              _current_program_filter;
-                                                      } set {
-                                                          if (
-                                                              _current_program_filter
-                                                              == value) return;
-                                                          _current_program_filter
-                                                              = value;
-                                                          if (_map_window !=
-                                                              null)
-                                                              _map_window.
-                                                              bounce_filter ();
-                                                      } }
+    public static string? current_program_filter {
+        get {
+            return _current_program_filter;
+        } set {
+            if (_current_program_filter == value)return;
+            _current_program_filter = value;
+            if (_map_window != null)
+                _map_window.bounce_filter ();
+        }
+    }
     private static string? _current_search_text = null;
-    public static string? current_search_text       { get {
-                                                          return
-                                                              _current_search_text;
-                                                      } set {
-                                                          if (
-                                                              _current_search_text
-                                                              == value) return;
-                                                          _current_search_text =
-                                                              value;
-                                                          if (_map_window !=
-                                                              null)
-                                                              _map_window.
-                                                              bounce_filter ();
-                                                      } }
+    public static string? current_search_text {
+        get {
+            return _current_search_text;
+        } set {
+            if (_current_search_text == value)
+                return;
+            _current_search_text = value;
+            if (_map_window != null)
+                _map_window.bounce_filter ();
+        }
+    }
     private static string? _current_band_filter = null;
-    public static string? current_band_filter       { get {
-                                                          return
-                                                              _current_band_filter;
-                                                      } set {
-                                                          if (
-                                                              _current_band_filter
-                                                              == value) return;
-                                                          _current_band_filter =
-                                                              value;
-                                                          if (_map_window !=
-                                                              null)
-                                                              _map_window.
-                                                              bounce_filter ();
-                                                      } }
-    public Application()
-    {
+    public static string? current_band_filter {
+        get {
+            return _current_band_filter;
+        } set {
+            if (_current_band_filter == value) return;
+            _current_band_filter = value;
+            if (_map_window != null)
+                _map_window.bounce_filter ();
+        }
+    }
+
+    public Application () {
         Object (
-            application_id: "com.k0vcz.artemis",
+            application_id : "com.k0vcz.artemis",
             flags: ApplicationFlags.DEFAULT_FLAGS,
             resource_base_path: "/com/k0vcz/artemis"
-            );
+        );
     }
 
     construct {
@@ -129,10 +116,11 @@ public sealed class Application : Adw.Application {
         settings = new Settings ("com.k0vcz.artemis");
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
+        spot_database = new SpotDb ();
+        callsign_cache = new CallsignCache (3600);
     }
 
-    public override void activate ()
-    {
+    public override void activate () {
         base.activate ();
 
         var adw_style_manager = Adw.StyleManager.get_default ();
@@ -150,22 +138,19 @@ public sealed class Application : Adw.Application {
         var win = this.active_window ?? new AppWindow (this);
         win.close_request.connect (() => {
             if (map_window != null)
-                map_window.close (); // closing the main window closes all the windows
+                map_window.close ();   // closing the main window closes all the windows
             return false;
         });
         win.present ();
     }
 
-    public static void open_map_window ()
-    {
-        if (map_window == null)
-        {
-            map_window = new MapWindow ()
-            {
+    public static void open_map_window () {
+        if (map_window == null) {
+            map_window = new MapWindow () {
                 default_width = 800,
                 default_height = 600
             };
-            //map_window.set_application (this);
+            // map_window.set_application (this);
             map_window.close_request.connect (() => {
                 map_window = null;
                 return false;
@@ -174,17 +159,14 @@ public sealed class Application : Adw.Application {
         map_window.present ();
     }
 
-    private void on_open_map_action ()
-    {
+    private void on_open_map_action () {
         open_map_window ();
     }
 
-    private void on_preferences_action ()
-    {
+    private void on_preferences_action () {
         var window = active_window as AppWindow;
 
-        if (window != null)
-        {
+        if (window != null) {
             var preferences = new PreferencesDialog ();
             preferences.present (window);
         }

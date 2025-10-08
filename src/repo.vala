@@ -4,13 +4,12 @@ using Gdk;
 public class CallsignCacheEntry : Object {
     public Activator activator { get; construct; }
     public uint64 expires_at { get; construct; }
-    public Gdk.Texture? avatar { get; set; default = null; }
-    public CallsignCacheEntry (Activator activator, uint64 expires_at)
-    {
+    public Gdk.Texture ? avatar { get; set; default = null; }
+    public CallsignCacheEntry (Activator activator, uint64 expires_at) {
         Object (
-            activator: activator,
+            activator : activator,
             expires_at: expires_at
-            );
+        );
     }
 }
 
@@ -18,21 +17,11 @@ public class CallsignCache : Object {
     private HashTable<string, CallsignCacheEntry> ham_cache;
 
     public uint ttl_seconds { get; construct; default = 3600; }
-    private static CallsignCache? _instance = null;
-    public static CallsignCache instance ()
-    {
-        lock (_instance) {
-            if (_instance == null)
-                _instance = new CallsignCache (3600);
-        }
-        return _instance;
-    }
 
-    private CallsignCache (uint ttl_seconds)
-    {
+    public CallsignCache (uint ttl_seconds) {
         Object (
-            ttl_seconds: ttl_seconds
-            );
+            ttl_seconds : ttl_seconds
+        );
     }
 
     construct {
@@ -40,27 +29,23 @@ public class CallsignCache : Object {
             GLib.str_equal);
     }
 
-    private bool is_entry_expired (CallsignCacheEntry? entry)
-    {
-        if (entry == null) return true;
+    private bool is_entry_expired (CallsignCacheEntry ? entry) {
+        if (entry == null)
+            return true;
         return GLib.get_monotonic_time () > entry.expires_at;
     }
 
-    public void clear ()
-    {
+    public void clear () {
         ham_cache.remove_all ();
     }
 
-    public async void load_callsigns (HashSet<string> callsigns)
-    {
-        foreach (var callsign in callsigns)
-        {
+    public async void load_callsigns (HashSet<string> callsigns) {
+        foreach (var callsign in callsigns) {
             yield get_callsign (callsign);
         }
     }
 
-    public async Gdk.Texture? get_avatar_for (string callsign)
-    {
+    public async Gdk.Texture? get_avatar_for (string callsign) {
         var entry = yield get_callsign (callsign);
 
         if (entry == null)
@@ -85,20 +70,18 @@ public class CallsignCache : Object {
                 DEFAULT, null);
 
             var pixbuf = new Gdk.Pixbuf.from_stream (stream);
-            if (pixbuf != null)
-            {
+            if (pixbuf != null) {
                 var texture = Gdk.Texture.for_pixbuf (pixbuf);
                 cached_entry.avatar = texture;
                 return texture;
             }
-        } catch(Error e) {
+        } catch (Error e) {
             warning ("Failed to fetch avatar for %s: %s", callsign, e.message);
         }
         return null;
     }
 
-    public async Activator? get_callsign (string callsign)
-    {
+    public async Activator? get_callsign (string callsign) {
         var entry = ham_cache.lookup (callsign);
 
         if ((entry != null) && !is_entry_expired (entry))
@@ -116,7 +99,7 @@ public class CallsignCache : Object {
                 );
             ham_cache.set (callsign, callsign_entry);
             return callsign_entry.activator;
-        } catch(Error err) {
+        } catch (Error err) {
             return null;
         }
     }
@@ -132,29 +115,26 @@ public sealed class SpotRepo : Object {
 
     public Gtk.StringList program_model { get; private set; }
     public uint64 tracked_spot_hash { get; set; default = uint64.MAX; }
-    public SpotRepo ()
-    {
+    public SpotRepo () {
         Object ();
     }
 
     construct {
-        store = new GLib.ListStore (typeof(Spot));
+        store = new GLib.ListStore (typeof (Spot));
         program_model = new Gtk.StringList ({});
     }
 
-    public Spot? get_spot (Quark spot_hash)
-    {
-        for (uint i = 0; i < store.get_n_items (); i++)
-        {
+    public Spot ? get_spot (Quark spot_hash) {
+        for (uint i = 0 ; i < store.get_n_items () ; i++) {
             var spot = store.get_item (i) as Spot;
-            if ((spot != null) && (spot.hash == spot_hash)) return spot;
+            if ((spot != null) && (spot.hash == spot_hash))
+                return spot;
         }
 
         return null;
     }
 
-    public async void update_spots ()
-    {
+    public async void update_spots () {
         busy_changed (true);
 
         var unique_callsigns = new HashSet<string> ();
@@ -168,19 +148,16 @@ public sealed class SpotRepo : Object {
             var spots = yield Application.pota_client.fetch_spots ();
 
             if ((spots != null) &&
-                (spots.get_node_type () == Json.NodeType.ARRAY) )
-            {
+                (spots.get_node_type () == Json.NodeType.ARRAY)) {
                 var spots_array = spots.get_array ();
-                for (uint i = 0; i < spots_array.get_length (); i++)
-                {
+                for (uint i = 0 ; i < spots_array.get_length () ; i++) {
                     var element = spots_array.get_element (i).get_object ();
                     var spot = new Spot.from_json (element);
 
                     unique_callsigns.add (spot.callsign);
                     unique_callsigns.add (spot.spotter);
 
-                    if (spot.park_ref.contains ("-"))
-                    {
+                    if (spot.park_ref.contains ("-")) {
                         var program = spot.park_ref.split ("-", 2)[0];
                         programs.add (program);
                     }
@@ -193,23 +170,21 @@ public sealed class SpotRepo : Object {
             // TODO: alert if watched callsign is seen in unique_callsigns
 
             var programs_sorted = new ArrayList<string> ();
-            foreach (var program in programs)
-            {
+            foreach (var program in programs) {
                 programs_sorted.add (program);
             }
-            programs_sorted.sort ( (a, b) => { return strcmp (a, b); } );
+            programs_sorted.sort ((a, b) => { return strcmp (a, b); });
 
             program_model.append (_ ("All"));
-            foreach (var program in programs_sorted)
-            {
+            foreach (var program in programs_sorted) {
                 program_model.append (program);
             }
 
             busy_changed (false);
             refreshed (spots_updated);
-        } catch(Error err) {
+        } catch (Error err) {
             busy_changed (false);
             update_error (err);
         }
     } /* update_spots */
-} /* class SpotRepo */
+}     /* class SpotRepo */

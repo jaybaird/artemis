@@ -11,8 +11,7 @@ public class RadioConstants {
     };
 }
 
-public string band_from_khz (int khz)
-{
+public string band_from_khz (int khz) {
     double mhz = (double)khz / 1e3;
 
     if ((mhz >= 1.8) && (mhz < 2.0))
@@ -46,42 +45,41 @@ public string band_from_khz (int khz)
 } /* band_from_khz */
 
 public sealed class Spot : Object {
-    public string callsign          { get; construct; }
-    public string park_ref          { get; construct; }
-    public string park_name         { get; construct; }
-    public string location_desc     { get; construct; }
+    public string callsign { get; construct; }
+    public string park_ref { get; construct; }
+    public string park_name { get; construct; }
+    public string location_desc { get; construct; }
     public string activator_comment { get; construct; }
-    public int frequency_khz        { get; construct; }
-    public string band              { get; construct; }
-    public string mode              { get; construct; }
-    public DateTime spot_time       { get; construct; }
-    public string spotter           { get; construct; }
-    public string spotter_comment   { get; construct; }
-    public int spot_count           { get; construct; }
-    public string grid4             { get; construct; }
-    public string grid6             { get; construct; }
-    public double distance          { get; construct; }
-    public double bearing           { get; construct; }
-    public Coordinate coordinate    { get; construct; }
+    public int frequency_khz { get; construct; }
+    public string band { get; construct; }
+    public string mode { get; construct; }
+    public DateTime spot_time { get; construct; }
+    public string spotter { get; construct; }
+    public string spotter_comment { get; construct; }
+    public int spot_count { get; construct; }
+    public string grid4 { get; construct; }
+    public string grid6 { get; construct; }
+    public double distance { get; construct; }
+    public double bearing { get; construct; }
+    public Coordinate coordinate { get; construct; }
     public Quark hash { get; construct; default = uint32.MAX; }
     public bool is_new_park { get; construct; }
     public bool was_hunted_today { get; construct; }
-    public Spot (
-        string callsign,
-        string park_ref,
-        string park_name,
-        string location_desc,
-        string activator_comment,
-        int frequency_khz,
-        string mode,
-        DateTime created_utc,
-        DateTime spot_time,
-        string spotter,
-        string spotter_comment,
-        int spot_count,
-        string grid4,
-        string grid6)
-    {
+
+    public Spot (string callsign,
+                 string park_ref,
+                 string park_name,
+                 string location_desc,
+                 string activator_comment,
+                 int frequency_khz,
+                 string mode,
+                 DateTime created_utc,
+                 DateTime spot_time,
+                 string spotter,
+                 string spotter_comment,
+                 int spot_count,
+                 string grid4,
+                 string grid6) {
         Object (
             callsign: callsign,
             park_ref: park_ref,
@@ -96,7 +94,7 @@ public sealed class Spot : Object {
             spot_count: spot_count,
             grid4: grid4,
             grid6: grid6
-            );
+        );
     }
 
     public Spot.from_add_spot (
@@ -106,8 +104,7 @@ public sealed class Spot : Object {
         string frequency_khz,
         string mode,
         string spotter,
-        string spotter_comment)
-    {
+        string spotter_comment) {
         Object (
             callsign: callsign,
             park_ref: park_ref,
@@ -116,11 +113,10 @@ public sealed class Spot : Object {
             mode: mode,
             spotter: spotter,
             spotter_comment: spotter_comment
-            );
+        );
     }
 
-    public Spot.from_json (Json.Object spot)
-    {
+    public Spot.from_json (Json.Object spot) {
         Object (
             callsign: spot.get_string_member ("activator"),
             park_ref: spot.get_string_member ("reference"),
@@ -137,7 +133,7 @@ public sealed class Spot : Object {
                 "spotTime"), new GLib.TimeZone.utc ()),
             grid4: spot.get_string_member_with_default ("grid4", ""),
             grid6: spot.get_string_member_with_default ("grid6", "")
-            );
+        );
     }
 
     construct {
@@ -149,40 +145,35 @@ public sealed class Spot : Object {
             hash = hash - 1;
 
         Error error = null;
-        was_hunted_today = SpotDb.get_instance ().had_qso_with_park_on_utc_day (
+        was_hunted_today = Application.spot_database.had_qso_with_park_on_utc_day (
             park_ref, new DateTime.now_utc (), out error);
-        is_new_park = !SpotDb.get_instance ().is_park_hunted (park_ref, out
+        is_new_park = !Application.spot_database.is_park_hunted (park_ref, out
             error);
 
         var grid = Application.settings.get_string ("location");
-        if (grid != "")
-        {
+        if (grid != "") {
             try {
                 var latlon = Distance.maidenhead_to_latlon (grid);
                 var park_grid = (grid6 == "") ? grid4 : grid6;
-                if (park_grid != "")
-                {
+                if (park_grid != "") {
                     coordinate = Distance.maidenhead_to_latlon (park_grid);
                     distance = Distance.haversine_distance_km (latlon,
                         coordinate);
                     bearing = Distance.bearing (latlon, coordinate);
                 }
-            } catch(Error error) {
+            } catch (Error error) {
                 warning (error.message);
                 coordinate = null;
                 distance = -1.0;
                 bearing = -1.0;
             }
-        }
-        else
-        {
+        } else {
             distance = -1.0;
             bearing = -1.0;
         }
     }
 
-    public Json.Node to_json ()
-    {
+    public Json.Node to_json () {
         var builder = new Json.Builder ();
         builder.begin_object ();
 
@@ -204,8 +195,7 @@ public sealed class Spot : Object {
         builder.set_member_name ("source");
         builder.add_string_value ("Web");
 
-        if ((spotter_comment != null) && (spotter_comment.strip () != "") )
-        {
+        if ((spotter_comment != null) && (spotter_comment.strip () != "")) {
             builder.set_member_name ("comments");
             builder.add_string_value (spotter_comment);
         }
@@ -215,8 +205,7 @@ public sealed class Spot : Object {
         return builder.get_root ();
     }
 
-    public string to_string ()
-    {
+    public string to_string () {
         return
             @"Spot(activator: $callsign\nspotter: $spotter\npark: $park_ref\nfrequency: $frequency_khz)";
     }
@@ -224,26 +213,22 @@ public sealed class Spot : Object {
 
 public sealed class SpotStore : Object {
     public GLib.ListStore spot_store { get; construct; }
-    public SpotStore ()
-    {
+    public SpotStore () {
         Object ();
     }
 
     construct {
-        spot_store = new GLib.ListStore (typeof(Spot));
+        spot_store = new GLib.ListStore (typeof (Spot));
     }
 
-    public void clear ()
-    {
+    public void clear () {
         spot_store.remove_all ();
     }
 
-    public void add_from_json (Json.Array array)
-    {
-        foreach (var element in array.get_elements ())
-        {
+    public void add_from_json (Json.Array array) {
+        foreach (var element in array.get_elements ()) {
             var obj = element.get_object ();
-            spot_store.append ( new Spot.from_json (obj));
+            spot_store.append (new Spot.from_json (obj));
         }
     }
 } /* class SpotStore */

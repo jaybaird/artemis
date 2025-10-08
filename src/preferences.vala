@@ -55,8 +55,7 @@ public sealed class PreferencesDialog : Object {
 
     private File? logbook_csv = null;
 
-    public PreferencesDialog()
-    {
+    public PreferencesDialog () {
         var builder = new Gtk.Builder.from_resource (
             "/com/k0vcz/artemis/ui/preferences.ui");
 
@@ -68,8 +67,7 @@ public sealed class PreferencesDialog : Object {
         update_connection_groups_visibility ();
     }
 
-    private void get_widgets (Gtk.Builder builder)
-    {
+    private void get_widgets (Gtk.Builder builder) {
         row_callsign = builder.get_object ("row_callsign") as Adw.EntryRow;
         row_location = builder.get_object ("row_location") as Adw.EntryRow;
         row_spot_message = builder.get_object ("row_spot_message") as Adw.
@@ -125,13 +123,11 @@ public sealed class PreferencesDialog : Object {
             as Gtk.Label;
     } /* get_widgets */
 
-    public void present (Gtk.Window parent)
-    {
+    public void present (Gtk.Window parent) {
         dialog.present (parent);
     }
 
-    private void setup_bindings ()
-    {
+    private void setup_bindings () {
         Application.settings.bind ("callsign", row_callsign, "text",
             SettingsBindFlags.
             DEFAULT);
@@ -188,17 +184,15 @@ public sealed class PreferencesDialog : Object {
     } /* setup_bindings */
 
     private void bind_combo_to_string_setting (string setting_key, Adw.ComboRow
-        combo_row)
-    {
+        combo_row) {
         var model = combo_row.model as Gtk.StringList;
 
-        if (model == null) return;
+        if (model == null)
+            return;
 
         var current_value = Application.settings.get_string (setting_key);
-        for (uint i = 0; i < model.get_n_items (); i++)
-        {
-            if (model.get_string (i) == current_value)
-            {
+        for (uint i = 0 ; i < model.get_n_items () ; i++) {
+            if (model.get_string (i) == current_value) {
                 combo_row.selected = i;
                 break;
             }
@@ -213,10 +207,8 @@ public sealed class PreferencesDialog : Object {
 
         Application.settings.changed[setting_key].connect (() => {
             var value = Application.settings.get_string (setting_key);
-            for (uint i = 0; i < model.get_n_items (); i++)
-            {
-                if (model.get_string (i).down () == value)
-                {
+            for (uint i = 0 ; i < model.get_n_items () ; i++) {
+                if (model.get_string (i).down () == value) {
                     combo_row.selected = i;
                     break;
                 }
@@ -224,19 +216,17 @@ public sealed class PreferencesDialog : Object {
         });
     } /* bind_combo_to_string_setting */
 
-    private void bind_baud_rate_combo ()
-    {
+    private void bind_baud_rate_combo () {
         var model = row_baud_rate.model as Gtk.StringList;
 
-        if (model == null) return;
+        if (model == null)
+            return;
 
         var current_baud = Application.settings.get_int ("radio-baud-rate");
         var current_baud_str = current_baud.to_string ();
 
-        for (uint i = 0; i < model.get_n_items (); i++)
-        {
-            if (model.get_string (i) == current_baud_str)
-            {
+        for (uint i = 0 ; i < model.get_n_items () ; i++) {
+            if (model.get_string (i) == current_baud_str) {
                 row_baud_rate.selected = i;
                 break;
             }
@@ -244,8 +234,7 @@ public sealed class PreferencesDialog : Object {
 
         row_baud_rate.notify["selected"].connect (() => {
             var selected_text = model.get_string (row_baud_rate.selected);
-            if (selected_text != null)
-            {
+            if (selected_text != null) {
                 var baud_rate = int.parse (selected_text);
                 Application.settings.set_int ("radio-baud-rate", baud_rate);
             }
@@ -254,10 +243,8 @@ public sealed class PreferencesDialog : Object {
         Application.settings.changed["radio-baud-rate"].connect (() => {
             var baud_rate = Application.settings.get_int ("radio-baud-rate");
             var baud_str = baud_rate.to_string ();
-            for (uint i = 0; i < model.get_n_items (); i++)
-            {
-                if (model.get_string (i) == baud_str)
-                {
+            for (uint i = 0 ; i < model.get_n_items () ; i++) {
+                if (model.get_string (i) == baud_str) {
                     row_baud_rate.selected = i;
                     break;
                 }
@@ -265,8 +252,7 @@ public sealed class PreferencesDialog : Object {
         });
     } /* bind_baud_rate_combo */
 
-    private void setup_signals ()
-    {
+    private void setup_signals () {
         row_connection_type.notify["selected"].connect (
             update_connection_groups_visibility);
         test_connection_button.clicked.connect (on_test_connection);
@@ -274,17 +260,16 @@ public sealed class PreferencesDialog : Object {
         import_log.activated.connect (do_import_file);
     }
 
-    private void update_connection_groups_visibility ()
-    {
+    private void update_connection_groups_visibility () {
         var model = row_connection_type.model as Gtk.StringList;
 
-        if (model == null) return;
+        if (model == null)
+            return;
 
         var selected_type = model.get_string (row_connection_type.selected);
 
-        switch (selected_type.down ())
-        {
-            case "serial":
+        switch (selected_type.down ()) {
+            case "serial" :
             case "usb":
                 serial_settings_group.visible = true;
                 network_settings_group.visible = false;
@@ -300,50 +285,43 @@ public sealed class PreferencesDialog : Object {
         }
     }
 
-    private void on_test_connection ()
-    {
+    private void on_test_connection () {
         test_connection_button.sensitive = false;
         connection_status_icon.icon_name = "content-loading-symbolic";
-        connection_status_label.label = _ ("Testing...");
+        connection_status_label.label = _ ("Testing…");
 
         test_radio_connection.begin ((obj, res) => {
             bool success = test_radio_connection.end (res);
 
             test_connection_button.sensitive = true;
-            if (success)
-            {
+            if (success) {
                 connection_status_icon.icon_name = "network-idle-symbolic";
                 connection_status_label.label = _ ("Connected");
-            }
-            else
-            {
+            } else {
                 connection_status_icon.icon_name = "network-offline-symbolic";
                 connection_status_label.label = _ ("Failed");
             }
         });
     }
 
-    private async bool test_radio_connection ()
-    {
+    private async bool test_radio_connection () {
         return false;
     }
 
-    private void do_import_file ()
-    {
+    private void do_import_file () {
         if (logbook_csv == null)
             return;
 
-        var db = SpotDb.get_instance ();
+        var db = Application.spot_database;
         string description;
 
         try {
             var stream = logbook_csv.read ();
             var data = new DataInputStream (stream);
-            var line = data.read_line (); // skip column titles
+            var line = data.read_line ();     // skip column titles
             var num_parks = 0;
             Error error;
-            while ((line = data.read_line ()) != null)
-            {
+            while ((line = data.read_line ()) != null) {
                 var raw_columns = new ArrayList<string>.wrap (line.split (","));
 
                 var columns = to_array (raw_columns.map<string> ((column) => {
@@ -363,7 +341,7 @@ public sealed class PreferencesDialog : Object {
             }
             description = ngettext ("Successfully imported one park",
                 "Succesfully imported %d parks", num_parks).printf (num_parks);
-        } catch(Error err) {
+        } catch (Error err) {
             description = _ (
                 "Unable to import hunted parks. Please check your CSV file and try again.");
             error (err.message);
@@ -381,15 +359,13 @@ public sealed class PreferencesDialog : Object {
         alert.present (dialog.get_root ());
     } /* do_import_file */
 
-    private string _strip_quotes (string s)
-    {
+    private string _strip_quotes (string s) {
         if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
             return s.substring (1, s.length - 2);
         return s;
     }
 
-    private void on_import_file ()
-    {
+    private void on_import_file () {
         var file_dialog = new Gtk.FileDialog ();
 
         file_dialog.title = _ ("Select Logbook CSV File");
@@ -399,22 +375,20 @@ public sealed class PreferencesDialog : Object {
         csv_filter.add_mime_type ("text/csv");
         csv_filter.add_pattern ("*.csv");
 
-        var filter_list = new GLib.ListStore (typeof(Gtk.FileFilter));
+        var filter_list = new GLib.ListStore (typeof (Gtk.FileFilter));
         filter_list.append (csv_filter);
         file_dialog.filters = filter_list;
 
         file_dialog.open.begin (dialog.get_root () as Gtk.Window, null, (obj,
-                                                                         res) =>
-        {
+                                                                         res) => {
             try {
                 var file = file_dialog.open.end (res);
-                if (file != null)
-                {
+                if (file != null) {
                     logbook_csv = file;
                     import_file_row.subtitle = file.get_basename ();
                     import_log.add_css_class ("suggested-action");
                 }
-            } catch(Error e) {
+            } catch (Error e) {
                 warning ("Failed to select file: %s", e.message);
             }
         });

@@ -10,13 +10,12 @@ public sealed class StatusPage : Gtk.Box {
     [GtkChild]
     public unowned Gtk.Label status_body;
 
-    public StatusPage (string icon_name, string title, string description)
-    {
+    public StatusPage (string icon_name, string title, string description) {
         Object (
             icon_name: icon_name,
             title: title,
             description: description
-            );
+        );
     }
 
     construct {
