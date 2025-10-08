@@ -15,9 +15,30 @@ jobs:
     - uses: elementary/actions/vala-lint@master
       with:
         conf: vala-lint.conf
+  prepare-subprojects:
+    runs-on: ubuntu-latest
+    outputs:
+      subprojects-artifact: subprojects
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure meson
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git python3-pip ninja-build
+          pip3 install meson==1.8.2
+
+      - name: Download meson subprojects (host)
+        run: meson subprojects download
+
+      - name: Upload subprojects artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: subprojects
+          path: subprojects
   flatpak-builder:
     name: "Flatpak Builder"
-    needs: [ lint ]
+    needs: [ lint, prepare-subprojects ]
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-48
       options: --privileged
@@ -30,6 +51,10 @@ jobs:
     runs-on: ${{ matrix.variant.runner }}
     steps:
     - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with: 
+        name: subprojects
+        path: ./subprojects
     - uses: flatpak/flatpak-github-actions/flatpak-builder@v6
       with:
         bundle: "com.k0vcz.artemis.Devel.flatpak"
