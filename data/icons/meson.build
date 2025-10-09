@@ -27,7 +27,7 @@ install_data(
     'hicolor/symbolic/actions/map-symbolic.svg',
     'hicolor/symbolic/actions/mode-symbolic.svg'
   ],
-  install_dir: get_option('datadir') / application_id / 'icons/hicolor/symbolic/actions'
+  install_dir: get_option('datadir') / application_id / 'icons/hicolor/scalable/actions'
 )
 
 # Install status icons in application data directory
