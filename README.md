@@ -1,4 +1,14 @@
-# Artemis – POTA Logging and Spotting Application
+<p align="center">
+  <img alt="" width="160" src="./data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg">
+</p>
+<h1 align="center">Artemis</h1>
+<h3 align="center">A Parks on the Air Spotting Tool</h3>
+<p align="center">
+  <br />
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/LICENSE-GPL--3.0-f5c211.svg?style=for-the-badge&labelColor=2e3436" alt="License GPL-3.0" /></a>
+    <a href="https://github.com/jaybaird/artemis-vala/actions/workflows/build.yml"><img alt="GitHub CI Status" src="https://img.shields.io/github/actions/workflow/status/jaybaird/artemis-vala/build.yml?branch=main&style=for-the-badge&labelColor=2e3436"></a>
+    <a href='https://stopthemingmy.app'><img width='193.455' alt='Please do not theme this app' src='https://stopthemingmy.app/badge.svg'/></a>
+</p>
 
 **Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track QSOs, log parks, fetch spots in real-time, and manage radio connections. Built with **Vala**, **GTK4/Libadwaita**, and **SQLite**, Artemis is cross-platform and lightweight.
 
