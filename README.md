@@ -80,4 +80,4 @@ meson install -C build
 
 ## License
 
-Artemis is licensed under GPL-3.0-or-later. See LICENSE for details.
+Artemis is licensed under GPL-3.0-or-later. See LICENSE for details. Parks on the Air ® is a registered service mark of Parks on the Air, Inc.
