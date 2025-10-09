@@ -1,5 +1,5 @@
 <p align="center">
-  <img alt="" width="160" src="./data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg">
+  <img alt="The logo for Artemis, showing a retrowave sunset with shilouetted trees with a stylized IC-7300 in the foreground" width="160" src="./data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg">
 </p>
 <h1 align="center">Artemis</h1>
 <h3 align="center">A Parks on the Air Spotting Tool</h3>
@@ -10,11 +10,13 @@
     <a href='https://stopthemingmy.app'><img width='193.455' alt='Please do not theme this app' src='https://stopthemingmy.app/badge.svg'/></a>
 </p>
 
-**Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track QSOs, log parks, fetch spots in real-time, and manage radio connections. Built with **Vala**, **GTK4/Libadwaita**, and **SQLite**, Artemis is cross-platform and lightweight.
+**Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track QSOs, log parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
+
+Artemis is designed to be cross-platform, lightweight, and easy to use.
 
 ## Features
 
-- **Hunt QSOs and Parks**
+- **Hunt Parks**
   - Filter by band, mode, and program. Configure a "hit list," to be notified when a park, state, or callsign is spotted.
   - Track which parks have been hunted or activated.
 
@@ -27,21 +29,31 @@
   - Supports serial, USB, and network-connected radios via Hamlib.
 
 - **Import/Export**
-  - Import your already hunted parks from POTA.app
-  - Ability to exporting hunter QSOs to QRZ, LoTW, UDP, or local ADIF log.
+  - Import your already hunted parks from (POTA.app)[https://pota.app]
+  - Ability to exporting hunter QSOs to QRZ; LoTW, UDP, or local ADIF log coming soon.
 
 - **UI**
-  - Modern GTK4/Libadwaita interface.
+  - Modern GTK4/Adwaita interface.
 
 ## Installation
 
 ### Linux (Flatpak recommended)
 ```bash
-flatpak install flathub com.k0vcz.artemis
-flatpak run com.k0vcz.artemis
+flatpak install flathub com.k0vcz.Artemis
+flatpak run com.k0vcz.Artemis
 ```
 
-## Build from Source
+## Usage
+
+1. Configure your callsign, location, and radio settings via Preferences.
+2. Import your hunter.csv from POTA.app
+3. View live POTA spots, filter by band, mode, and program. Track the spot to hold its position, tune your radio, rotate your beam, and add your spot!
+4. Track which parks you’ve hunted, filter parks, and get notified for calls, parks, or states/countries of interest.
+5. Use distance and bearing calculations for more efficient hunting.
+
+**Contributions are welcome! Please submit pull requests or open issues for feature requests and bug reports.**
+
+## Build from Source and Contributing
 
 **Dependencies**
 - Vala
@@ -55,6 +67,7 @@ flatpak run com.k0vcz.artemis
 - Dex
 - WebKitGtk
 - SQLite3
+- Shumate
 
 **Build using Meson**
 ```bash
@@ -64,16 +77,6 @@ meson setup build
 meson compile -C build
 meson install -C build
 ```
-
-## Usage
-
-1. Configure your callsign, location, and radio settings via Preferences.
-2. Import your hunter.csv from POTA.app
-3. View live POTA spots, filter by band, mode, and program. Track the spot to hold its position, tune your radio, rotate your beam, and add your spot!
-4. Track which parks you’ve hunted, filter parks, and get notified for calls, parks, or states/countries of interest.
-5. Use distance and bearing calculations for more efficient hunting.
-
-**Contributions are welcome! Please submit pull requests or open issues for feature requests and bug reports.**
 
 ## License
 
