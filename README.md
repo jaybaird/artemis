@@ -2,7 +2,7 @@
   <img alt="The logo for Artemis, showing a retrowave sunset with shilouetted trees with a stylized IC-7300 in the foreground" width="160" src="./data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg">
 </p>
 <h1 align="center">Artemis</h1>
-<h3 align="center">A Parks on the Air Spotting Tool</h3>
+<h3 align="center">A Parks on the Air Spotting Tool®</h3>
 <p align="center">
   <br />
     <a href="./LICENSE"><img src="https://img.shields.io/badge/LICENSE-GPL--3.0-f5c211.svg?style=for-the-badge&labelColor=2e3436" alt="License GPL-3.0" /></a>
