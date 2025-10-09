@@ -15,7 +15,10 @@
     ],
     "build-options" : {
         "append-path" : "/usr/lib/sdk/vala/bin",
-        "prepend-ld-library-path" : "/usr/lib/sdk/vala/lib"
+        "prepend-ld-library-path" : "/usr/lib/sdk/vala/lib",
+        "env" : {
+            "FLATPAK_ID": "com.k0vcz.Artemis"
+        }
     },
     "cleanup" : [
         "/include",
@@ -63,6 +66,38 @@
                     "type": "archive",
                     "url": "https://github.com/Hamlib/Hamlib/releases/download/4.6.5/hamlib-4.6.5.tar.gz",
                     "sha256": "90d6f1dba59417c00f8f4545131c7efd31930cd0e178598980a8210425e3852e"
+                }
+            ]
+        },
+        {
+            "name": "protobuf",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DCMAKE_POSITION_INDEPENDENT_CODE=ON",
+                "-Dprotobuf_ABSL_PROVIDER=package",
+                "-Dprotobuf_BUILD_SHARED_LIBS=ON",
+                "-Dprotobuf_BUILD_TESTS=OFF"
+            ],
+            "cleanup": [
+                "/bin/protoc*",
+                "/lib/libprotoc*"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/protocolbuffers/protobuf.git",
+                    "tag": "v32.1"
+                }
+            ]
+        },
+        {
+            "name": "protobuf-c",
+            "buildsystem": "autotools",
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/protobuf-c/protobuf-c.git",
+                    "tag": "v1.5.2"
                 }
             ]
         },

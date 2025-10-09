@@ -28,7 +28,7 @@ blueprint_batch = custom_target(
   output: outs,
   command: [
     find_program('blueprint-compiler', required: true), 'batch-compile',
-    '@CURRENT_SOURCE_DIR@/../src/ui',
+    '@CURRENT_SOURCE_DIR@/../data/ui',
     '@CURRENT_SOURCE_DIR@',
     '@INPUT@'
   ],

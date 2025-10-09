@@ -11,9 +11,9 @@
     <file preprocess="xml-stripblanks">ui/band_view.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_dialog.ui</file>
 
-    <file compressed="true" alias="style.css">../data/css/style.css</file>
+    <file compressed="true" alias="style.css">css/style.css</file>
 
-     <file preprocess="xml-stripblanks" alias="metainfo.xml">../data/com.k0vcz.artemis.metainfo.xml.in</file>
+     <file preprocess="xml-stripblanks" alias="metainfo.xml">com.k0vcz.Artemis.metainfo.xml.in</file>
   </gresource>
 </gresources>
 

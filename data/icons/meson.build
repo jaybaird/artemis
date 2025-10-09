@@ -1,4 +1,4 @@
-application_id = 'com.k0vcz.artemis'
+application_id = 'com.k0vcz.Artemis'
 
 scalable_dir = 'hicolor' / 'scalable' / 'apps'
 install_data(
@@ -12,6 +12,7 @@ install_data(
   install_dir: get_option('datadir') / 'icons' / symbolic_apps_dir
 )
 
+# Install action icons in application data directory
 install_data(
   [
     'hicolor/symbolic/actions/update-symbolic.svg',
@@ -26,10 +27,10 @@ install_data(
     'hicolor/symbolic/actions/map-symbolic.svg',
     'hicolor/symbolic/actions/mode-symbolic.svg'
   ],
-  install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'actions'
+  install_dir: get_option('datadir') / application_id / 'icons/hicolor/symbolic/actions'
 )
 
-# Install status icons
+# Install status icons in application data directory
 install_data(
   [
     'hicolor/scalable/status/band-All.svg',
@@ -47,5 +48,5 @@ install_data(
     'hicolor/scalable/status/band-2m.svg',
     'hicolor/scalable/status/band-70cm.svg',
   ],
-  install_dir: get_option('datadir') / 'icons' / 'hicolor' / 'scalable' / 'status'
+  install_dir: get_option('datadir') / application_id / 'icons/hicolor/scalable/status/'
 )

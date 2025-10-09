@@ -30,6 +30,7 @@ config.set('EXEC_NAME', meson.project_name())
 config.set('GETTEXT_PACKAGE', meson.project_name())
 config.set('BINDIR', join_paths(get_option('prefix'), get_option('bindir')))
 config.set('LOCALEDIR', join_paths(get_option('prefix'), get_option('localedir')))
+config.set('DATADIR', join_paths(get_option('prefix'), get_option('datadir')))
 config.set('DOMAIN', meson.project_name ())
 config.set('G_LOG_DOMAIN', 'Artemis')
 config.set('RESOURCES', '/' + '/'.join(meson.project_name().split('.')) + '/')
@@ -59,12 +60,21 @@ subdir('sql')
 subdir('src')
 subdir('po')
 
-executable('artemis', artemis_vala_sources,
-  dependencies: artemis_vala_deps,
-  vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
-  link_with: [libradiocontrol],
-  install: true,
-)
+if devel 
+  executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
+    dependencies: artemis_vala_deps,
+    vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
+    link_with: [libradiocontrol],
+    install: true,
+  )
+else
+  executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
+    dependencies: artemis_vala_deps,
+    vala_args: ['--pkg=RadioControl', '--vapidir='+srcdir],
+    link_with: [libradiocontrol],
+    install: true,
+  )
+endif
 
 gnome.post_install(
      glib_compile_schemas: true,

@@ -1,3 +1,0 @@
-[D-BUS Service]
-Name=com.k0vcz.artemis
-Exec=@bindir@/com.k0vcz.artemis --gapplication-service

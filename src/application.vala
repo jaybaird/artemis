@@ -106,6 +106,10 @@ public sealed class Application : Adw.Application {
         );
     }
 
+    string get_data_dir () {
+        return GLib.Path.build_filename (GLib.Environment.get_user_data_dir (), Build.DOMAIN);
+    }
+
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
         set_accels_for_action ("app.about", { "F1" });
@@ -124,6 +128,14 @@ public sealed class Application : Adw.Application {
 
     public override void activate () {
         base.activate ();
+
+        // Add application icon directory to icon theme search path
+        var icon_theme = Gtk.IconTheme.get_for_display (Gdk.Display.get_default ());
+        var icon_dir = File.new_for_path ("%s/%s".printf (Build.DATADIR, Build.DOMAIN)).get_child ("icons");
+        debug (icon_dir.get_path ());
+        if (icon_dir.query_exists ()) {
+            icon_theme.add_search_path (icon_dir.get_path ());
+        }
 
         var adw_style_manager = Adw.StyleManager.get_default ();
         adw_style_manager.set_color_scheme (Adw.ColorScheme.DEFAULT);
@@ -168,11 +180,8 @@ public sealed class Application : Adw.Application {
             translator_credits = _("translator-credits")
         };
 
-        // translators: Wiki pages / Guides
-        dialog.add_link (_("Wiki"), Build.WIKI_WEBSITE);
-
-        dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
-        dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
+        //dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
+        //dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
 
         dialog.present (win);
     }

@@ -112,12 +112,12 @@ public class BoundingBox : Object {
     }
 
     private static double normalize_longitude (double lon) {
-        if (lon < -180.0) {
-            return lon + 360.0;
+        while (lon < -180.0) {
+            lon += 360.0;
         }
 
-        if (lon > 180.0) {
-            return lon + -360.0;
+        while (lon > 180.0) {
+            lon -= 360.0;
         }
 
         return lon;

@@ -52,8 +52,3 @@ artemis_vala_sources += configure_file(
   configuration: config
 )
 
-artemis_vala_sources += gnome.compile_resources('artemis-vala-resources',
-  '../data/artemis-vala.gresource.xml',
-  dependencies: blueprint_batch,
-  c_name: 'artemis_vala'
-)
