@@ -119,6 +119,9 @@
             "config-opts":[
                 "-Dbuildtype=release"
             ],
+            "build-commands": [
+                "chmod +x subprojects/blueprint-compiler/blueprint-compiler || true"
+            ],
             "sources" : [
                 {
                     "type" : "dir",
