@@ -34,6 +34,7 @@ mathlib = cc.find_library('m', required: true)
 
 artemis_vala_deps = [
   dependency('gtk4'),
+  dependency('gudev-1.0'),
   dependency('libsoup-3.0'),
   dependency('json-glib-1.0'),
   dependency('libadwaita-1', version: '>= 1.4'),

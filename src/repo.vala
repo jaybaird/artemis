@@ -15,7 +15,7 @@ public class CallsignCacheEntry : Object {
 
 public class CallsignCache : Object {
     private HashTable<string, CallsignCacheEntry> ham_cache;
-
+    private Soup.Session avatar_session;
     public uint ttl_seconds { get; construct; default = 3600; }
 
     public CallsignCache (uint ttl_seconds) {
@@ -24,9 +24,24 @@ public class CallsignCache : Object {
         );
     }
 
+    ~CallsignCache () {
+        if (avatar_session != null) {
+            avatar_session.abort ();
+            avatar_session = null;
+        }
+    }
+
     construct {
         ham_cache = new HashTable<string, CallsignCacheEntry> (GLib.str_hash,
             GLib.str_equal);
+        avatar_session = new Soup.Session ();
+        var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
+            "artemis");
+        var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
+        cache.set_max_size (50 * 1024 * 1024);
+        avatar_session.add_feature (cache);
+        avatar_session.timeout = 10;
+        avatar_session.user_agent = "Artemis/0.1.0";
     }
 
     private bool is_entry_expired (CallsignCacheEntry? entry) {
@@ -63,10 +78,9 @@ public class CallsignCache : Object {
             var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
                 .printf (gravatar_hash);
 
-            var session = new Soup.Session ();
             var message = new Soup.Message ("GET", url);
 
-            var stream = yield session.send_async (message, GLib.Priority.
+            var stream = yield avatar_session.send_async (message, GLib.Priority.
                 DEFAULT, null);
 
             var pixbuf = new Gdk.Pixbuf.from_stream (stream);

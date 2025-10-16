@@ -232,6 +232,14 @@ public sealed class SpotCard : Gtk.Box {
             fetch_avatars.end (res);
         });
 
+
+        Application.settings.changed["radio-connection-type"].connect (() => {
+            var connection_type = Application.settings.get_string ("radio-connection-type");
+            tune_button.visible = connection_type != "none";
+        });
+        var connection_type = Application.settings.get_string ("radio-connection-type");
+        tune_button.visible = connection_type != "none";
+
         refresh_highlight ();
     }
 

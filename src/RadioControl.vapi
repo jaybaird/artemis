@@ -25,6 +25,12 @@ public struct RadioConfiguration {
     public int baud_rate;
 }
 
+[CCode (cname = "RadioModel", has_type_id = false)]
+public struct RadioModel {
+    public int model_id;
+    public unowned string display_name;
+}
+
 [CCode (cname = "RadioControl", cheader_filename="../src/radio_control.h")]
 public class RadioControl : GLib.Object {
     // Constructor
@@ -42,6 +48,8 @@ public class RadioControl : GLib.Object {
 
     // Property
     public bool is_rig_connected { get; }
+
+    public static unowned RadioModel[] get_radio_models ();
 
     // Signals
     [CCode (cname = "radio-connected")]

@@ -128,7 +128,7 @@ Adw.PreferencesDialog prefs_dialog {
     }
   }
   Adw.PreferencesPage radio_page {
-    title: _("Radio");
+    title: _("CAT Control");
     icon-name: "radio-console-symbolic";
 
     Adw.PreferencesGroup radio_connection_group {
@@ -149,11 +149,11 @@ Adw.PreferencesDialog prefs_dialog {
 
       /* Serial/USB settings group */
       Adw.PreferencesGroup serial_settings_group {
-        title: _("Serial/USB Settings");
+        title: _("Serial Settings");
         
-        Adw.EntryRow row_device_path {
-          title: _("Device Path");
-          text: "/dev/ttyUSB0";
+        Adw.ComboRow row_device_path {
+          title: _("Serial Port");
+          subtitle: _("The path to your rig");
         }
 
         Adw.ComboRow row_baud_rate {

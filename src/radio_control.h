@@ -40,6 +40,15 @@ typedef struct {
   gint baud_rate;
 } RadioConfiguration;
 
+
+typedef struct {
+  int model_id;
+  const char *display_name;
+} RadioModel;
+
+const 
+RadioModel* radio_control_get_radio_models(gint *count);
+
 void
 radio_configuration_destroy(RadioConfiguration *config);
 

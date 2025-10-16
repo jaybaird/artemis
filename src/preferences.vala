@@ -19,6 +19,7 @@
  */
 
 using Gee;
+using GUdev;
 
 public sealed class PreferencesDialog : Object {
     private Adw.PreferencesDialog dialog;
@@ -31,12 +32,13 @@ public sealed class PreferencesDialog : Object {
 
     private Adw.ComboRow row_connection_type;
     private Adw.ComboRow row_radio_model;
-    private Adw.EntryRow row_device_path;
+    private Adw.ComboRow row_device_path;
     private Adw.ComboRow row_baud_rate;
     private Adw.EntryRow row_network_host;
     private Adw.SpinRow row_network_port;
     private Adw.PreferencesGroup serial_settings_group;
     private Adw.PreferencesGroup network_settings_group;
+    private Adw.PreferencesGroup radio_test_group;
 
     private Adw.SwitchRow row_enable_logging;
     private Adw.SwitchRow row_use_metric;
@@ -54,20 +56,24 @@ public sealed class PreferencesDialog : Object {
     private Gtk.Label connection_status_label;
 
     private File? logbook_csv = null;
+    private GUdev.Client udev_client;
 
     public PreferencesDialog () {
-        var builder = new Gtk.Builder.from_resource (
-            "/com/k0vcz/artemis/ui/preferences.ui");
+        Object ();
+    }
+
+    construct {
+        var builder = new Gtk.Builder.from_resource ("/com/k0vcz/artemis/ui/preferences.ui");
 
         dialog = builder.get_object ("prefs_dialog") as Adw.PreferencesDialog;
 
-        get_widgets (builder);
-        setup_bindings ();
-        setup_signals ();
-        update_connection_groups_visibility ();
-    }
+        udev_client = new GUdev.Client ({"tty"});
+        udev_client.uevent.connect ((action, device) => {
+            if (row_device_path != null) {
+                row_device_path.model = get_serial_devices ();
+            }
+        });
 
-    void get_widgets (Gtk.Builder builder) {
         row_callsign = builder.get_object ("row_callsign") as Adw.EntryRow;
         row_location = builder.get_object ("row_location") as Adw.EntryRow;
         row_spot_message = builder.get_object ("row_spot_message") as Adw.
@@ -81,10 +87,20 @@ public sealed class PreferencesDialog : Object {
 
         row_connection_type = builder.get_object ("row_connection_type") as Adw.
             ComboRow;
-        row_radio_model = builder.get_object ("row_radio_model") as Adw.ComboRow
-        ;
-        row_device_path = builder.get_object ("row_device_path") as Adw.EntryRow
-        ;
+
+        row_radio_model = builder.get_object ("row_radio_model") as Adw.ComboRow;
+        var radio_models = RadioControl.get_radio_models ();
+        var radio_model_list = new Gtk.StringList ({_("None")});
+        for (var i = 0; i < radio_models.length; i++) {
+            radio_model_list.append (radio_models[i].display_name);
+        }
+        row_radio_model.model = radio_model_list;
+        row_radio_model.enable_search = true;
+        row_radio_model.search_match_mode = Gtk.StringFilterMatchMode.SUBSTRING;
+
+        row_device_path = builder.get_object ("row_device_path") as Adw.ComboRow;
+        row_device_path.model = get_serial_devices ();
+
         row_baud_rate = builder.get_object ("row_baud_rate") as Adw.ComboRow;
         row_network_host = builder.get_object ("row_network_host") as Adw.
             EntryRow;
@@ -93,8 +109,9 @@ public sealed class PreferencesDialog : Object {
         serial_settings_group = builder.get_object ("serial_settings_group") as
             Adw.PreferencesGroup;
         network_settings_group = builder.get_object ("network_settings_group")
-            as
-            Adw.PreferencesGroup;
+            as Adw.PreferencesGroup;
+        radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
+
         row_hide_qrt = builder.get_object ("row_hide_qrt") as Adw.SwitchRow;
         row_show_scale = builder.get_object ("row_show_scale") as Adw.SwitchRow;
         row_hide_hunted = builder.get_object ("row_hide_hunted") as Adw.
@@ -121,6 +138,10 @@ public sealed class PreferencesDialog : Object {
             Gtk.Image;
         connection_status_label = builder.get_object ("connection_status_label")
             as Gtk.Label;
+
+        setup_bindings ();
+        setup_signals ();
+        update_connection_groups_visibility ();
     } /* get_widgets */
 
     public void present (Gtk.Window parent) {
@@ -144,12 +165,10 @@ public sealed class PreferencesDialog : Object {
         bind_combo_to_string_setting ("default-mode", row_default_mode);
         bind_combo_to_string_setting ("radio-connection-type",
             row_connection_type);
+        bind_combo_to_string_setting ("radio-device", row_device_path);
 
         Application.settings.bind ("radio-model", row_radio_model, "selected",
             SettingsBindFlags.DEFAULT);
-        Application.settings.bind ("radio-device", row_device_path, "text",
-            SettingsBindFlags
-            .DEFAULT);
         bind_baud_rate_combo ();
         Application.settings.bind ("radio-network-host", row_network_host,
             "text",
@@ -272,12 +291,21 @@ public sealed class PreferencesDialog : Object {
             case "usb":
                 serial_settings_group.visible = true;
                 network_settings_group.visible = false;
+                row_radio_model.visible = true;
+                radio_test_group.visible = true;
                 break;
             case "network":
+                row_radio_model.visible = true;
+                row_radio_model.selected = 1;
+                row_radio_model.selectable = false;
+
                 serial_settings_group.visible = false;
                 network_settings_group.visible = true;
+                radio_test_group.visible = true;
                 break;
             default:
+                radio_test_group.visible = false;
+                row_radio_model.visible = false;
                 serial_settings_group.visible = false;
                 network_settings_group.visible = false;
                 break;
@@ -391,5 +419,16 @@ public sealed class PreferencesDialog : Object {
                 warning ("Failed to select file: %s", e.message);
             }
         });
+    }
+
+    Gtk.StringList get_serial_devices () {
+        var devices = udev_client.query_by_subsystem ("tty");
+        var model = new Gtk.StringList ({});
+
+        devices.foreach ((device) => {
+            model.append (device.get_device_file ());
+        });
+
+        return model;
     }
 } /* class PreferencesDialog */
