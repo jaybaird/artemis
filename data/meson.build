@@ -21,18 +21,21 @@ appstream_file = i18n.merge_file(
 )
 
 appstreamcli = find_program('appstreamcli', required: false, disabler: true)
-test('Validate appstream file', appstreamcli,
+if appstreamcli.found()
+  test('Validate appstream file', appstreamcli,
      args: ['validate', '--no-net', '--explain', appstream_file])
+endif
 
 install_data('com.k0vcz.Artemis.gschema.xml',
   install_dir: get_option('datadir') / 'glib-2.0' / 'schemas'
 )
 
 compile_schemas = find_program('glib-compile-schemas', required: false, disabler: true)
-test('Validate schema file',
+if compile_schemas.found()
+  test('Validate schema file',
      compile_schemas,
      args: ['--strict', '--dry-run', meson.current_source_dir()])
-
+endif
 
 service_conf = configuration_data()
 service_conf.set('bindir', get_option('prefix') / get_option('bindir'))

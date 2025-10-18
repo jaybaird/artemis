@@ -1,4 +1,4 @@
-[CCode (cname = "RadioMode")]
+[CCode (cname = "enum RadioMode")]
 public enum RadioMode {
     UNKNOWN,
     AM,
@@ -37,14 +37,21 @@ public class RadioControl : GLib.Object {
     public RadioControl ();
 
     // Async operations
-    public Dex.Future connect_async (RadioConfiguration configuration);
-    public Dex.Future disconnect_async ();
+    [CCode (cname = "radio_control_connect_async")]
+    public Dex.Future connect (RadioConfiguration configuration);
 
-    public Dex.Future get_vfo_async ();
-    public Dex.Future set_vfo_async (int frequency);
+    [CCode (cname = "radio_control_disconnect_async")]
+    public Dex.Future disconnect ();
 
-    public Dex.Future get_mode_async ();
-    public Dex.Future set_mode_async (RadioMode mode);
+    [CCode (cname = "radio_control_get_vfo_async")]
+    public Dex.Future get_vfo ();
+    [CCode (cname = "radio_control_set_vfo_async")]
+    public Dex.Future set_vfo (int frequency);
+
+    [CCode (cname = "radio_control_get_mode_async")]
+    public Dex.Future get_mode ();
+    [CCode (cname = "radio_control_set_mode_async")]
+    public Dex.Future set_mode (RadioMode mode);
 
     // Property
     public bool is_rig_connected { get; }

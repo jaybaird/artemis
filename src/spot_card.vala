@@ -232,11 +232,16 @@ public sealed class SpotCard : Gtk.Box {
             fetch_avatars.end (res);
         });
 
-
-        Application.settings.changed["radio-connection-type"].connect (() => {
-            var connection_type = Application.settings.get_string ("radio-connection-type");
-            tune_button.visible = connection_type != "none";
+        Application.radio_control.radio_connected.connect (() => {
+            tune_button.visible = true;
         });
+        Application.radio_control.radio_disconnected.connect (() => {
+            tune_button.visible = false;
+        });
+        Application.radio_control.radio_status.connect ((frequency, mode) => {
+            tune_button.visible = Application.radio_control.is_rig_connected;
+        });
+
         var connection_type = Application.settings.get_string ("radio-connection-type");
         tune_button.visible = connection_type != "none";
 
@@ -341,7 +346,25 @@ public sealed class SpotCard : Gtk.Box {
     }
 
     [GtkCallback]
-    private void on_tune_button_clicked () {}
+    private void on_tune_button_clicked () {
+        if (spot != null) {
+            Application.radio_control.set_vfo (spot.frequency_khz).disown ();
+
+            var mode = spot.mode.down ();
+            Dex.Future? mode_future = null;
+            if (mode == "ft8" || mode == "ft4")
+                mode_future = Application.radio_control.set_mode (RadioMode.DIGITAL_U);
+            if (mode == "ssb")
+                mode_future = Application.radio_control.set_mode ((spot.frequency_khz >= 14000) ? RadioMode.USB : RadioMode.LSB);
+            if (mode == "fm")
+                mode_future = Application.radio_control.set_mode (RadioMode.FM);
+            if (mode == "am")
+                mode_future = Application.radio_control.set_mode (RadioMode.AM);
+            if (mode == "cw")
+                mode_future = Application.radio_control.set_mode (RadioMode.CW);
+            mode_future.disown ();
+        }
+    }
 
     [GtkCallback]
     private void on_spot_button_clicked () {

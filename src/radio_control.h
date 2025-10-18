@@ -11,16 +11,16 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE(RadioControl, radio_control, ARTEMIS, RADIO_CONTROL, GObject)
 
 enum RadioMode {
-  UNKNOWN, 
-  CW, 
-  CW_R, 
-  USB, 
-  LSB,
-  DIGITAL_U, 
-  DIGITAL_L, 
-  AM, 
-  FM,
-  DIGITAL_FM
+  RADIO_MODE_UNKNOWN, 
+  RADIO_MODE_CW, 
+  RADIO_MODE_CW_R, 
+  RADIO_MODE_USB, 
+  RADIO_MODE_LSB,
+  RADIO_MODE_DIGITAL_U, 
+  RADIO_MODE_DIGITAL_L, 
+  RADIO_MODE_AM, 
+  RADIO_MODE_FM,
+  RADIO_MODE_DIGITAL_FM
 };
 
 enum RadioStatusSignal {
@@ -52,6 +52,9 @@ RadioModel* radio_control_get_radio_models(gint *count);
 void
 radio_configuration_destroy(RadioConfiguration *config);
 
+void
+radio_configuration_copy(RadioConfiguration *config, RadioConfiguration *new_config);
+
 RadioControl *
 radio_control_new();
 
@@ -64,7 +67,7 @@ radio_control_disconnect_async(RadioControl *self);
 /* Getters */
 
 gboolean
-radio_control_is_rig_connected(RadioControl *self);
+radio_control_get_is_rig_connected(RadioControl *self);
 
 DexFuture *
 radio_control_get_vfo_async(RadioControl *self);

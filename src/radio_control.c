@@ -135,40 +135,40 @@ map_hamlib_mode(rmode_t mode)
     case RIG_MODE_SAM:
     case RIG_MODE_AMS:
     case RIG_MODE_DSB:
-      return AM;
+      return RADIO_MODE_AM;
 
     case RIG_MODE_CW:
-      return CW;
+      return RADIO_MODE_CW;
 
     case RIG_MODE_CWR:
-      return CW_R;
+      return RADIO_MODE_CW_R;
 
     case RIG_MODE_USB:
     case RIG_MODE_ECSSUSB:
     case RIG_MODE_SAH:
     case RIG_MODE_FAX:
-      return USB;
+      return RADIO_MODE_USB;
 
     case RIG_MODE_LSB:
     case RIG_MODE_ECSSLSB:
     case RIG_MODE_SAL:
-      return LSB;
+      return RADIO_MODE_LSB;
 
     case RIG_MODE_PKTLSB:
-      return DIGITAL_L;
+      return RADIO_MODE_DIGITAL_L;
 
     case RIG_MODE_PKTUSB:
-      return DIGITAL_U;
+      return RADIO_MODE_DIGITAL_U;
 
     case RIG_MODE_FM:
     case RIG_MODE_WFM:
-      return FM;
+      return RADIO_MODE_FM;
 
     case RIG_MODE_PKTFM:
-      return DIGITAL_FM;
+      return RADIO_MODE_DIGITAL_FM;
 
     default:
-      return UNKNOWN;
+      return RADIO_MODE_UNKNOWN;
   }
 }
 
@@ -177,15 +177,15 @@ map_artemis_mode(enum RadioMode mode)
 {
   switch (mode)
   {
-    case AM: return RIG_MODE_AM;
-    case CW: return RIG_MODE_CW;
-    case CW_R: return RIG_MODE_CWR;
-    case USB: return RIG_MODE_USB;
-    case LSB: return RIG_MODE_LSB;
-    case DIGITAL_L: return RIG_MODE_PKTLSB;
-    case DIGITAL_U: return RIG_MODE_PKTUSB;
-    case FM: return RIG_MODE_FM;
-    case DIGITAL_FM: return RIG_MODE_PKTFM;
+    case RADIO_MODE_AM: return RIG_MODE_AM;
+    case RADIO_MODE_CW: return RIG_MODE_CW;
+    case RADIO_MODE_CW_R: return RIG_MODE_CWR;
+    case RADIO_MODE_USB: return RIG_MODE_USB;
+    case RADIO_MODE_LSB: return RIG_MODE_LSB;
+    case RADIO_MODE_DIGITAL_L: return RIG_MODE_PKTLSB;
+    case RADIO_MODE_DIGITAL_U: return RIG_MODE_PKTUSB;
+    case RADIO_MODE_FM: return RIG_MODE_FM;
+    case RADIO_MODE_DIGITAL_FM: return RIG_MODE_PKTFM;
     default: break;
   }
   return RIG_MODE_USB;
@@ -193,7 +193,10 @@ map_artemis_mode(enum RadioMode mode)
 
 
 static DexFuture *
-watcher_worker(DexFuture *future, gpointer user_data);
+watcher_iteration(DexFuture *future, gpointer user_data);
+
+static DexFuture *
+watcher_worker(RadioControl *self);
 
 struct _RadioControl {
   GObject parent_instance;
@@ -228,6 +231,17 @@ radio_configuration_destroy(RadioConfiguration *config)
         g_free(config->device_path);
         g_free(config->network_host);
     }
+}
+
+void
+radio_configuration_copy(RadioConfiguration *config, RadioConfiguration *new_config)
+{
+  new_config->model_id = config->model_id;
+  new_config->connection_type = g_strdup(config->connection_type);
+  new_config->device_path = g_strdup(config->device_path);
+  new_config->network_host = g_strdup(config->network_host);
+  new_config->network_port = config->network_port;
+  new_config->baud_rate = config->baud_rate;
 }
 
 G_DEFINE_FINAL_TYPE(RadioControl, radio_control, G_TYPE_OBJECT);
@@ -339,12 +353,12 @@ radio_control_init(RadioControl *self)
   rig_set_debug_callback(hamlib_debug_callback, NULL);
   rig_set_debug_level(RIG_DEBUG_NONE);
 
-  self->poll_interval_ms = 5000;
+  self->poll_interval_ms = 500;
   self->canceled = dex_cancellable_new();
   self->scheduler = dex_thread_pool_scheduler_new();
 
   g_message("[RadioControl] Starting rig watch worker...");
-  self->watcher = dex_future_finally_loop(dex_future_new_true(), watcher_worker, g_object_ref(self), g_object_unref);
+  self->watcher = dex_scheduler_spawn(self->scheduler, 0, watcher_worker, g_object_ref(self), g_object_unref);
 }
 
 RadioControl* 
@@ -354,22 +368,60 @@ radio_control_new()
 }
 
 gboolean
-radio_control_is_rig_connected(RadioControl *self)
+radio_control_get_is_rig_connected(RadioControl *self)
 {
   return self->is_connected;
 }
 
 typedef struct {
+  RadioControl            *radio;
+  int                     frequency; // in kHz
+  enum RadioMode          mode;
+  enum RadioStatusSignal  status;
+  GError                  *error;
+} _RadioStatus;
+
+static void
+radio_status_free(_RadioStatus *data)
+{
+  g_object_unref(data->radio);
+  g_clear_error(&data->error);
+}
+
+static DexFuture *
+send_status(gpointer user_data)
+{
+  _RadioStatus *status = (_RadioStatus *)user_data;
+  if (status->status == SIG_STATUS)
+  {
+    g_signal_emit(status->radio, signals[SIG_STATUS], 0, status->frequency, status->mode);
+    goto status_finished;
+  }
+  
+  if (status->status == SIG_ERROR) 
+  {
+    g_signal_emit(status->radio, signals[SIG_ERROR], 0, status->error);
+    goto status_finished;
+  }
+  
+  g_signal_emit(status->radio, signals[status->status], 0);
+
+status_finished:
+  return dex_future_new_true();
+}
+
+typedef struct {
     RadioControl        *radio_control;
-    RadioConfiguration    *config;
+    RadioConfiguration  *config;
 } ConnectData;
 
 static void
 connect_data_free(ConnectData *data) {
     if (data) {
         g_object_unref(data->radio_control);
-        g_free(data);
+        radio_configuration_destroy(data->config);
     }
+    g_free(data);
 }
 
 static DexFuture *
@@ -381,13 +433,15 @@ connect_worker(gpointer user_data)
 
   g_autoptr (GError) error = NULL;
 
+  self->rig = rig_init(config->model_id);
+
   if (!self->rig)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed to initialize radio model %d", config->model_id);
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
-  if (g_strcmp0(config->connection_type, "serial") == 0 || g_strcmp0(config->connection_type, "usb") == 0) 
+  if (g_strcmp0(config->connection_type, "serial/usb") == 0) 
   {
     rig_set_conf(self->rig, rig_token_lookup(self->rig, "rig_pathname"), (char*)config->device_path);
     if (config->baud_rate > 0) {
@@ -415,6 +469,14 @@ connect_worker(gpointer user_data)
   }
   self->is_connected = TRUE;
 
+  _RadioStatus *status = g_new0(_RadioStatus, 1);
+  status->radio = g_object_ref(self);
+  status->status = SIG_CONNECTED;
+
+  dex_future_disown(
+    dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, status, (GDestroyNotify)radio_status_free)
+  );
+
   return dex_future_new_true();
 }
 
@@ -423,7 +485,8 @@ radio_control_connect_async(RadioControl *self, RadioConfiguration *config)
 {
     ConnectData *data = g_new0(ConnectData, 1);
     data->radio_control = g_object_ref(self);
-    data->config = config;
+    data->config = g_new0(RadioConfiguration, 1);
+    radio_configuration_copy(config, data->config);
 
     return dex_scheduler_spawn(
         self->scheduler,
@@ -442,6 +505,14 @@ disconnect_worker(gpointer user_data)
   self->is_connected = FALSE;
   rig_close(self->rig);
   rig_cleanup(self->rig);
+
+  _RadioStatus *status = g_new0(_RadioStatus, 1);
+  status->status = SIG_DISCONNECTED;
+  status->radio = g_object_ref(self);
+
+  dex_future_disown(
+    dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, status, (GDestroyNotify)radio_status_free)
+  );
 
   return dex_future_new_true();
 }
@@ -590,40 +661,8 @@ radio_control_set_vfo_async(RadioControl *self, int frequency)
   return dex_scheduler_spawn(self->scheduler, 0, set_vfo_worker, data, (GDestroyNotify)set_vfo_data_free);
 }
 
-typedef struct {
-  RadioControl            *radio;
-  int                     frequency; // in kHz
-  enum RadioMode          mode;
-  enum RadioStatusSignal  status;
-  GError                  *error;
-} _RadioStatus;
-
-static void
-radio_status_free(_RadioStatus *data)
-{
-  g_object_unref(data->radio);
-  g_clear_error(&data->error);
-}
-
 static DexFuture *
-send_status(gpointer user_data)
-{
-  g_message("[RadioControl] *** sending rig heartbeat ***");
-  _RadioStatus *status = (_RadioStatus *)user_data;
-  if (status->frequency < 0)
-  {
-    g_signal_emit(status->radio, signals[SIG_ERROR], 0, status->error);
-  }
-  else
-  {
-    g_signal_emit(status->radio, signals[SIG_STATUS], 0, status->frequency, status->mode);
-  }
-
-  return dex_future_new_true();
-}
-
-static DexFuture *
-watcher_worker(DexFuture *future, gpointer user_data)
+watcher_iteration(DexFuture *future, gpointer user_data)
 {
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
   
@@ -640,14 +679,17 @@ watcher_worker(DexFuture *future, gpointer user_data)
   freq_t freq;
   rmode_t mode;
   pbwidth_t width;
+  powerstat_t pwr_stat;
+  split_t _st;
+  int satmode;
   
-  int r_f = rig_get_freq(self->rig, RIG_VFO_CURR, &freq);
-  int r_m = rig_get_mode(self->rig, RIG_VFO_CURR, &mode, &width);
+  int r_f = rig_get_vfo_info(self->rig, RIG_VFO_CURR, &freq, &mode, &width, &_st, &satmode);
+  int r_ps = rig_get_powerstat(self->rig, &pwr_stat);
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
   status->radio = g_object_ref(self);
   
-  if (r_f == RIG_OK && r_m == RIG_OK)
+  if (r_f == RIG_OK && r_ps == RIG_OK)
   {
     status->status = SIG_STATUS;
     status->frequency = (int)(freq / 1000.0);
@@ -659,7 +701,7 @@ watcher_worker(DexFuture *future, gpointer user_data)
     status->frequency = -1;
     status->mode = 0;
 
-    GError *error = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED, "[RadioControl] heartbeat received error from hamlib: %s; %s", rigerror(r_f), rigerror(r_m));
+    GError *error = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED, "[RadioControl] heartbeat received error from hamlib: %s; %s", rigerror(r_f), rigerror(r_ps));
     status->error = g_steal_pointer(&error);
   }
   
@@ -668,4 +710,10 @@ watcher_worker(DexFuture *future, gpointer user_data)
   );
 
   return dex_timeout_new_msec(self->poll_interval_ms);
+}
+
+static DexFuture *
+watcher_worker(RadioControl *self)
+{
+  return dex_future_finally_loop(dex_future_new_true(), watcher_iteration, g_object_ref(self), g_object_unref);
 }

@@ -19,6 +19,8 @@
  */
 
 public sealed class Application : Adw.Application {
+    public signal void radio_status (bool is_connected);
+
     private static Quark _current_spot_hash = 0;
     public static Quark current_spot_hash {
         get {
@@ -40,6 +42,9 @@ public sealed class Application : Adw.Application {
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
     public static MapWindow? map_window { get; private set; default = null; }
+
+    public static RadioControl? radio_control { get; private set; default = null; }
+    public static bool is_radio_connected { get; set; default = false; }
 
     public static Application app;
     public static Gtk.Window win;
@@ -124,6 +129,17 @@ public sealed class Application : Adw.Application {
         pota_client = new PotaClient ();
         spot_database = new SpotDb ();
         callsign_cache = new CallsignCache (3600);
+
+        radio_control = new RadioControl ();
+        radio_control.radio_connected.connect (() => {
+            radio_status (true);
+        });
+        radio_control.radio_disconnected.connect (() => {
+            radio_status (false);
+        });
+        radio_control.radio_status.connect ((frequency, radio_mode) => {
+            radio_status (Application.radio_control.is_rig_connected);
+        });
     }
 
     public override void activate () {

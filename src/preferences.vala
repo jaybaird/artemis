@@ -21,6 +21,12 @@
 using Gee;
 using GUdev;
 
+static string _strip_quotes (string s) {
+    if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
+        return s.substring (1, s.length - 2);
+    return s;
+}
+
 public sealed class PreferencesDialog : Object {
     private Adw.PreferencesDialog dialog;
     private Adw.EntryRow row_callsign;
@@ -57,6 +63,8 @@ public sealed class PreferencesDialog : Object {
 
     private File? logbook_csv = null;
     private GUdev.Client udev_client;
+
+    private Dex.Future connect_future;
 
     public PreferencesDialog () {
         Object ();
@@ -97,6 +105,10 @@ public sealed class PreferencesDialog : Object {
         row_radio_model.model = radio_model_list;
         row_radio_model.enable_search = true;
         row_radio_model.search_match_mode = Gtk.StringFilterMatchMode.SUBSTRING;
+        row_radio_model.notify ["selected"].connect (() => {
+            var model = radio_models[row_radio_model.selected - 1];
+            print ("radio model selected %s".printf (model.display_name));
+        });
 
         row_device_path = builder.get_object ("row_device_path") as Adw.ComboRow;
         row_device_path.model = get_serial_devices ();
@@ -286,15 +298,14 @@ public sealed class PreferencesDialog : Object {
 
         var selected_type = model.get_string (row_connection_type.selected);
 
-        switch (selected_type.down ()) {
-            case "serial" :
-            case "usb":
+        switch (selected_type.up ()) {
+            case "SERIAL/USB" :
                 serial_settings_group.visible = true;
                 network_settings_group.visible = false;
                 row_radio_model.visible = true;
                 radio_test_group.visible = true;
                 break;
-            case "network":
+            case "NETWORK":
                 row_radio_model.visible = true;
                 row_radio_model.selected = 1;
                 row_radio_model.selectable = false;
@@ -317,22 +328,66 @@ public sealed class PreferencesDialog : Object {
         connection_status_icon.icon_name = "content-loading-symbolic";
         connection_status_label.label = _ ("Testing…");
 
-        test_radio_connection.begin ((obj, res) => {
-            bool success = test_radio_connection.end (res);
-
-            test_connection_button.sensitive = true;
-            if (success) {
-                connection_status_icon.icon_name = "network-idle-symbolic";
-                connection_status_label.label = _ ("Connected");
-            } else {
-                connection_status_icon.icon_name = "network-offline-symbolic";
-                connection_status_label.label = _ ("Failed");
-            }
-        });
+        test_radio_connection ();
     }
 
-    async bool test_radio_connection () {
-        return false;
+    void test_radio_connection () {
+        if (Application.radio_control == null || row_radio_model.selected == 0) return;
+        var radio_models = RadioControl.get_radio_models ();
+        var radio_model = radio_models[row_radio_model.selected - 1]; // padded for "None" selection
+
+        var connection_type = row_connection_type.model.get_item (row_connection_type.selected) as Gtk.StringObject;
+        var device_path = row_device_path.model.get_item (row_device_path.selected) as Gtk.StringObject;
+        var baud_rate = row_baud_rate.model.get_item (row_baud_rate.selected) as Gtk.StringObject;
+
+        var config = RadioConfiguration () {
+            model_id = radio_model.model_id,
+            connection_type = connection_type.get_string ().down () ?? "",
+            device_path = device_path.get_string (),
+            network_host = row_network_host.text,
+            network_port = int.parse (row_network_port.text),
+            baud_rate = int.parse (baud_rate.get_string ())
+        };
+        debug ("""Testing radio connection with:
+        \tModel ID: %s\n
+        \tConnection type: %s\n
+        \tDevice path: %s\n
+        \tNetwork host: %s\n
+        \tNetwork port: %d\n
+        \tBaud rate: %d\n
+        """.printf (
+            radio_model.display_name,
+            config.connection_type,
+            config.device_path,
+            config.network_host,
+            config.network_port,
+            config.baud_rate
+        ));
+
+        var is_connected = Application.radio_control.connect (config);
+        new Dex.Future.then (is_connected, (result) => {
+            bool success = false;
+            try {
+                success = result.await_boolean ();
+            } catch (Error err) {
+                error (err.message);
+            }
+
+            Dex.Scheduler.get_default ().spawn (0, () => {
+                test_connection_button.sensitive = true;
+                if (success) {
+                    connection_status_icon.icon_name = "network-idle-symbolic";
+                    connection_status_label.label = _("Connected");
+                } else {
+                    connection_status_icon.icon_name = "network-offline-symbolic";
+                    connection_status_label.label = _("Failed");
+                }
+
+                return null;
+            }).disown ();
+
+            return null;
+        }).disown ();
     }
 
     void do_import_file () {
@@ -385,12 +440,6 @@ public sealed class PreferencesDialog : Object {
         alert.set_close_response ("ok");
         alert.present (dialog.get_root ());
     } /* do_import_file */
-
-    string _strip_quotes (string s) {
-        if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
-            return s.substring (1, s.length - 2);
-        return s;
-    }
 
     void on_import_file () {
         var file_dialog = new Gtk.FileDialog ();
