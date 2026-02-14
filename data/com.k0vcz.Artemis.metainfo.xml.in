@@ -64,17 +64,17 @@
 
   <!-- Applications should set a brand color in both light and dark variants like so -->
   <branding>
-    <color type="primary" scheme_preference="light">#ff00ff</color>
-    <color type="primary" scheme_preference="dark">#993d3d</color>
+    <color type="primary" scheme_preference="light">#1f5ab4</color>
+    <color type="primary" scheme_preference="dark">#545454</color>
   </branding>
 
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/main-window.png</image>
+      <image xml:lang="en">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/main-window.png</image>
       <caption>Main spot hunting view with filters and live cards</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view.png</image>
+      <image xml:lang="en">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view.png</image>
       <caption>Map view showing current park activity and station context</caption>
     </screenshot>
   </screenshots>
