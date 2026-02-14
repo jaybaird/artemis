@@ -1,10 +1,8 @@
 {
     "id" : "com.k0vcz.Artemis",
     "runtime" : "org.gnome.Platform",
-    "runtime-version" : "48",
+    "runtime-version" : "49",
     "sdk" : "org.gnome.Sdk",
-    "sdk-extensions" : [
-    ],
     "command" : "com.k0vcz.Artemis",
     "finish-args" : [
         "--share=network",
@@ -13,13 +11,6 @@
         "--device=dri",
         "--socket=wayland"
     ],
-    "build-options" : {
-        "append-path" : "/usr/lib/sdk/vala/bin",
-        "prepend-ld-library-path" : "/usr/lib/sdk/vala/lib",
-        "env" : {
-            "FLATPAK_ID": "com.k0vcz.Artemis"
-        }
-    },
     "cleanup" : [
         "/include",
         "/lib/pkgconfig",
@@ -44,22 +35,7 @@
                 "--without-readline"
             ],
             "cleanup": [
-                "/bin/ampctl",
-                "/bin/ampctld",
-                "/bin/rigctl",
-                "/bin/rigctlcom",
-                "/bin/rigctld",
-                "/bin/rigctlsync",
-                "/bin/rigctltcp",
-                "/bin/rigfreqwalk",
-                "/bin/rigmem",
-                "/bin/rigsmtr",
-                "/bin/rigswr",
-                "/bin/rigtestlibusb",
-                "/bin/rigtestmcast",
-                "/bin/rigtestmcastrx",
-                "/bin/rotctl",
-                "/bin/rotctld"
+                "/bin"
             ],
             "sources": [
                 {
@@ -106,9 +82,9 @@
             "buildsystem": "meson",
             "sources": [
                 {
-                "type": "git",
-                "url": "https://gitlab.gnome.org/GNOME/libshumate.git",
-                "tag": "1.5.0"
+                    "type": "git",
+                    "url": "https://gitlab.gnome.org/GNOME/libshumate.git",
+                    "tag": "1.5.0"
                 }
             ]
         },
