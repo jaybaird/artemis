@@ -5,9 +5,6 @@ build/
 flatpak-build/
 .cache/
 dist/
-AppDir/
-build-appimage/
-*.AppImage
 po/*.pot
 subprojects/blueprint-compiler/
 *.ui

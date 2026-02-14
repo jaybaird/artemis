@@ -70,7 +70,10 @@ public class BoundingBox : Object {
         }
     }
 
-    public void extend_coord (Coordinate coord) {
+    public void extend_coord (Coordinate? coord) {
+        if (coord == null)
+            return;
+
         extend (coord.latitude, coord.longitude);
     }
 
@@ -381,7 +384,7 @@ public class MapView : Gtk.Box {
                 child = child.get_next_sibling ();
             }
             sidebar_box.append (spot_card);
-            map_widget.go_to (spot.coordinate.latitude, spot.coordinate.longitude);
+            map_widget.go_to (coordinate.latitude, coordinate.longitude);
             split_view.show_sidebar = true;
         });
         marker.add_controller (click);
@@ -420,10 +423,15 @@ public class MapView : Gtk.Box {
 
         for (uint i = 0 ; i < filtered.get_n_items () ; i++) {
             Spot spot = filtered.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
             bbox.extend_coord (spot.coordinate);
             _create_marker (spot);
-            spot_count++;
             valid_hashes.add (spot.hash);
+
+            if (spot.coordinate != null)
+                spot_count++;
         }
         bbox.expand ();
 

@@ -6,13 +6,20 @@
 <p align="center">
   <br />
     <a href="./LICENSE"><img src="https://img.shields.io/badge/LICENSE-GPL--3.0-f5c211.svg?style=for-the-badge&labelColor=2e3436" alt="License GPL-3.0" /></a>
-    <a href="https://github.com/jaybaird/artemis-vala/actions/workflows/build.yml"><img alt="GitHub CI Status" src="https://img.shields.io/github/actions/workflow/status/jaybaird/artemis-vala/build.yml?branch=main&style=for-the-badge&labelColor=2e3436"></a>
     <a href='https://stopthemingmy.app'><img width='193.455' alt='Please do not theme this app' src='https://stopthemingmy.app/badge.svg'/></a>
 </p>
 
 **Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track QSOs, log parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
 
 Artemis is designed to be cross-platform, lightweight, and easy to use.
+
+## Screenshots
+
+![Main window showing live spots and filters](./screenshots/main-window.png)
+*Main spot hunting view with filters and live cards.*
+
+![Map view showing park activity](./screenshots/map-view.png)
+*Map view showing current park activity and station context.*
 
 ## Features
 
@@ -89,24 +96,6 @@ bash scripts/release-flatpak.sh
 
 Artifact output:
 - `dist/flatpak/com.k0vcz.Artemis.flatpak`
-
-### AppImage
-Requires `appimage-builder`, Meson/Ninja, and the normal build dependencies.
-
-```bash
-bash scripts/release-appimage.sh
-```
-
-Artifact output:
-- `dist/appimage/Artemis-x86_64.AppImage`
-
-### CI release artifacts
-GitHub Actions workflow:
-- `.github/workflows/release.yml`
-
-Triggers:
-- Manual run (`workflow_dispatch`)
-- Git tag push matching `v*`
 
 ## License
 

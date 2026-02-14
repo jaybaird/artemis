@@ -8,7 +8,7 @@ Core features:
 - Map visualization with Shumate
 - Radio CAT control via Hamlib
 - Local spot/QSO data in SQLite
-- Packaging for Flatpak and AppImage
+- Packaging for Flatpak
 
 ## Technology Stack
 - Language: Vala (plus a C bridge for radio control)
@@ -27,7 +27,6 @@ Core features:
 - `po/` translations and gettext config
 - `com.k0vcz.Artemis.json` Flatpak manifest
 - `scripts/release-flatpak.sh` Flatpak bundle build
-- `scripts/release-appimage.sh` AppImage build
 
 ## Build and Validation
 - Build: `meson setup build && meson compile -C build`
@@ -39,8 +38,7 @@ When changing UI/resources, ensure the build succeeds and generated resources re
 
 ## Release Notes
 - Flatpak artifacts output to `dist/flatpak/`
-- AppImage artifacts output to `dist/appimage/`
-- CI release workflow: `.github/workflows/release.yml`
+- CI release workflow files are currently removed; check repository state before adding automation.
 
 ## Translation Notes
 - Gettext domain: `com.k0vcz.Artemis`
