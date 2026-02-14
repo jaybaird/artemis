@@ -6,7 +6,6 @@
 <p align="center">
   <br />
     <a href="./LICENSE"><img src="https://img.shields.io/badge/LICENSE-GPL--3.0-f5c211.svg?style=for-the-badge&labelColor=2e3436" alt="License GPL-3.0" /></a>
-    <a href="https://github.com/jaybaird/artemis-vala/actions/workflows/build.yml"><img alt="GitHub CI Status" src="https://img.shields.io/github/actions/workflow/status/jaybaird/artemis-vala/build.yml?branch=main&style=for-the-badge&labelColor=2e3436"></a>
     <a href='https://stopthemingmy.app'><img width='193.455' alt='Please do not theme this app' src='https://stopthemingmy.app/badge.svg'/></a>
 </p>
 
