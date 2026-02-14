@@ -70,11 +70,11 @@
 
   <screenshots>
     <screenshot type="default">
-      <image xml:lang="en">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/main-window.png</image>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/main-window.png</image>
       <caption>Main spot hunting view with filters and live cards</caption>
     </screenshot>
     <screenshot>
-      <image xml:lang="en">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view.png</image>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view.png</image>
       <caption>Map view showing current park activity and station context</caption>
     </screenshot>
   </screenshots>
