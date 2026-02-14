@@ -56,7 +56,6 @@ add_project_arguments('-DGETTEXT_PACKAGE="' + meson.project_name() + '"', langua
 
 subdir('blueprints')
 subdir('data')
-subdir('sql')
 subdir('src')
 subdir('po')
 

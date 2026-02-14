@@ -5,7 +5,6 @@ inputs = files(
   'spot_card.blp',
   'spot_history_dialog.blp',
   'spot_page.blp',
-  'status_page.blp',
   'band_view.blp',
   'park_log_dialog.blp',
 )
@@ -17,7 +16,6 @@ outs = [
   'spot_card.ui',
   'spot_history_dialog.ui',
   'spot_page.ui',
-  'status_page.ui',
   'band_view.ui',
   'park_log_dialog.ui',
 ]

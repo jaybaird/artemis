@@ -4,7 +4,6 @@
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file preprocess="xml-stripblanks">ui/main_window.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_card.ui</file>
-    <file preprocess="xml-stripblanks">ui/status_page.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_page.ui</file>
     <file preprocess="xml-stripblanks">ui/add_spot_page.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_history_dialog.ui</file>
@@ -13,7 +12,9 @@
 
     <file compressed="true" alias="style.css">css/style.css</file>
 
-     <file preprocess="xml-stripblanks" alias="metainfo.xml">com.k0vcz.Artemis.metainfo.xml.in</file>
+    <file compressed="true">sql/version-001.sql</file>
+
+    <file preprocess="xml-stripblanks" alias="metainfo.xml">com.k0vcz.Artemis.metainfo.xml.in</file>
   </gresource>
 </gresources>
 

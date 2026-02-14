@@ -18,6 +18,9 @@ public sealed class BandView : Gtk.Box {
     [GtkChild]
     public unowned Gtk.FlowBox band_spot_cards;
 
+    [GtkChild]
+    public unowned Adw.StatusPage status_page;
+
     public unowned Adw.ViewStackPage ? page;
 
     private Gtk.Filter filter;
@@ -27,12 +30,8 @@ public sealed class BandView : Gtk.Box {
 
     private bool just_selected = false;
 
-    private StatusPage status_page;
-
-    public SpotRepo spot_repo { get; construct; }
-    public BandView (SpotRepo repo, string band_label, string icon) {
+    public BandView (string band_label, string icon) {
         Object (
-            spot_repo : repo,
             band_label: band_label,
             icon_name: icon
             );
@@ -61,21 +60,14 @@ public sealed class BandView : Gtk.Box {
             if (now.compare (expires) > 0)
                 return false;
 
-            if ((Application.current_program_filter != null) && (Application.
-                                                                 current_program_filter
-                                                                 != _
-                                                                     ("All")) &&
-                !spot.park_ref.down ().has_prefix (Application.
-                    current_program_filter.down
-                        ()))
+            if ((Application.current_program_filter != null) &&
+                (Application.current_program_filter != _("All")) &&
+                !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
                 return false;
 
-            if ((Application.current_mode_filter != null) && (Application.
-                                                              current_mode_filter
-                                                              != _ (
-                                                                  "All")) &&
-                !spot.mode.down ().contains (Application.current_mode_filter.
-                    down ()))
+            if ((Application.current_mode_filter != null) &&
+                (Application.current_mode_filter != _("All")) &&
+                !spot.mode.down ().contains (Application.current_mode_filter.down ()))
                 return false;
 
             if (Application.current_search_text != null) {
@@ -89,8 +81,7 @@ public sealed class BandView : Gtk.Box {
             return true;
         });
 
-        filtered = new Gtk.FilterListModel (Application.spot_repo.store,
-            filter);
+        filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
 
         sorter = new Gtk.CustomSorter ((item_a, item_b) => {
             var spot_a = item_a as Spot;
@@ -115,12 +106,6 @@ public sealed class BandView : Gtk.Box {
         });
         sorted = new Gtk.SortListModel (filtered, sorter);
 
-        status_page = new StatusPage (icon_name, band_label, _ (
-            "There are no spots currently on %s.").printf (band_label));
-        status_page.visible = false;
-
-        this.append (status_page);
-
         band_spot_cards.bind_model (
             sorted,
             (Gtk.FlowBoxCreateWidgetFunc)create_spot_card
@@ -130,7 +115,7 @@ public sealed class BandView : Gtk.Box {
             if ((spot_card != null) &&
                 !just_selected &&
                 (spot_card.spot.hash == Application.current_spot_hash)) {
-                Application.current_spot_hash = 0;
+                Application.current_spot_hash = BLANK_HASH;
                 band_spot_cards.unselect_all ();
             }
             if (just_selected) {
@@ -157,6 +142,7 @@ public sealed class BandView : Gtk.Box {
 
         sorted.items_changed.connect ((position, removed, added) => {
             var items = sorted.get_n_items ();
+
             band_spot_cards.visible = (items > 0);
             status_page.visible = (items == 0);
 
@@ -167,6 +153,9 @@ public sealed class BandView : Gtk.Box {
         var items = sorted.get_n_items ();
         band_spot_cards.visible = (items > 0);
         status_page.visible = (items == 0);
+        status_page.title = band_label;
+        status_page.description = _("There are no spots currently on %s").printf (band_label);
+        status_page.icon_name = icon_name;
 
         if (page != null)
             page.badge_number = sorted.get_n_items ();

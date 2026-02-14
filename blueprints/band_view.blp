@@ -1,20 +1,39 @@
 using Gtk 4.0;
+using Adw 1;
 
 template $BandView : Box {
   vexpand: true;
   hexpand: true;
+  halign: fill;
+  valign: fill;
 
-  ScrolledWindow {
-    vexpand: true;
+  Overlay {
     hexpand: true;
+    vexpand: true;
 
-    FlowBox band_spot_cards {
-      column-spacing: 6;
-      row-spacing: 12;
-      selection-mode: single;
-      min-children-per-line: 2;
-      max-children-per-line: 8;
-      homogeneous: true;
+    child: ScrolledWindow {
+      vexpand: true;
+      hexpand: true;
+      halign: fill;
+      valign: fill;
+
+      FlowBox band_spot_cards {
+        column-spacing: 6;
+        row-spacing: 12;
+        selection-mode: single;
+        min-children-per-line: 2;
+        max-children-per-line: 8;
+        homogeneous: true;
+      }
+    };
+
+    [overlay]
+    Adw.StatusPage status_page {
+      halign: fill;
+      valign: fill;
+      hexpand: true;
+      vexpand: true;
+      visible: false;
     }
   }
 }

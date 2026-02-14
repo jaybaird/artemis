@@ -121,7 +121,7 @@ public class CallsignCache : Object {
 
 public sealed class SpotRepo : Object {
     public GLib.ListStore store { get; construct; }
-    public Gtk.Filter spot_filter { get; construct; }
+
     public signal void busy_changed (bool busy);
     public signal void refreshed (uint spots_updated);
     public signal void update_error (Error err);
@@ -129,6 +129,9 @@ public sealed class SpotRepo : Object {
 
     public Gtk.StringList program_model { get; private set; }
     public uint64 tracked_spot_hash { get; set; default = uint64.MAX; }
+
+    public HashMap<string, int> band_counts;
+
     public SpotRepo () {
         Object ();
     }
@@ -136,9 +139,10 @@ public sealed class SpotRepo : Object {
     construct {
         store = new GLib.ListStore (typeof (Spot));
         program_model = new Gtk.StringList ({});
+        band_counts = new HashMap<string, int> ();
     }
 
-    public Spot ? get_spot (Quark spot_hash) {
+    public Spot? get_spot (Quark spot_hash) {
         for (uint i = 0 ; i < store.get_n_items () ; i++) {
             var spot = store.get_item (i) as Spot;
             if ((spot != null) && (spot.hash == spot_hash))
@@ -146,6 +150,14 @@ public sealed class SpotRepo : Object {
         }
 
         return null;
+    }
+
+    public int get_band_count (string band) {
+        if (band_counts.has_key (band)) {
+            return band_counts.get (band);
+        }
+
+        return 0;
     }
 
     public async void update_spots () {
@@ -156,6 +168,7 @@ public sealed class SpotRepo : Object {
 
         try {
             store.remove_all ();
+            band_counts.clear ();
             program_model.splice (0, program_model.get_n_items (), {});
 
             var programs = new HashSet<string> ();
@@ -175,7 +188,11 @@ public sealed class SpotRepo : Object {
                         var program = spot.park_ref.split ("-", 2)[0];
                         programs.add (program);
                     }
-
+                    if (band_counts.has_key (spot.band)) {
+                        band_counts[spot.band] = band_counts[spot.band] + 1;
+                    } else {
+                        band_counts[spot.band] = 1;
+                    }
                     store.append (spot);
                 }
                 spots_updated = spots_array.get_length ();

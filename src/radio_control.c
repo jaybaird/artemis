@@ -196,7 +196,7 @@ static DexFuture *
 watcher_iteration(DexFuture *future, gpointer user_data);
 
 static DexFuture *
-watcher_worker(RadioControl *self);
+watcher_worker(void *user_data);
 
 struct _RadioControl {
   GObject parent_instance;
@@ -208,7 +208,10 @@ struct _RadioControl {
   DexCancellable  *canceled;
   DexFuture       *watcher;
 
-  gboolean  is_connected;
+  gboolean        is_connected;
+  float           frequency_khz;
+  enum RadioMode  mode;
+
   gulong    settings_changed_handler;
 
   DexScheduler *scheduler;
@@ -253,7 +256,7 @@ radio_control_dispose(GObject *object)
 {
   RadioControl *self = ARTEMIS_RADIO_CONTROL(object);
 
-  if (self->rig)
+  if (self->rig != NULL)
   {
     g_autoptr (GError) error = NULL;
     DexFuture *disconnect = radio_control_disconnect_async(self);
@@ -373,6 +376,18 @@ radio_control_get_is_rig_connected(RadioControl *self)
   return self->is_connected;
 }
 
+float
+radio_control_get_frequency(RadioControl *self)
+{
+  return self->frequency_khz;
+}
+
+enum RadioMode
+radio_control_get_mode(RadioControl *self)
+{
+  return self->mode;
+}
+
 typedef struct {
   RadioControl            *radio;
   int                     frequency; // in kHz
@@ -435,13 +450,13 @@ connect_worker(gpointer user_data)
 
   self->rig = rig_init(config->model_id);
 
-  if (!self->rig)
+  if (self->rig == NULL)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed to initialize radio model %d", config->model_id);
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
-  if (g_strcmp0(config->connection_type, "serial/usb") == 0) 
+  if (g_strcmp0(config->connection_type, "serial") == 0) 
   {
     rig_set_conf(self->rig, rig_token_lookup(self->rig, "rig_pathname"), (char*)config->device_path);
     if (config->baud_rate > 0) {
@@ -464,7 +479,10 @@ connect_worker(gpointer user_data)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_CONNECTION_REFUSED,
                 "Failed to connect to radio: %s", rigerror(result));
+    rig_close(self->rig);
     rig_cleanup(self->rig);
+    self->rig = NULL;
+    self->is_connected = FALSE;
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
   self->is_connected = TRUE;
@@ -503,8 +521,13 @@ disconnect_worker(gpointer user_data)
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
 
   self->is_connected = FALSE;
-  rig_close(self->rig);
-  rig_cleanup(self->rig);
+
+  if (self->rig != NULL)
+  {
+    rig_close(self->rig);
+    rig_cleanup(self->rig);
+    self->rig = NULL;
+  }
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
   status->status = SIG_DISCONNECTED;
@@ -662,11 +685,11 @@ radio_control_set_vfo_async(RadioControl *self, int frequency)
 }
 
 static DexFuture *
-watcher_iteration(DexFuture *future, gpointer user_data)
+watcher_iteration(DexFuture *_, gpointer user_data)
 {
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
   
-  if (!self->is_connected)
+  if (!self->is_connected || self->rig == NULL)
   {
     return dex_future_new_for_boolean(TRUE);
   }
@@ -694,12 +717,18 @@ watcher_iteration(DexFuture *future, gpointer user_data)
     status->status = SIG_STATUS;
     status->frequency = (int)(freq / 1000.0);
     status->mode = map_hamlib_mode(mode);
+
+    self->frequency_khz = (float)(freq / 1000.0);
+    self->mode = map_hamlib_mode(mode);
   }
   else 
   {
     status->status = SIG_ERROR;
     status->frequency = -1;
     status->mode = 0;
+
+    self->frequency_khz = -1;
+    self->mode = 0;
 
     GError *error = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED, "[RadioControl] heartbeat received error from hamlib: %s; %s", rigerror(r_f), rigerror(r_ps));
     status->error = g_steal_pointer(&error);
@@ -713,7 +742,8 @@ watcher_iteration(DexFuture *future, gpointer user_data)
 }
 
 static DexFuture *
-watcher_worker(RadioControl *self)
+watcher_worker(void *user_data)
 {
+  RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
   return dex_future_finally_loop(dex_future_new_true(), watcher_iteration, g_object_ref(self), g_object_unref);
 }

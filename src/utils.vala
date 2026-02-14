@@ -1,6 +1,10 @@
 using GLib;
 using Shumate;
 
+public static inline uint clampi (uint v, uint min, uint max) {
+    return (v < min) ? min : (max < v) ? max : v;
+}
+
 public static inline double clamp (double v, double min, double max) {
     return (v < min) ? min : (max < v) ? max : v;
 }
@@ -19,6 +23,15 @@ public static Gee.ArrayList<T> to_array<T> (Gee.Iterator<T> iter) {
     }
 
     return list;
+}
+
+public static string format_vfo (float freq_khz) {
+    uint freq_hz = (uint)(freq_khz * 1000.0 + 0.5);
+    uint mhz = freq_hz / 1000000;
+    uint khz = (freq_hz / 1000) % 1000;
+    uint hz = freq_hz % 1000;
+
+    return "%u.%03u.%02u".printf (mhz, khz, hz / 10);
 }
 
 namespace Distance {

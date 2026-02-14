@@ -91,7 +91,10 @@ template $SpotCard : Box {
           margin-bottom: 0;
           label: "US-WY";
           wrap: true;
-          wrap-mode: word_char;
+          width-chars: 24;
+          xalign: 0.0;
+          ellipsize: end;
+          wrap-mode: word;
         }
       }
 
@@ -255,14 +258,6 @@ template $SpotCard : Box {
             Image {
               tooltip-text: _("Spot History");
               icon-name: "history-undo-symbolic";
-              icon-size: normal;
-            }
-          }
-
-          Button logbook_button {
-            Image {
-              tooltip-text: _("Logbook");
-              icon-name: "format-ordered-list-symbolic";
               icon-size: normal;
             }
           }

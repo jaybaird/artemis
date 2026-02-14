@@ -1,12 +1,3 @@
 TODO
 ======
 
-Short term:
------------
-* Finish Park Log Dialog page
-* Log QSO, create new park if applicable, when spotting
-
-Longer Term:
-------------
-* Detect spot from outside the app, log QSO
-* Wire up hamlib / rig control

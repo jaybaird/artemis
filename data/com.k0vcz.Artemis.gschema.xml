@@ -73,13 +73,13 @@
 
         <!-- Radio Settings -->
         <key name="radio-connection-type" type="s">
-        <default>"NONE"</default>
+        <default>"none"</default>
         <summary>Radio connection type</summary>
         <description>How to connect to the radio (none, serial/USB, network).</description>
         <choices>
-            <choice value="NONE"/>
-            <choice value="SERIAL/USB"/>
-            <choice value="NETWORK"/>
+            <choice value="none"/>
+            <choice value="serial"/>
+            <choice value="network"/>
         </choices>
         </key>
 

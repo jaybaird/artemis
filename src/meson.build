@@ -8,10 +8,9 @@ artemis_vala_sources = [
   'src/repo.vala',
   'src/activator.vala',
   'src/band_view.vala',
-  'src/status_page.vala',
   'src/database.vala',
   'src/utils.vala',
-  'src/map_window.vala',
+  'src/map_view.vala',
 ]
 
 glib_dep = dependency('glib-2.0')

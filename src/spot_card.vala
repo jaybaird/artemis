@@ -76,6 +76,13 @@ public sealed class AddSpot : Adw.Dialog {
         activator_callsign.editable = false;
         park_ref.text = spot.park_ref;
         park_ref.editable = false;
+        frequency.text = "%d".printf (spot.frequency_khz);
+    }
+
+    public AddSpot.with_frequency (float frequency_khz) {
+        Object ();
+
+        frequency.text = "%d".printf ((int)frequency_khz);
     }
 
     construct {
@@ -85,17 +92,14 @@ public sealed class AddSpot : Adw.Dialog {
         var content = builder.get_object ("add_spot_content") as Gtk.Widget;
         this.set_child (content);
 
-        activator_callsign = builder.get_object ("activator_callsign") as Adw.
-            EntryRow;
-        spotter_callsign = builder.get_object ("spotter_callsign") as Adw.
-            EntryRow;
+        activator_callsign = builder.get_object ("activator_callsign") as Adw.EntryRow;
+        spotter_callsign = builder.get_object ("spotter_callsign") as Adw.EntryRow;
         frequency = builder.get_object ("frequency") as Adw.EntryRow;
         mode = builder.get_object ("mode") as Adw.ComboRow;
         park_ref = builder.get_object ("park_ref") as Adw.EntryRow;
         rst_sent = builder.get_object ("rst_sent") as Adw.EntryRow;
         rst_received = builder.get_object ("rst_received") as Adw.EntryRow;
-        spotter_comments = builder.get_object ("spotter_comments") as Adw.
-            EntryRow;
+        spotter_comments = builder.get_object ("spotter_comments") as Adw. EntryRow;
 
         var settings = Application.settings;
         spotter_callsign.text = settings.get_string ("callsign");
@@ -121,7 +125,12 @@ public sealed class AddSpot : Adw.Dialog {
 
             Application.pota_client.post_spot.begin (spot, (obj, res) => {
                 try {
+                    Error? err = null;
                     Application.pota_client.post_spot.end (res);
+                    Application.spot_database.add_qso_from_spot (spot, out err);
+                    if (err != null) {
+                        error ("Unable to save qso: %s".printf (err.message));
+                    }
                     Application.spot_repo.update_spots.begin ();
                 } catch (Error err) {
                     var errmsg = err.message;
@@ -183,9 +192,6 @@ public sealed class SpotCard : Gtk.Box {
     public unowned Gtk.Button history_button;
 
     [GtkChild]
-    public unowned Gtk.Button logbook_button;
-
-    [GtkChild]
     public unowned Gtk.Button park_details_button;
 
     [GtkChild]
@@ -216,7 +222,22 @@ public sealed class SpotCard : Gtk.Box {
 
         title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
         park_label.label = spot.park_name;
-        location_desc.label = spot.location_desc;
+
+        Error err = null;
+        var locations = spot.location_desc.split (",", -1);
+        var locations_str = "";
+        if (locations.length <= 2) {
+            for (int i = 0; i < locations.length; i++) {
+                var country = Application.spot_database.country_string_for_location (locations[i], out err);
+                locations_str = locations_str + ((i > 0) ? "\n" : "") + ((country == null) ? spot.location_desc : country);
+            }
+        } else {
+            locations_str = spot.location_desc;
+        }
+
+        location_desc.label = locations_str;
+        location_desc.tooltip_text = spot.location_desc;
+
         frequency.label = "%d kHz".printf (spot.frequency_khz);
         mode.label = spot.mode;
         hunter_callsign.label = spot.spotter;
@@ -242,8 +263,7 @@ public sealed class SpotCard : Gtk.Box {
             tune_button.visible = Application.radio_control.is_rig_connected;
         });
 
-        var connection_type = Application.settings.get_string ("radio-connection-type");
-        tune_button.visible = connection_type != "none";
+        tune_button.visible = Application.radio_control.is_rig_connected;
 
         refresh_highlight ();
     }
@@ -347,23 +367,45 @@ public sealed class SpotCard : Gtk.Box {
 
     [GtkCallback]
     private void on_tune_button_clicked () {
-        if (spot != null) {
-            Application.radio_control.set_vfo (spot.frequency_khz).disown ();
+        if ((spot == null) || !Application.radio_control.is_rig_connected)
+            return;
 
-            var mode = spot.mode.down ();
-            Dex.Future? mode_future = null;
-            if (mode == "ft8" || mode == "ft4")
-                mode_future = Application.radio_control.set_mode (RadioMode.DIGITAL_U);
-            if (mode == "ssb")
-                mode_future = Application.radio_control.set_mode ((spot.frequency_khz >= 14000) ? RadioMode.USB : RadioMode.LSB);
-            if (mode == "fm")
-                mode_future = Application.radio_control.set_mode (RadioMode.FM);
-            if (mode == "am")
-                mode_future = Application.radio_control.set_mode (RadioMode.AM);
-            if (mode == "cw")
-                mode_future = Application.radio_control.set_mode (RadioMode.CW);
-            mode_future.disown ();
-        }
+        var text_mode = spot.mode.down ();
+        RadioMode mode = RadioMode.UNKNOWN;
+        if (text_mode == "ft8" || text_mode == "ft4")
+            mode = RadioMode.DIGITAL_U;
+        if (text_mode == "ssb")
+            mode = (spot.frequency_khz >= 14000) ? RadioMode.USB : RadioMode.LSB;
+        if (text_mode == "fm")
+            mode = RadioMode.FM;
+        if (text_mode == "am")
+            mode = RadioMode.AM;
+        if (text_mode == "cw")
+            mode = RadioMode.CW;
+
+        var set_vfo_future = Application.radio_control.set_vfo (spot.frequency_khz);
+        new Dex.Future.finally (set_vfo_future, (result) => {
+            try {
+                result.await_boolean ();
+            } catch (Error err) {
+                warning ("Unable to tune VFO to %d kHz: %s", spot.frequency_khz, err.message);
+                return null;
+            }
+
+            if (mode == RadioMode.UNKNOWN)
+                return null;
+
+            var set_mode_future = Application.radio_control.set_mode (mode);
+            new Dex.Future.finally (set_mode_future, (mode_result) => {
+                try {
+                    mode_result.await_boolean ();
+                } catch (Error err) {
+                    warning ("Unable to set mode %s: %s", text_mode, err.message);
+                }
+                return null;
+            }).disown ();
+            return null;
+        }).disown ();
     }
 
     [GtkCallback]

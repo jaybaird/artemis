@@ -1,1 +1,1 @@
-i18n.gettext('artemis-vala', preset: 'glib')
+i18n.gettext('com.k0vcz.Artemis', preset: 'glib')

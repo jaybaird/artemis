@@ -69,6 +69,12 @@ radio_control_disconnect_async(RadioControl *self);
 gboolean
 radio_control_get_is_rig_connected(RadioControl *self);
 
+float
+radio_control_get_frequency(RadioControl *self);
+
+enum RadioMode
+radio_control_get_mode(RadioControl *self);
+
 DexFuture *
 radio_control_get_vfo_async(RadioControl *self);
 

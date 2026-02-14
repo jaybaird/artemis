@@ -19,8 +19,6 @@
  */
 
 public sealed class Application : Adw.Application {
-    public signal void radio_status (bool is_connected);
-
     private static Quark _current_spot_hash = 0;
     public static Quark current_spot_hash {
         get {
@@ -30,9 +28,7 @@ public sealed class Application : Adw.Application {
                 return;
             _current_spot_hash = value;
             if (_spot_repo != null) {
-                _spot_repo.
-                current_spot_changed (value)
-                ;
+                _spot_repo.current_spot_changed (value);
             }
         }
     }
@@ -41,7 +37,6 @@ public sealed class Application : Adw.Application {
     public static SpotRepo spot_repo { get; private set; }
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
-    public static MapWindow? map_window { get; private set; default = null; }
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -49,56 +44,20 @@ public sealed class Application : Adw.Application {
     public static Application app;
     public static Gtk.Window win;
 
-    private static string? _current_mode_filter = null;
-    public static string? current_mode_filter {
+    public static string? current_mode_filter { get; set; }
+    public static string? current_program_filter { get; set; }
+    public static string? current_search_text { get; set; }
+    public static string? current_band_filter { get; set; }
+
+    public static bool is_radio_configured {
         get {
-            return _current_mode_filter;
-        } set {
-            if (_current_mode_filter == value) return;
-            _current_mode_filter = value;
-            if (_map_window != null)
-                _map_window.bounce_filter ();
-        }
-    }
-    private static string? _current_program_filter = null;
-    public static string? current_program_filter {
-        get {
-            return _current_program_filter;
-        } set {
-            if (_current_program_filter == value)return;
-            _current_program_filter = value;
-            if (_map_window != null)
-                _map_window.bounce_filter ();
-        }
-    }
-    private static string? _current_search_text = null;
-    public static string? current_search_text {
-        get {
-            return _current_search_text;
-        } set {
-            if (_current_search_text == value)
-                return;
-            _current_search_text = value;
-            if (_map_window != null)
-                _map_window.bounce_filter ();
-        }
-    }
-    private static string? _current_band_filter = null;
-    public static string? current_band_filter {
-        get {
-            return _current_band_filter;
-        } set {
-            if (_current_band_filter == value) return;
-            _current_band_filter = value;
-            if (_map_window != null)
-                _map_window.bounce_filter ();
+            return Application.settings.get_string ("radio-connection-type") != "none";
         }
     }
 
     private const GLib.ActionEntry[] APP_ENTRIES = {
         { "add-spot", on_add_button_clicked },
         { "about", about_activated },
-        { "open-map", on_open_map_action },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
         { "quit", quit_activated }
@@ -111,14 +70,9 @@ public sealed class Application : Adw.Application {
         );
     }
 
-    string get_data_dir () {
-        return GLib.Path.build_filename (GLib.Environment.get_user_data_dir (), Build.DOMAIN);
-    }
-
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
         set_accels_for_action ("app.about", { "F1" });
-        set_accels_for_action ("app.open-map", { "<primary>m" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
         set_accels_for_action ("app.quit", { "<primary>q" });
@@ -127,19 +81,21 @@ public sealed class Application : Adw.Application {
         settings = new Settings (Build.DOMAIN);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
+
         spot_database = new SpotDb ();
+        Error err;
+        if (!spot_database.init (out err)) {
+            error (err.message);
+        }
+
         callsign_cache = new CallsignCache (3600);
 
         radio_control = new RadioControl ();
-        radio_control.radio_connected.connect (() => {
-            radio_status (true);
-        });
-        radio_control.radio_disconnected.connect (() => {
-            radio_status (false);
-        });
-        radio_control.radio_status.connect ((frequency, radio_mode) => {
-            radio_status (Application.radio_control.is_rig_connected);
-        });
+        var radio_models = RadioControl.get_radio_models ();
+        for (int i = 0; i < radio_models.length; i++) {
+            var radio = radio_models[i];
+            print ("%s: %d\n".printf (radio.display_name, radio.model_id));
+        }
     }
 
     public override void activate () {
@@ -167,8 +123,6 @@ public sealed class Application : Adw.Application {
 
         win = this.active_window ?? new AppWindow (this);
         win.close_request.connect (() => {
-            if (map_window != null)
-                map_window.close ();   // closing the main window closes all the windows
             return false;
         });
         win.present ();
@@ -210,25 +164,6 @@ public sealed class Application : Adw.Application {
 
     private void quit_activated () {
         this.quit ();
-    }
-
-    public static void open_map_window () {
-        if (map_window == null) {
-            map_window = new MapWindow () {
-                default_width = 800,
-                default_height = 600
-            };
-            // map_window.set_application (this);
-            map_window.close_request.connect (() => {
-                map_window = null;
-                return false;
-            });
-        }
-        map_window.present ();
-    }
-
-    private void on_open_map_action () {
-        open_map_window ();
     }
 
     private void on_add_button_clicked () {

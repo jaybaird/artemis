@@ -1,5 +1,7 @@
 using Shumate;
 
+public const uint32 BLANK_HASH = uint32.MAX;
+
 public class RadioConstants {
     public const string[] BANDS = {
         "All", "160m", "80m", "60m", "40m", "30m", "20m", "17m",
@@ -62,7 +64,7 @@ public sealed class Spot : Object {
     public double distance { get; construct; }
     public double bearing { get; construct; }
     public Coordinate coordinate { get; construct; }
-    public Quark hash { get; construct; default = uint32.MAX; }
+    public Quark hash { get; construct; default = BLANK_HASH; }
     public bool is_new_park { get; construct; }
     public bool was_hunted_today { get; construct; }
 
@@ -141,7 +143,7 @@ public sealed class Spot : Object {
 
         var key = @"$callsign|$park_ref";
         hash = GLib.Quark.from_string (key);
-        if (hash == uint32.MAX)
+        if (hash == BLANK_HASH)
             hash = hash - 1;
 
         Error error = null;

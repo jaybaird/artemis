@@ -1,8 +1,22 @@
 # List of source files containing translatable strings.
 # Please keep this file sorted alphabetically.
-data/com.k0vcz.artemis.desktop.in
-data/com.k0vcz.artemis.metainfo.xml.in
-data/com.k0vcz.artemis.gschema.xml
-src/main.vala
+data/com.k0vcz.Artemis.desktop.in
+data/com.k0vcz.Artemis.gschema.xml
+data/com.k0vcz.Artemis.metainfo.xml.in
+data/ui/add_spot_page.ui
+data/ui/band_view.ui
+data/ui/main_window.ui
+data/ui/park_log_dialog.ui
+data/ui/preferences.ui
+data/ui/radio_control.ui
+data/ui/spot_card.ui
+data/ui/spot_history_dialog.ui
+data/ui/spot_page.ui
+data/ui/status_page.ui
+src/application.vala
+src/band_view.vala
+src/map_view.vala
+src/preferences.vala
+src/repo.vala
+src/spot_card.vala
 src/window.vala
-src/window.ui

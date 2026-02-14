@@ -1,3 +1,4 @@
+using Gee;
 using Shumate;
 
 const double MIN_LATITUDE = -85.0511287798;
@@ -129,11 +130,11 @@ public class BoundingBox : Object {
     }
 } /* class BoundingBox */
 
-public class MapWindow : Adw.ApplicationWindow {
+public class MapView : Gtk.Box {
     private Viewport viewport;
     private MapSourceRegistry registry;
     private MapSource map_source;
-    private Map map_widget;
+    private Shumate.Map map_widget;
 
     private Scale map_scale;
     private Layer map_layer;
@@ -143,21 +144,19 @@ public class MapWindow : Adw.ApplicationWindow {
     private Coordinate qth_coordinate;
 
     private Gtk.Overlay overlay;
+    private Adw.OverlaySplitView split_view;
+
+    private bool marker_clicked = false;
 
     Gtk.Filter filter;
     Gtk.FilterListModel filtered;
 
-    public MapWindow () {
-        Object (
-            title: _ ("Map")
-            );
+    public MapView () {
+        Object ();
+        add_css_class ("card");
     }
 
     construct {
-        var header = new Adw.HeaderBar () {
-            title_widget = new Gtk.Label (_ ("Map"))
-        };
-
         registry = new MapSourceRegistry.with_defaults ();
 
         const string API_KEY = "78418e148d9b4447ae11c25d30a735e5";
@@ -175,16 +174,17 @@ public class MapWindow : Adw.ApplicationWindow {
             url_template
             );
 
-        map_widget = new Map () {
+        map_widget = new Shumate.Map () {
             vexpand = true,
             hexpand = true
         };
+        map_widget.add_css_class ("card");
 
         var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
             vexpand = true,
             hexpand = true
         };
-        box.append (header);
+        box.add_css_class ("window");
         box.append (map_widget);
 
         overlay = new Gtk.Overlay () {
@@ -193,7 +193,22 @@ public class MapWindow : Adw.ApplicationWindow {
         };
         overlay.set_child (box);
 
-        set_content (overlay);
+        split_view = new Adw.OverlaySplitView () {
+            sidebar = new Gtk.Box (Gtk.Orientation.VERTICAL, 10) {
+                width_request = 350,
+                hexpand = true,
+                vexpand = true,
+                margin_start = 10,
+                margin_end = 10,
+                margin_top = 10,
+                margin_bottom = 10,
+            },
+            content = overlay,
+            show_sidebar = false,
+            min_sidebar_width = 250.0
+        };
+        split_view.add_css_class ("card");
+        this.append (split_view);
 
         viewport = map_widget.get_viewport ();
         viewport.set_reference_map_source (map_source);
@@ -213,8 +228,7 @@ public class MapWindow : Adw.ApplicationWindow {
         };
 
         Application.settings.changed["show-map-scale"].connect (() => {
-            map_scale.visible = Application.settings.get_boolean (
-                "show-map-scale");
+            map_scale.visible = Application.settings.get_boolean ("show-map-scale");
         });
 
         Application.settings.changed["use-metric"].connect (() => {
@@ -256,18 +270,14 @@ public class MapWindow : Adw.ApplicationWindow {
             if (spot == null)
                 return false;
 
-            if ((Application.current_band_filter != "All") && (spot.band !=
-                                                               Application.
-                                                               current_band_filter))
-
+            var band_filter = Application.current_band_filter ?? "All";
+            if ((band_filter != "All") && (spot.band != band_filter))
                 return false;
 
-            if (Application.settings.get_boolean ("hide-qrt") &&
-                spot.activator_comment.down ().contains ("qrt"))
+            if (Application.settings.get_boolean ("hide-qrt") && spot.activator_comment.down ().contains ("qrt"))
                 return false;
 
-            if (Application.settings.get_boolean ("hide-hunted") && spot.
-                was_hunted_today)
+            if (Application.settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
                 return false;
 
             var stale_minutes = Application.settings.get_int ("hide-older-than")
@@ -277,20 +287,14 @@ public class MapWindow : Adw.ApplicationWindow {
             if (now.compare (expires) > 0)
                 return false;
 
-            if ((Application.current_program_filter != null) && (Application.
-                                                                 current_program_filter
-                                                                 != _ ("All"))
-                &&
-                !spot.park_ref.down ().has_prefix (Application.
-                    current_program_filter.down
-                        ()))
+            if ((Application.current_program_filter != null) && 
+                (Application.current_program_filter != _ ("All")) &&
+                !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
                 return false;
 
-            if ((Application.current_mode_filter != null) && (Application.
-                                                              current_mode_filter
-                                                              != _ ("All")) &&
-                !spot.mode.down ().contains (Application.current_mode_filter.
-                    down ()))
+            if ((Application.current_mode_filter != null) && 
+                (Application.current_mode_filter != _ ("All")) &&
+                !spot.mode.down ().contains (Application.current_mode_filter.down ()))
                 return false;
 
             if (Application.current_search_text != null) {
@@ -312,7 +316,7 @@ public class MapWindow : Adw.ApplicationWindow {
         load_spots ();
     }
 
-    // pulled straight from https://gitlab.gnome.org/GNOME/gnome-maps/-/blob/main/src/mapView.js
+    // pulled straight from https://gitlab.gnome.org/GNOME/gnome-maps/-/blob/main/src/mapView.js; thanks!
     private double get_zoom_level_fitting_bounds (BoundingBox bbox) {
         if (!bbox.is_valid ())
             return viewport.min_zoom_level;
@@ -322,10 +326,8 @@ public class MapWindow : Adw.ApplicationWindow {
         Graphene.Rect widget_bounds = {};
         map_widget.compute_bounds (map_widget, out widget_bounds);
 
-        var width = (widget_bounds.size.width > 0) ? widget_bounds.size.width :
-            800;
-        var height = (widget_bounds.size.height > 0) ? widget_bounds.size.height
-        : 600;
+        var width = (widget_bounds.size.width > 0) ? widget_bounds.size.width : 800;
+        var height = (widget_bounds.size.height > 0) ? widget_bounds.size.height : 600;
 
         do {
             var min_x = map_source.get_x (zoom_level, bbox.min_lon);
@@ -364,20 +366,33 @@ public class MapWindow : Adw.ApplicationWindow {
             latitude = coordinate.latitude,
             longitude = coordinate.longitude
         };
+        marker.add_css_class ("marker");
 
         var click = new Gtk.GestureClick ();
         click.pressed.connect (() => {
+            marker_clicked = true;
             Application.current_spot_hash = spot.hash;
+        
+            var sidebar_box = split_view.sidebar as Gtk.Box;
+            var spot_card = new SpotCard.from_spot (spot);
+            
+            for (var child = sidebar_box.get_first_child (); child != null;) {
+                sidebar_box.remove (child);
+                child = child.get_next_sibling ();
+            }
+            sidebar_box.append (spot_card);
+            map_widget.go_to (spot.coordinate.latitude, spot.coordinate.longitude);
+            split_view.show_sidebar = true;
         });
         marker.add_controller (click);
 
         var motion = new Gtk.EventControllerMotion ();
         motion.enter.connect (() => {
-            marker.set_opacity (0.5);
+            marker.add_css_class ("hovered");
             marker.set_cursor_from_name ("pointer");
         });
         motion.leave.connect (() => {
-            marker.set_opacity (1.0);
+            marker.remove_css_class ("hovered");
             marker.set_cursor_from_name (null);
         });
         marker.add_controller (motion);
@@ -401,27 +416,35 @@ public class MapWindow : Adw.ApplicationWindow {
         marker_layer = new MarkerLayer (viewport);
 
         uint spot_count = 0;
+        var valid_hashes = new HashSet<GLib.Quark> ();
+
         for (uint i = 0 ; i < filtered.get_n_items () ; i++) {
             Spot spot = filtered.get_item (i) as Spot;
             bbox.extend_coord (spot.coordinate);
             _create_marker (spot);
             spot_count++;
+            valid_hashes.add (spot.hash);
         }
         bbox.expand ();
 
         map_widget.insert_layer_above (marker_layer, map_layer);
 
-        if ((spot_count > 0) && bbox.is_valid ()) {
-            var center = bbox.center ();
-            var zoom_level = get_zoom_level_fitting_bounds (bbox);
+        if (Application.current_spot_hash == BLANK_HASH || 
+            !valid_hashes.contains (Application.current_spot_hash)) {
+            if (split_view.show_sidebar) {
+                split_view.show_sidebar = false;
+                Application.current_spot_hash = BLANK_HASH;
+            }
 
-            viewport.set_location (center.latitude, center.longitude);
-            viewport.set_zoom_level (zoom_level);
-        } else {
-            // No spots or invalid bbox, use default location/zoom
-            viewport.set_location (qth_coordinate.latitude, qth_coordinate.
-                longitude);
-            viewport.set_zoom_level (4);
+            if ((spot_count > 0) && bbox.is_valid ()) {
+                var center = bbox.center ();
+                var zoom_level = get_zoom_level_fitting_bounds (bbox);
+
+                map_widget.go_to_full (center.latitude, center.longitude, zoom_level);
+            } else {
+                map_widget.go_to_full (qth_coordinate.latitude, qth_coordinate.longitude, 4);
+            }
         }
+
     } /* load_spots */
 }     /* class MapWindow */

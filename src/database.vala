@@ -2,6 +2,10 @@ using Gee;
 using GLib;
 using Sqlite;
 
+const string[] DB_VERSIONS = {
+    "version-001.sql"
+};
+
 static string iso8601_day_start (DateTime utc_any) {
     return utc_any.format ("%Y-%m-%dT00:00:00Z");
 }
@@ -20,38 +24,50 @@ static string? iso8601_from_borrowed_utc (DateTime? dt) {
 }
 
 public sealed class QsoRow : Object {
-    public int64 id;
-    public string ? park_ref;
-    public string ? callsign;
-    public string ? mode;
-    public int frequency_khz;
-    public string ? created_utc;
-    public string ? spotter;
-    public string ? spotter_comment;
-    public string ? activator_comment;
+    public int64 id { get; construct; }
+    public string? park_ref { get; construct; }
+    public string? callsign { get; construct; }
+    public string? mode { get; construct; }
+    public int frequency_khz { get; construct; }
+    public string? created_utc { get; construct; }
+    public string? spotter { get; construct; }
+    public string? spotter_comment { get; construct; }
+    public string? activator_comment { get; construct; }
+
+    public QsoRow.from_statement (Sqlite.Statement st) {
+        Object (
+            id: st.column_int64 (0),
+            park_ref: st.column_text (1),
+            callsign: st.column_text (2),
+            mode: (st.column_type (3) == Sqlite.NULL) ? null : st.column_text (3),
+            frequency_khz: (st.column_type (4) == Sqlite.NULL) ? 0 : st.column_int (4),
+            created_utc: st.column_text (5),
+            spotter: (st.column_type (6) == Sqlite.NULL) ? null : st.column_text (6),
+            spotter_comment: (st.column_type (7) == Sqlite.NULL) ? null : st.column_text (7),
+            activator_comment: (st.column_type (8) == Sqlite.NULL) ? null : st.column_text (8)
+        );
+    }
 }
 
 public sealed class ParkRow : Object {
     public int id { get; construct; }
     public string reference { get; construct; }
-    public string name { get; construct; }
-    public string location_desc { get; construct; }
-    public double latitude { get; construct; }
-    public double longitude { get; construct; }
     public ParkRow (int id,
-                    string reference,
-                    string name,
-                    string location_desc,
-                    double latitude,
-                    double longitude) {
+                    string reference) {
         Object (
             id: id,
-            reference: reference,
-            name: name,
-            location_desc: location_desc,
-            latitude: latitude,
-            longitude: longitude
-            );
+            reference: reference
+        );
+    }
+
+    public ParkRow.from_statement (Sqlite.Statement st) {
+        int id = st.column_int (0);
+        string reference = st.column_text (1);
+
+        Object (
+            id: id,
+            reference: reference
+        );
     }
 } /* class ParkRow */
 
@@ -70,7 +86,7 @@ public class SpotDb : Object {
 
     public SpotDb () {}
 
-    private bool init (out Error? error) {
+    public bool init (out Error? error = null) {
         error = null;
         // build paths
         string data_dir = Environment.get_user_data_dir ();
@@ -127,58 +143,21 @@ public class SpotDb : Object {
     /* ----- schema ----- */
     private bool spot_db_init_schema (out Error? error) {
         error = null;
-        const string SCHEMA = """
-        CREATE TABLE IF NOT EXISTS parks (
-          reference TEXT PRIMARY KEY,
-          park_name TEXT,
-          dx_entity TEXT,
-          location  TEXT,
-          hasc      TEXT,
-          first_qso_date DATETIME,
-          qso_count INTEGER NOT NULL DEFAULT 0
-        );
-
-        CREATE TABLE IF NOT EXISTS qsos (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          park_ref TEXT NOT NULL,
-          callsign TEXT NOT NULL,
-          mode TEXT,
-          frequency_khz INTEGER,
-          created_utc DATETIME NOT NULL,
-          spotter TEXT,
-          spotter_comment TEXT,
-          activator_comment TEXT,
-          FOREIGN KEY(park_ref) REFERENCES parks(reference) ON DELETE CASCADE
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_qsos_park_ref ON qsos(park_ref);
-        CREATE INDEX IF NOT EXISTS idx_qsos_created  ON qsos(created_utc);
-
-        CREATE TRIGGER IF NOT EXISTS trg_qsos_ai
-        AFTER INSERT ON qsos
-        FOR EACH ROW BEGIN
-          UPDATE parks
-            SET qso_count = qso_count + 1,
-                first_qso_date = CASE
-                    WHEN first_qso_date IS NULL THEN NEW.created_utc
-                    WHEN NEW.created_utc < first_qso_date THEN NEW.created_utc
-                    ELSE first_qso_date
-                END
-          WHERE reference = NEW.park_ref;
-        END;
-
-        CREATE TRIGGER IF NOT EXISTS trg_qsos_ad
-        AFTER DELETE ON qsos
-        FOR EACH ROW BEGIN
-          UPDATE parks
-            SET qso_count = CASE WHEN qso_count > 0 THEN qso_count - 1 ELSE 0 END,
-                first_qso_date = (SELECT MIN(created_utc) FROM qsos WHERE park_ref = OLD.park_ref)
-          WHERE reference = OLD.park_ref;
-        END;""";
-        if (db.exec (SCHEMA) != Sqlite.OK) {
-            error = new Error (spot_db_error_quark (), DatabaseError.
-                SQLITE_FAILED
-                , "Failed to create database schema: %s".printf (db.errmsg ()));
+        try {
+            string schema_sql = (string)GLib.resources_lookup_data (
+                "/com/k0vcz/artemis/sql/version-001.sql",
+                GLib.ResourceLookupFlags.NONE
+            ).get_data ();
+            if (db.exec (schema_sql) != Sqlite.OK) {
+                error = new Error (
+                    spot_db_error_quark (),
+                    DatabaseError.SQLITE_FAILED,
+                    "Failed to create database schema: %s".printf (db.errmsg ())
+                );
+                return false;
+            }
+        } catch (Error e) {
+            error = e;
             return false;
         }
 
@@ -218,7 +197,7 @@ public class SpotDb : Object {
         Sqlite.Statement st;
         const string PARK_SQL =
             """
-            INSERT INTO parks(reference, park_name, location) VALUES(?, ?, ?)
+            INSERT INTO parks(reference) VALUES(?)
             ON CONFLICT(reference) DO UPDATE SET
             park_name = COALESCE(excluded.park_name, parks.park_name),
             location  = COALESCE(excluded.location,  parks.location);
@@ -367,39 +346,7 @@ public class SpotDb : Object {
         return hunted;
     }
 
-    /* ----- helpers to read rows from a prepared statement ----- */
-    private ParkRow park_row_from_stmt (Sqlite.Statement st) {
-        int id = st.column_int (0);
-        string reference = st.column_text (1);
-        string name = st.column_text (2);
-        string location_desc = st.column_text (3);
-        double latitude = st.column_double (4);
-        double longitude = st.column_double (5);
-
-        return new ParkRow (id, reference, name, location_desc, latitude,
-            longitude);
-    }
-
-    private QsoRow qso_row_from_stmt (Statement st) {
-        var r = new QsoRow ();
-
-        r.id = st.column_int64 (0);
-        r.park_ref = st.column_text (1);
-        r.callsign = st.column_text (2);
-        r.mode = (st.column_type (3) == Sqlite.NULL) ? null : st.column_text (3);
-        r.frequency_khz = (st.column_type (4) == Sqlite.NULL) ? 0 : st.
-            column_int (4);
-        r.created_utc = st.column_text (5);
-        r.spotter = (st.column_type (6) == Sqlite.NULL) ? null : st.
-            column_text (6);
-        r.spotter_comment = (st.column_type (7) == Sqlite.NULL) ? null : st.
-            column_text (7);
-        r.activator_comment = (st.column_type (8) == Sqlite.NULL) ? null : st
-            .column_text (8);
-        return r;
-    }
-
-    public ParkRow ? get_park_by_ref (string park_ref, out Error? error) {
+    public ParkRow? get_park_by_ref (string park_ref, out Error? error) {
         error = null;
 
         if (db == null) {
@@ -418,7 +365,7 @@ public class SpotDb : Object {
 
         const string SQL =
             """
-            SELECT id, reference, name, location_desc, latitude, longitude
+            SELECT id, reference
             FROM parks
             WHERE reference = ?
             LIMIT 1;
@@ -436,7 +383,7 @@ public class SpotDb : Object {
         st.bind_text (1, park_ref);
 
         if (st.step () == Sqlite.ROW)
-            return park_row_from_stmt (st);
+            return new ParkRow.from_statement (st);
 
         // No row found
         return null;
@@ -474,7 +421,7 @@ public class SpotDb : Object {
             return rows;
         }
         while (st.step () == Sqlite.ROW) {
-            rows.add (qso_row_from_stmt (st));
+            rows.add (new QsoRow.from_statement (st));
         }
         return rows;
     }
@@ -510,12 +457,12 @@ public class SpotDb : Object {
         }
         st.bind_int (1, limit);
         while (st.step () == Sqlite.ROW) {
-            rows.add (qso_row_from_stmt (st));
+            rows.add (new QsoRow.from_statement (st));
         }
         return rows;
     }
 
-    public ArrayList<QsoRow> ? all_qsos_for_park (string park_ref, out Error? error) {
+    public ArrayList<QsoRow>? all_qsos_for_park (string park_ref, out Error? error) {
         var list = new ArrayList<QsoRow> ();
 
         error = null;
@@ -550,13 +497,13 @@ public class SpotDb : Object {
         st.bind_text (1, park_ref);
 
         while (st.step () == Sqlite.ROW) {
-            var row = qso_row_from_stmt (st);
+            var row = new QsoRow.from_statement (st);
             list.add (row);
         }
         return list;
     } /* all_qsos_for_park */
 
-    public QsoRow ? latest_qso_for_park (string park_ref, out Error ? error) {
+    public QsoRow? latest_qso_for_park (string park_ref, out Error ? error) {
         error = null;
         if (db == null) {
             error = new Error (spot_db_error_quark (), DatabaseError.
@@ -588,9 +535,9 @@ public class SpotDb : Object {
             return null;
         }
         st.bind_text (1, park_ref);
-        QsoRow ? row = null;
+        QsoRow? row = null;
         if (st.step () == Sqlite.ROW)
-            row = qso_row_from_stmt (st);
+            row = new QsoRow.from_statement (st);
         return row;
     } /* latest_qso_for_park */
 
@@ -638,5 +585,48 @@ public class SpotDb : Object {
             exists = st.column_int (0) != 0;
         return exists;
     } /* had_qso_with_park_on_utc_day */
+
+    public string? country_string_for_location (string location, out Error? error) {
+        error = null;
+        if (db == null) {
+            error = new Error (spot_db_error_quark (), DatabaseError.
+                DB_NOT_INITIALIZED, "DB not initialized");
+            return null;
+        }
+
+        if ((location == null) || (location.strip () == "")) {
+            error = new Error (spot_db_error_quark (), DatabaseError.
+                INVALID_ARGUMENT, "Location cannot be empty");
+            return null;
+        }
+
+        const string SQL =
+            """
+            SELECT s.name, l.value
+            FROM subdivision s
+            JOIN list l ON s.country = l.id
+            WHERE s.id = ?
+            LIMIT 1;
+            """;
+
+        Statement st;
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+            error = new Error (spot_db_error_quark (), DatabaseError.
+                SQLITE_FAILED
+                , "Failed to prepare country_string_for_location query: %s".
+                printf (db.errmsg ()));
+            return null;
+        }
+        st.bind_text (1, location);
+
+        if (st.step () == Sqlite.ROW) {
+            string subdivision_name = st.column_text (0);
+            string country_name = st.column_text (1);
+            return "%s, %s".printf (subdivision_name, country_name);
+        }
+
+        // No match found, return null
+        return null;
+    } /* country_string_for_location */
 
 } /* class SpotDb */

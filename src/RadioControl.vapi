@@ -1,13 +1,13 @@
 [CCode (cname = "enum RadioMode")]
 public enum RadioMode {
     UNKNOWN,
-    AM,
     CW,
     CW_R,
     USB,
     LSB,
-    DIGITAL_L,
     DIGITAL_U,
+    DIGITAL_L,
+    AM,
     FM,
     DIGITAL_FM
 }
@@ -53,6 +53,9 @@ public class RadioControl : GLib.Object {
     [CCode (cname = "radio_control_set_mode_async")]
     public Dex.Future set_mode (RadioMode mode);
 
+    public float frequency { get; }
+    public RadioMode mode { get; }
+
     // Property
     public bool is_rig_connected { get; }
 
@@ -70,4 +73,22 @@ public class RadioControl : GLib.Object {
     
     [CCode (cname = "radio-error")]
     public signal void radio_error (GLib.Error error);
+
+    // Helpers
+    public static string mode_string (RadioMode mode) {
+        switch (mode) {
+            case AM: return "AM";
+            case CW:
+            case CW_R:
+                return "CW";
+            case USB: return "USB";
+            case LSB: return "LSB";
+            case DIGITAL_L: return "LSB-D";
+            case DIGITAL_U: return "USB-D";
+            case FM: return "FM";
+            case DIGITAL_FM: return "FM-D"; 
+            case UNKNOWN: return "Unknown";
+            default: return "Unknown";
+        }
+    }
 }

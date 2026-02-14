@@ -78,6 +78,36 @@ meson compile -C build
 meson install -C build
 ```
 
+## Release Packaging
+
+### Flatpak bundle
+Requires `flatpak-builder` and the GNOME 48 runtime/sdk installed on your build host.
+
+```bash
+bash scripts/release-flatpak.sh
+```
+
+Artifact output:
+- `dist/flatpak/com.k0vcz.Artemis.flatpak`
+
+### AppImage
+Requires `appimage-builder`, Meson/Ninja, and the normal build dependencies.
+
+```bash
+bash scripts/release-appimage.sh
+```
+
+Artifact output:
+- `dist/appimage/Artemis-x86_64.AppImage`
+
+### CI release artifacts
+GitHub Actions workflow:
+- `.github/workflows/release.yml`
+
+Triggers:
+- Manual run (`workflow_dispatch`)
+- Git tag push matching `v*`
+
 ## License
 
 Artemis is licensed under GPL-3.0-or-later. See LICENSE for details. Parks on the Air ® is a registered service mark of Parks on the Air, Inc.

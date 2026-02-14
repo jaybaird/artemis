@@ -64,8 +64,6 @@ public sealed class PreferencesDialog : Object {
     private File? logbook_csv = null;
     private GUdev.Client udev_client;
 
-    private Dex.Future connect_future;
-
     public PreferencesDialog () {
         Object ();
     }
@@ -84,17 +82,12 @@ public sealed class PreferencesDialog : Object {
 
         row_callsign = builder.get_object ("row_callsign") as Adw.EntryRow;
         row_location = builder.get_object ("row_location") as Adw.EntryRow;
-        row_spot_message = builder.get_object ("row_spot_message") as Adw.
-            EntryRow;
-        row_update_interval = builder.get_object ("row_update_interval") as Adw.
-            SpinRow;
-        row_default_band = builder.get_object ("row_default_band") as Adw.
-            ComboRow;
-        row_default_mode = builder.get_object ("row_default_mode") as Adw.
-            ComboRow;
+        row_spot_message = builder.get_object ("row_spot_message") as Adw.EntryRow;
+        row_update_interval = builder.get_object ("row_update_interval") as Adw.SpinRow;
+        row_default_band = builder.get_object ("row_default_band") as Adw.ComboRow;
+        row_default_mode = builder.get_object ("row_default_mode") as Adw.ComboRow;
 
-        row_connection_type = builder.get_object ("row_connection_type") as Adw.
-            ComboRow;
+        row_connection_type = builder.get_object ("row_connection_type") as Adw.ComboRow;
 
         row_radio_model = builder.get_object ("row_radio_model") as Adw.ComboRow;
         var radio_models = RadioControl.get_radio_models ();
@@ -105,51 +98,31 @@ public sealed class PreferencesDialog : Object {
         row_radio_model.model = radio_model_list;
         row_radio_model.enable_search = true;
         row_radio_model.search_match_mode = Gtk.StringFilterMatchMode.SUBSTRING;
-        row_radio_model.notify ["selected"].connect (() => {
-            var model = radio_models[row_radio_model.selected - 1];
-            print ("radio model selected %s".printf (model.display_name));
-        });
 
         row_device_path = builder.get_object ("row_device_path") as Adw.ComboRow;
         row_device_path.model = get_serial_devices ();
 
         row_baud_rate = builder.get_object ("row_baud_rate") as Adw.ComboRow;
-        row_network_host = builder.get_object ("row_network_host") as Adw.
-            EntryRow;
-        row_network_port = builder.get_object ("row_network_port") as Adw.
-            SpinRow;
-        serial_settings_group = builder.get_object ("serial_settings_group") as
-            Adw.PreferencesGroup;
-        network_settings_group = builder.get_object ("network_settings_group")
-            as Adw.PreferencesGroup;
+        row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
+        row_network_port = builder.get_object ("row_network_port") as Adw.SpinRow;
+        serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
+        network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
         radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
 
         row_hide_qrt = builder.get_object ("row_hide_qrt") as Adw.SwitchRow;
         row_show_scale = builder.get_object ("row_show_scale") as Adw.SwitchRow;
-        row_hide_hunted = builder.get_object ("row_hide_hunted") as Adw.
-            SwitchRow;
-        row_hide_older_than = builder.get_object ("row_hide_older_than") as Adw.
-            SpinRow;
-        row_enable_logging = builder.get_object ("row_enable_logging") as Adw.
-            SwitchRow;
-        row_qrz_api_key = builder.get_object ("row_qrz_api_key") as Adw.
-            PasswordEntryRow;
-        row_highlight_unhunted = builder.get_object ("row_highlight_unhunted")
-            as
-            Adw.SwitchRow;
+        row_hide_hunted = builder.get_object ("row_hide_hunted") as Adw.SwitchRow;
+        row_hide_older_than = builder.get_object ("row_hide_older_than") as Adw.SpinRow;
+        row_enable_logging = builder.get_object ("row_enable_logging") as Adw.SwitchRow;
+        row_qrz_api_key = builder.get_object ("row_qrz_api_key") as Adw.PasswordEntryRow;
+        row_highlight_unhunted = builder.get_object ("row_highlight_unhunted") as Adw.SwitchRow;
         row_use_metric = builder.get_object ("row_use_metric") as Adw.SwitchRow;
-        import_file_row = builder.get_object ("import_file_row")
-            as Adw.ActionRow;
+        import_file_row = builder.get_object ("import_file_row") as Adw.ActionRow;
         import_log = builder.get_object ("import_log") as Adw.ButtonRow;
 
-        test_connection_button = builder.get_object ("test_connection_button")
-            as
-            Gtk.Button;
-        connection_status_icon = builder.get_object ("connection_status_icon")
-            as
-            Gtk.Image;
-        connection_status_label = builder.get_object ("connection_status_label")
-            as Gtk.Label;
+        test_connection_button = builder.get_object ("test_connection_button") as Gtk.Button;
+        connection_status_icon = builder.get_object ("connection_status_icon") as Gtk.Image;
+        connection_status_label = builder.get_object ("connection_status_label") as Gtk.Label;
 
         setup_bindings ();
         setup_signals ();
@@ -175,12 +148,71 @@ public sealed class PreferencesDialog : Object {
 
         bind_combo_to_string_setting ("default-band", row_default_band);
         bind_combo_to_string_setting ("default-mode", row_default_mode);
-        bind_combo_to_string_setting ("radio-connection-type",
-            row_connection_type);
         bind_combo_to_string_setting ("radio-device", row_device_path);
 
-        Application.settings.bind ("radio-model", row_radio_model, "selected",
-            SettingsBindFlags.DEFAULT);
+        Application.settings.bind_with_mapping (
+            "radio-connection-type",
+            row_connection_type,
+            "selected",
+            SettingsBindFlags.GET | SettingsBindFlags.SET,
+            (value, variant, user_data) => {
+                var connection_type = variant.get_string ();
+                if (connection_type == "serial")
+                    value.set_uint (1);
+                else if (connection_type == "network")
+                    value.set_uint (2);
+                else
+                    value.set_uint (0);
+                return true;
+            },
+            (value, variant, user_data) => {
+                var v = value.get_uint ();
+                string str_val = "none";
+                switch (v) {
+                    case 1:
+                        str_val = "serial";
+                        break;
+                    case 2:
+                        str_val = "network";
+                        break;
+                    case 0:
+                    default:
+                        str_val = "none";
+                        break;
+                }
+
+                return new Variant.string (str_val);
+            },
+            null, null
+        );
+
+        Application.settings.bind_with_mapping (
+            "radio-model",
+            row_radio_model,
+            "selected",
+            SettingsBindFlags.GET | SettingsBindFlags.SET,
+            (value, variant, user_data) => {
+                var radio_model = variant.get_int32 ();
+                var models = RadioControl.get_radio_models ();
+                for (var i = 1; i < models.length; i++) {
+                    if (models[i].model_id == radio_model) {
+                        value.set_uint (i + 1); // offset for 'None'
+                        return true;
+                    }
+                }
+                value.set_uint (0);
+                return true;
+            },
+            (value, variant, user_data) => {
+                var models = RadioControl.get_radio_models ();
+                var idx = value.get_uint ();
+                var model_id = models[idx - 1].model_id; // offset for 'None'
+                print ("model_id: %d".printf (model_id));
+                return new Variant.int32 (model_id);
+            },
+            null, null
+        );
+
         bind_baud_rate_combo ();
         Application.settings.bind ("radio-network-host", row_network_host,
             "text",
@@ -204,11 +236,8 @@ public sealed class PreferencesDialog : Object {
         Application.settings.bind ("hide-older-than", row_hide_older_than,
             "value",
             SettingsBindFlags.DEFAULT);
-
         Application.settings.bind ("qrz-api-key", row_qrz_api_key, "text",
-            SettingsBindFlags
-            .
-            DEFAULT);
+            SettingsBindFlags.DEFAULT);
         Application.settings.bind ("highlight-unhunted-parks",
             row_highlight_unhunted,
             "active", SettingsBindFlags.DEFAULT);
@@ -221,9 +250,9 @@ public sealed class PreferencesDialog : Object {
         if (model == null)
             return;
 
-        var current_value = Application.settings.get_string (setting_key);
+        var current_value = Application.settings.get_string (setting_key).up ();
         for (uint i = 0 ; i < model.get_n_items () ; i++) {
-            if (model.get_string (i) == current_value) {
+            if (model.get_string (i).up () == current_value) {
                 combo_row.selected = i;
                 break;
             }
@@ -232,7 +261,7 @@ public sealed class PreferencesDialog : Object {
         combo_row.notify["selected"].connect (() => {
             var selected_text = model.get_string (combo_row.selected);
             if (selected_text != null)
-                Application.settings.set_string (setting_key, selected_text.up ());
+                Application.settings.set_string (setting_key, selected_text);
         });
 
         Application.settings.changed[setting_key].connect (() => {
@@ -333,30 +362,36 @@ public sealed class PreferencesDialog : Object {
 
     void test_radio_connection () {
         if (Application.radio_control == null || row_radio_model.selected == 0) return;
-        var radio_models = RadioControl.get_radio_models ();
-        var radio_model = radio_models[row_radio_model.selected - 1]; // padded for "None" selection
+        var radio_model = Application.settings.get_int ("radio-model");
 
         var connection_type = row_connection_type.model.get_item (row_connection_type.selected) as Gtk.StringObject;
         var device_path = row_device_path.model.get_item (row_device_path.selected) as Gtk.StringObject;
         var baud_rate = row_baud_rate.model.get_item (row_baud_rate.selected) as Gtk.StringObject;
+        var connection_type_text = connection_type.get_string ().down ();
+        if (connection_type_text == "serial/usb")
+            connection_type_text = "serial";
+        else if (connection_type_text == "none")
+            connection_type_text = "none";
+        else
+            connection_type_text = "network";
 
         var config = RadioConfiguration () {
-            model_id = radio_model.model_id,
-            connection_type = connection_type.get_string ().down () ?? "",
+            model_id = radio_model,
+            connection_type = connection_type_text,
             device_path = device_path.get_string (),
             network_host = row_network_host.text,
             network_port = int.parse (row_network_port.text),
             baud_rate = int.parse (baud_rate.get_string ())
         };
-        debug ("""Testing radio connection with:
-        \tModel ID: %s\n
+        print ("""Testing radio connection with:
+        \tModel ID: %d\n
         \tConnection type: %s\n
         \tDevice path: %s\n
         \tNetwork host: %s\n
         \tNetwork port: %d\n
         \tBaud rate: %d\n
         """.printf (
-            radio_model.display_name,
+            radio_model,
             config.connection_type,
             config.device_path,
             config.network_host,
@@ -365,22 +400,29 @@ public sealed class PreferencesDialog : Object {
         ));
 
         var is_connected = Application.radio_control.connect (config);
-        new Dex.Future.then (is_connected, (result) => {
+        new Dex.Future.finally (is_connected, (result) => {
+            Error connection_err = null;
             bool success = false;
             try {
                 success = result.await_boolean ();
+                Application.radio_control.disconnect ().disown ();
             } catch (Error err) {
-                error (err.message);
+                warning ("Connection failed: %s", err.message);
+                connection_err = err;
+                success = false;
             }
 
             Dex.Scheduler.get_default ().spawn (0, () => {
                 test_connection_button.sensitive = true;
                 if (success) {
                     connection_status_icon.icon_name = "network-idle-symbolic";
-                    connection_status_label.label = _("Connected");
+                    connection_status_label.label = _("Successful!");
+                    connection_status_label.tooltip_text = "";
                 } else {
                     connection_status_icon.icon_name = "network-offline-symbolic";
                     connection_status_label.label = _("Failed");
+                    if (connection_err != null)
+                        connection_status_label.tooltip_text = connection_err.message;
                 }
 
                 return null;

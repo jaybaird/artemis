@@ -4,10 +4,15 @@ using Adw 1;
 template $AppWindow : Window {
   default-width: 1280;
   default-height: 720;
-  title: _("Artemis");
 
   [titlebar]
   Adw.HeaderBar {
+    title-widget: Adw.ViewSwitcher {
+      halign: center;
+      stack: views;
+      policy: wide;
+    };
+
     Button add_spot {
       icon-name: "list-add-symbolic";
       tooltip-text: _("Add Spot");
@@ -18,10 +23,9 @@ template $AppWindow : Window {
     Box {
       orientation: horizontal;
 
-      Button map_button {
-        icon-name: "map-symbolic";
-        tooltip-text: _("Open Map");
-        clicked => $on_map_button_clicked();
+      Button search_button {
+        icon-name: "system-search-symbolic";
+        tooltip-text: _("Toggle Search");
       }
 
       MenuButton button_menu {
@@ -33,139 +37,218 @@ template $AppWindow : Window {
 
   Box {
     orientation: vertical;
-
-    Box {
     margin-start: 25;
     margin-end: 25;
-    orientation: vertical;
 
-    styles ["toolbar"]
+    Revealer search_revealer {
+      transition-type: slide_down;
+      transition-duration: 250;
 
-    Adw.ToastOverlay toast_overlay {
-      Overlay {
+      child: Box {
+        margin-top: 15;
+        halign: fill;
         hexpand: true;
-        vexpand: true;
+        orientation: horizontal;
 
-        child:
-          Box root {
-            orientation: vertical;
+        SearchEntry search_entry {
+          hexpand: true;
+          halign: fill;
+          width-request: 500;
+          input-hints: no_spellcheck;
+          placeholder-text: _("Search for Park or Callsign");
+        }
 
-            Box {
-              margin-top: 15;
-              halign: fill;
-              hexpand: true;
-              orientation: horizontal;
+        Separator {
+          styles ["spacer"]
+        }
 
-              SearchEntry search_entry {
-                hexpand: true;
-                halign: fill;
-                width-request: 500;
-                input-hints: no_spellcheck;
-                placeholder-text: _("Search for Park or Callsign");
-              }
+        Label {
+          label: _("Mode");
+          margin-end: 5;
+        }
 
-              Separator {
-                styles ["spacer"]
-              }
-
-              Label {
-                label: _("Mode");
-                margin-end: 5;
-              }
-
-              DropDown search_select {
-                tooltip-text: _("Mode Selector");
-                model: StringList {
-                  strings [
-                    _("All"),
-                    _("SSB"),
-                    _("CW"),
-                    _("FT8"),
-                    _("FT4"),
-                    _("FM"),
-                    _("AM"),
-                    _("RTTY"),
-                    _("JT65"),
-                  ]
-                };
-              }
-
-              Separator {
-                styles ["spacer"]
-              }
-
-              Label {
-                label: _("Program");
-                margin-end: 5;
-              }
-
-              DropDown program_select {
-                tooltip-text: _("Program Selection");
-                model: StringList {
-                  strings [
-                    _("All"),
-                    _("US"),
-                    _("CA"),
-                    _("NZ"),
-                    _("JP")
-                  ]
-                };
-              }
-
-              Separator {
-                styles ["spacer"]
-              }
-
-              Label current_time {
-                tooltip-text: _("Current Time");
-                styles ["monospace", "utc-time"]
-                label: "18:51:27 UTC";
-              }
-            }
-
-            Adw.InlineViewSwitcher switcher {
-              margin-top: 20;
-              stack: band_stack;
-              display-mode: both;
-              can-shrink: false;
-
-              styles ["round"]
-            }
-
-            Adw.ViewStack band_stack {
-              margin-top: 20;
-              enable-transitions: true;
-              hexpand: true;
-              vexpand: true;
-            }
+        DropDown search_select {
+          tooltip-text: _("Mode Selector");
+          model: StringList {
+            strings [
+              _("All"),
+              _("SSB"),
+              _("CW"),
+              _("FT8"),
+              _("FT4"),
+              _("FM"),
+              _("AM"),
+              _("RTTY"),
+              _("JT65"),
+            ]
           };
+        }
 
-          [overlay]
-          Box loading_spinner {
-            halign: center;
-            valign: center;
-            visible: false;
+        Separator {
+          styles ["spacer"]
+        }
 
-            Adw.Spinner {
-              width-request: 64;
-              height-request: 64;
+        Label {
+          label: _("Program");
+          margin-end: 5;
+        }
+
+        DropDown program_select {
+          tooltip-text: _("Program Selection");
+          model: StringList {
+            strings [
+              _("All"),
+              _("US"),
+              _("CA"),
+              _("NZ"),
+              _("JP")
+            ]
+          };
+        }
+      };
+    }
+
+    Adw.InlineViewSwitcher switcher {
+      margin-top: 20;
+      margin-bottom: 20;
+      stack: band_stack;
+      display-mode: both;
+      can-shrink: false;
+
+      styles ["round", "flat"]
+    }
+
+  Adw.ToastOverlay toast_overlay {
+    Adw.ViewStack views {
+      Adw.ViewStackPage {
+        title: _("Spots");
+        icon-name: "bullseye-symbolic";
+
+        child: Box {
+        orientation: vertical;
+          Overlay {
+            hexpand: true;
+            vexpand: true;
+
+            child:
+              Box root {
+                orientation: vertical;
+
+                Adw.ViewStack band_stack {
+                  enable-transitions: true;
+                  hexpand: true;
+                  vexpand: true;
+                }
+              };
+
+              [overlay]
+              Box loading_spinner {
+                halign: center;
+                valign: center;
+                visible: false;
+
+                Adw.Spinner {
+                  width-request: 64;
+                  height-request: 64;
+                }
+              }
             }
+        };
+      }
+
+      Adw.ViewStackPage {
+        title: _("Map");
+        icon-name: "map-symbolic";
+
+        child: Box map_container {
+          orientation: vertical;
+          styles ["card"]
+        };
+      }
+    }
+  }
+
+    CenterBox {
+      hexpand: true;
+      halign: fill;
+      margin-bottom: 15;
+      margin-top: 15;
+
+      styles ["view", "card"]
+
+      [start]
+      Box {
+        margin-start: 15;
+        orientation: horizontal;
+        valign: center;
+
+       ToggleButton radio_power_button {
+          styles ["radio-power-button"]
+        }
+
+        Box {
+          margin-top: 5;
+          margin-bottom: 5;
+
+          Label radio_vfo {
+            margin-top: 5;
+            margin-bottom: 5;
+            margin-start: 10;
+            margin-end: 10;
+            label: _("14.074.000");
+            styles ["monospace"]
+          }
+        }
+
+        Box {
+          margin-top: 5;
+          margin-bottom: 5;
+          styles ["card"]
+
+          Label radio_mode {
+            margin-top: 5;
+            margin-bottom: 5;
+            margin-start: 10;
+            margin-end: 10;
+            label: _("USB-D");
+            styles ["monospace"]
           }
         }
       }
-    }
 
-    ProgressBar refresh_progress {
-      show-text: false;
-      fraction: 0.5;
-      styles ["osd"]
-    }
+      [center]
+      Label status_bar_text {
+        halign: center;
+        justify: center;
+        xalign: 0.5;
+        label: _("64 spots. (4 filtered)");
+      }
 
-    Adw.Banner refresh_banner {
-      title: _("Spots will refresh in 60 seconds");
-      button-label: _("Pause");
-      button-style: suggested;
-      revealed: true;
+      [end]
+      Box {
+        spacing: 15;
+        orientation: horizontal;
+        valign: center;
+        halign: end;
+        margin-end: 15;
+
+        ProgressBar refresh_progress {
+          valign: center;
+        }
+
+        Label current_time {
+          tooltip-text: _("Current Time (UTC)");
+          styles ["utc-time", "monospace"]
+          label: "18:51:27 UTC";
+        }
+
+        ToggleButton refresh_button {
+          width-request: 30;
+          height-request: 30;
+          icon-name: "media-playback-pause-symbolic";
+          styles ["circular"]
+        }
+      }
     }
   }
 }
@@ -180,11 +263,6 @@ menu menu_app {
     item {
       label: _("Refresh");
       action: "app.refresh";
-    }
-
-    item {
-      label: _("Map");
-      action: "app.open-map";
     }
   }
 
