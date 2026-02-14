@@ -15,6 +15,7 @@ public class CallsignCacheEntry : Object {
 
 public class CallsignCache : Object {
     private HashTable<string, CallsignCacheEntry> ham_cache;
+    private HashSet<string> avatar_fetch_inflight;
     private Soup.Session avatar_session;
     public uint ttl_seconds { get; construct; default = 3600; }
 
@@ -34,13 +35,14 @@ public class CallsignCache : Object {
     construct {
         ham_cache = new HashTable<string, CallsignCacheEntry> (GLib.str_hash,
             GLib.str_equal);
+        avatar_fetch_inflight = new HashSet<string> ();
         avatar_session = new Soup.Session ();
         var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
             "artemis");
         var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
         cache.set_max_size (50 * 1024 * 1024);
         avatar_session.add_feature (cache);
-        avatar_session.timeout = 10;
+        avatar_session.timeout = 3;
         avatar_session.user_agent = "Artemis/0.1.0";
     }
 
@@ -52,6 +54,7 @@ public class CallsignCache : Object {
 
     public void clear () {
         ham_cache.remove_all ();
+        avatar_fetch_inflight.clear ();
     }
 
     public async void load_callsigns (HashSet<string> callsigns) {
@@ -70,29 +73,34 @@ public class CallsignCache : Object {
         if ((cached_entry != null) && (cached_entry.avatar != null))
             return cached_entry.avatar;
 
+        if (avatar_fetch_inflight.contains (callsign))
+            return null;
+
+        avatar_fetch_inflight.add (callsign);
+        Gdk.Texture? avatar = null;
         try {
             var gravatar_hash = entry.gravatar_hash;
-            if ((gravatar_hash == null) || (gravatar_hash.strip () == ""))
-                return null;
+            if ((gravatar_hash != null) && (gravatar_hash.strip () != "")) {
+                var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
+                    .printf (gravatar_hash);
 
-            var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
-                .printf (gravatar_hash);
+                var message = new Soup.Message ("GET", url);
 
-            var message = new Soup.Message ("GET", url);
+                var stream = yield avatar_session.send_async (message, GLib.Priority.
+                    DEFAULT, null);
 
-            var stream = yield avatar_session.send_async (message, GLib.Priority.
-                DEFAULT, null);
-
-            var pixbuf = new Gdk.Pixbuf.from_stream (stream);
-            if (pixbuf != null) {
-                var texture = Gdk.Texture.for_pixbuf (pixbuf);
-                cached_entry.avatar = texture;
-                return texture;
+                var pixbuf = new Gdk.Pixbuf.from_stream (stream);
+                if (pixbuf != null) {
+                    var texture = Gdk.Texture.for_pixbuf (pixbuf);
+                    cached_entry.avatar = texture;
+                    avatar = texture;
+                }
             }
         } catch (Error e) {
             warning ("Failed to fetch avatar for %s: %s", callsign, e.message);
         }
-        return null;
+        avatar_fetch_inflight.remove (callsign);
+        return avatar;
     }
 
     public async Activator? get_callsign (string callsign) {

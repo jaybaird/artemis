@@ -29,7 +29,7 @@ Artemis is designed to be cross-platform, lightweight, and easy to use.
   - Supports serial, USB, and network-connected radios via Hamlib.
 
 - **Import/Export**
-  - Import your already hunted parks from (POTA.app)[https://pota.app]
+  - Import your already hunted parks from [POTA.app](https://pota.app)
   - Ability to exporting hunter QSOs to QRZ; LoTW, UDP, or local ADIF log coming soon.
 
 - **UI**

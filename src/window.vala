@@ -72,12 +72,18 @@ public sealed class AppWindow : Gtk.Window {
 
     private uint timer_id = 0;
     private uint progress_timer_id = 0;
+    private uint radio_vfo_anim_id = 0;
     private int64 last_refresh_time = 0;
+    private int64 radio_vfo_anim_started_at = 0;
 
     private uint current_ticks = 0;
     private bool update_paused = false;
     private ArrayList<Adw.ViewStackPage> band_pages;
     private MapView map_view;
+    private bool has_displayed_radio_vfo = false;
+    private int displayed_radio_vfo_khz = 0;
+    private int radio_vfo_anim_start_khz = 0;
+    private int radio_vfo_anim_target_khz = 0;
 
     private ulong program_select_handler = 0;
 
@@ -118,7 +124,7 @@ public sealed class AppWindow : Gtk.Window {
         search_entry.search_changed.connect (() => {
             Application.current_search_text = search_entry.text;
 
-            map_view.bounce_filter ();
+            bounce_map_filter_if_ready ();
             foreach (var page in band_pages) {
                 var band_view = page.get_child () as BandView;
                 band_view.bounce_filter ();
@@ -140,7 +146,7 @@ public sealed class AppWindow : Gtk.Window {
 
                 Application.current_mode_filter = mode;
 
-                map_view.bounce_filter ();
+                bounce_map_filter_if_ready ();
 
                 foreach (var page in band_pages) {
                     var band_view = page.get_child () as BandView;
@@ -156,7 +162,10 @@ public sealed class AppWindow : Gtk.Window {
 
         Application.spot_repo.busy_changed.connect ((busy) => {
             loading_spinner.visible = busy;
-            program_select.disconnect (program_select_handler);
+            if (busy && (program_select_handler != 0)) {
+                program_select.disconnect (program_select_handler);
+                program_select_handler = 0;
+            }
         });
 
         Application.spot_repo.refreshed.connect ((spots_updated) => {
@@ -179,8 +188,10 @@ public sealed class AppWindow : Gtk.Window {
                 }
             }
             program_select.set_selected (idx);
-            program_select_handler = program_select.notify["selected"].connect (
-                on_program_selected);
+            if (program_select_handler == 0) {
+                program_select_handler = program_select.notify["selected"].connect (
+                    on_program_selected);
+            }
 
             last_refresh_time = get_monotonic_time ();
             current_ticks = 0;
@@ -228,7 +239,7 @@ public sealed class AppWindow : Gtk.Window {
         band_stack.notify["visible-child-name"].connect (() => {
             Application.current_band_filter = band_stack.visible_child_name;
             update_status_bar ();
-            map_view.bounce_filter ();
+            bounce_map_filter_if_ready ();
         });
 
         var model = search_select.get_model () as Gtk.StringList;
@@ -292,9 +303,14 @@ public sealed class AppWindow : Gtk.Window {
             (uint)total_visible
         ).printf ((uint)total_visible);
 
-        var status_bar_filtered_text = "; %u filtered".printf ((uint)filtered_count);
+        var status_bar_filtered_text = " • %u filtered".printf ((uint)filtered_count);
 
         status_bar_text.label = "%s%s".printf (status_bar_spots_text, status_bar_filtered_text);
+    }
+
+    private void bounce_map_filter_if_ready () {
+        if (map_view != null)
+            map_view.bounce_filter ();
     }
 
     private void initial_update () {
@@ -337,8 +353,60 @@ public sealed class AppWindow : Gtk.Window {
         }
     }
 
+    private void stop_radio_vfo_animation () {
+        if (radio_vfo_anim_id != 0) {
+            Source.remove (radio_vfo_anim_id);
+            radio_vfo_anim_id = 0;
+        }
+    }
+
+    private void set_radio_vfo_label_animated (int freq_khz) {
+        if (!has_displayed_radio_vfo) {
+            displayed_radio_vfo_khz = freq_khz;
+            has_displayed_radio_vfo = true;
+            radio_vfo.label = format_vfo (freq_khz);
+            return;
+        }
+
+        stop_radio_vfo_animation ();
+
+        radio_vfo_anim_start_khz = displayed_radio_vfo_khz;
+        radio_vfo_anim_target_khz = freq_khz;
+        if (radio_vfo_anim_start_khz == radio_vfo_anim_target_khz) {
+            radio_vfo.label = format_vfo (freq_khz);
+            return;
+        }
+
+        radio_vfo_anim_started_at = get_monotonic_time ();
+        radio_vfo_anim_id = Timeout.add (16, () => {
+            const double DURATION_MS = 160.0;
+            var elapsed_ms = (get_monotonic_time () - radio_vfo_anim_started_at) / 1000.0;
+            var t = elapsed_ms / DURATION_MS;
+            if (t > 1.0)
+                t = 1.0;
+
+            // Ease-out interpolation so the value settles smoothly.
+            var eased_t = 1.0 - ((1.0 - t) * (1.0 - t));
+            var interpolated = (double)radio_vfo_anim_start_khz +
+                ((double)(radio_vfo_anim_target_khz - radio_vfo_anim_start_khz) * eased_t);
+            displayed_radio_vfo_khz = (int)Math.round (interpolated);
+            radio_vfo.label = format_vfo (displayed_radio_vfo_khz);
+
+            if (t >= 1.0) {
+                displayed_radio_vfo_khz = radio_vfo_anim_target_khz;
+                radio_vfo.label = format_vfo (displayed_radio_vfo_khz);
+                radio_vfo_anim_id = 0;
+                return Source.REMOVE;
+            }
+
+            return Source.CONTINUE;
+        });
+    }
+
     private void power_off_radio () {
         Application.radio_control.disconnect ().disown ();
+        stop_radio_vfo_animation ();
+        has_displayed_radio_vfo = false;
         radio_vfo.label = _("Radio disconnected");
         radio_mode.visible = false;
     }
@@ -367,16 +435,20 @@ public sealed class AppWindow : Gtk.Window {
                     Application.radio_control.radio_status.connect ((freq, mode) => {
                         if (freq > 0 && mode != 0) {
                             radio_mode.visible = true;
-                            radio_vfo.label = format_vfo (freq);
+                            set_radio_vfo_label_animated (freq);
                             radio_mode.label = RadioControl.mode_string (mode);
                             radio_power_button.active = true;
                         } else {
+                            stop_radio_vfo_animation ();
+                            has_displayed_radio_vfo = false;
                             radio_mode.visible = false;
                             radio_power_button.active = false;
                             radio_vfo.label = _("Radio disconnected");
                         }
                     });
                 } else {
+                    stop_radio_vfo_animation ();
+                    has_displayed_radio_vfo = false;
                     radio_mode.visible = false;
                     radio_power_button.active = false;
                     radio_vfo.label = _("Radio disconnected");
@@ -473,7 +545,7 @@ public sealed class AppWindow : Gtk.Window {
 
             Application.current_program_filter = program;
 
-            map_view.bounce_filter ();
+            bounce_map_filter_if_ready ();
 
             foreach (var page in band_pages) {
                 var band_view = page.get_child () as BandView;
@@ -490,5 +562,7 @@ public sealed class AppWindow : Gtk.Window {
 
         if (progress_timer_id != 0)
             Source.remove (progress_timer_id);
+
+        stop_radio_vfo_animation ();
     }
 } /* class AppWindow */

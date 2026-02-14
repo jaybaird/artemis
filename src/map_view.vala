@@ -287,12 +287,12 @@ public class MapView : Gtk.Box {
             if (now.compare (expires) > 0)
                 return false;
 
-            if ((Application.current_program_filter != null) && 
+            if ((Application.current_program_filter != null) &&
                 (Application.current_program_filter != _ ("All")) &&
                 !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
                 return false;
 
-            if ((Application.current_mode_filter != null) && 
+            if ((Application.current_mode_filter != null) &&
                 (Application.current_mode_filter != _ ("All")) &&
                 !spot.mode.down ().contains (Application.current_mode_filter.down ()))
                 return false;
@@ -372,10 +372,10 @@ public class MapView : Gtk.Box {
         click.pressed.connect (() => {
             marker_clicked = true;
             Application.current_spot_hash = spot.hash;
-        
+
             var sidebar_box = split_view.sidebar as Gtk.Box;
             var spot_card = new SpotCard.from_spot (spot);
-            
+
             for (var child = sidebar_box.get_first_child (); child != null;) {
                 sidebar_box.remove (child);
                 child = child.get_next_sibling ();
@@ -429,7 +429,7 @@ public class MapView : Gtk.Box {
 
         map_widget.insert_layer_above (marker_layer, map_layer);
 
-        if (Application.current_spot_hash == BLANK_HASH || 
+        if (Application.current_spot_hash == BLANK_HASH ||
             !valid_hashes.contains (Application.current_spot_hash)) {
             if (split_view.show_sidebar) {
                 split_view.show_sidebar = false;

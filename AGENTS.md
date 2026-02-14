@@ -33,6 +33,7 @@ Core features:
 - Build: `meson setup build && meson compile -C build`
 - Reconfigure: `meson setup build --reconfigure`
 - Translation template: `ninja -C build com.k0vcz.Artemis-pot`
+- Lint must pass before commit (same expectation as pre-commit hooks, including `vala-lint`).
 
 When changing UI/resources, ensure the build succeeds and generated resources remain valid.
 
