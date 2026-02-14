@@ -1,6 +1,6 @@
-/* spot_card.vala
+/* src/spot_card.vala
  *
- * Copyright 2025 Unknown
+ * Copyright 2026 Jay Baird (K0VCZ)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by

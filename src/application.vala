@@ -1,6 +1,6 @@
-/* application.vala
+/* src/application.vala
  *
- * Copyright 2025 Unknown
+ * Copyright 2026 Jay Baird (K0VCZ)
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -139,7 +139,7 @@ public sealed class Application : Adw.Application {
             "Jay Baird (K0VCZ)"
         };
 
-        const string COPYRIGHT = "© 2025 Jay Baird (K0VCZ)";
+        const string COPYRIGHT = "© 2026 Jay Baird (K0VCZ)";
 
         var dialog = new Adw.AboutDialog.from_appdata ("/com/k0vcz/artemis/metainfo.xml", Build.PROFILE == "development" ? null : Build.VERSION) {
             version = Build.VERSION,
