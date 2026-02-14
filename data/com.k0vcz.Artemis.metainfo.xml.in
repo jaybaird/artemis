@@ -7,7 +7,8 @@
   <name>Artemis</name>
   <summary>A Parks on the Air Spotting Tool</summary>
   <description>
-    <p>No description</p>
+    <p>Artemis helps amateur radio operators hunt Parks on the Air activations with a fast desktop workflow for filtering spots, tracking targets, and tuning radios.</p>
+    <p>Use live spot filtering by band, mode, and program, view parks on an interactive map, and coordinate your station with integrated CAT control through Hamlib.</p>
   </description>
 
   <developer id="tld.vendor">
@@ -38,7 +39,28 @@
      If this is present, appstreamcli compose will pull icons, keywords and categories from the desktop file. -->
   <launchable type="desktop-id">com.k0vcz.Artemis.desktop</launchable>
   <!-- Use the OARS website (https://hughsie.github.io/oars/generate.html) to generate these and make sure to use oars-1.1 -->
-  <content_rating type="oars-1.1" />
+  <content_rating type="oars-1.1">
+    <content_attribute id="violence-cartoon">none</content_attribute>
+    <content_attribute id="violence-fantasy">none</content_attribute>
+    <content_attribute id="violence-realistic">none</content_attribute>
+    <content_attribute id="violence-bloodshed">none</content_attribute>
+    <content_attribute id="violence-sexual">none</content_attribute>
+    <content_attribute id="drugs-alcohol">none</content_attribute>
+    <content_attribute id="drugs-narcotics">none</content_attribute>
+    <content_attribute id="drugs-tobacco">none</content_attribute>
+    <content_attribute id="sex-nudity">none</content_attribute>
+    <content_attribute id="sex-themes">none</content_attribute>
+    <content_attribute id="language-profanity">none</content_attribute>
+    <content_attribute id="language-humor">none</content_attribute>
+    <content_attribute id="language-discrimination">none</content_attribute>
+    <content_attribute id="social-chat">none</content_attribute>
+    <content_attribute id="social-audio">none</content_attribute>
+    <content_attribute id="social-contacts">none</content_attribute>
+    <content_attribute id="social-info">none</content_attribute>
+    <content_attribute id="money-purchasing">none</content_attribute>
+    <content_attribute id="money-gambling">none</content_attribute>
+    <content_attribute id="social-location">none</content_attribute>
+  </content_rating>
 
   <!-- Applications should set a brand color in both light and dark variants like so -->
   <branding>
@@ -48,23 +70,25 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://example.org/example1.png</image>
-      <caption>A caption</caption>
+      <image>https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/main-window.png</image>
+      <caption>Main spot hunting view with filters and live cards</caption>
     </screenshot>
     <screenshot>
-      <image>https://example.org/example2.png</image>
-      <caption>A caption</caption>
+      <image>https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view.png</image>
+      <caption>Map view showing current park activity and station context</caption>
     </screenshot>
   </screenshots>
 
   <releases>
-    <release version="1.0.1" date="2024-01-18">
-      <url type="details">https://github.com/jaybaird/artemis-vala/releases</url>
+    <release version="1.0.0" date="2026-02-14">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.0</url>
       <description translate="no">
-        <p>Release description</p>
+        <p>Initial public release of Artemis.</p>
         <ul>
-          <li>List of changes</li>
-          <li>List of changes</li>
+          <li>Live POTA spot filtering by band, mode, and program</li>
+          <li>Integrated map view for park and spot visualization</li>
+          <li>Radio CAT integration with Hamlib for tune and mode control</li>
+          <li>CSV-based hunter history import and local activity tracking</li>
         </ul>
       </description>
     </release>

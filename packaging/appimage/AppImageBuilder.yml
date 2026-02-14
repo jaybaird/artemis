@@ -7,7 +7,7 @@ AppDir:
     id: com.k0vcz.Artemis
     name: Artemis
     icon: com.k0vcz.Artemis
-    version: 0.1.0
+    version: 1.0.0
     exec: usr/bin/com.k0vcz.Artemis
     exec_args: $@
 

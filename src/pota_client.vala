@@ -32,7 +32,7 @@ public sealed class PotaClient : Object {
         cache.set_max_size (50 * 1024 * 1024);
         session.add_feature (cache);
         session.timeout = 30;
-        session.user_agent = "Artemis/0.1.0";
+        session.user_agent = "Artemis/1.0.0";
     }
 
     private async Json.Node ? fetch_worker (string url) throws Error {

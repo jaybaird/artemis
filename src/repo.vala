@@ -43,7 +43,7 @@ public class CallsignCache : Object {
         cache.set_max_size (50 * 1024 * 1024);
         avatar_session.add_feature (cache);
         avatar_session.timeout = 3;
-        avatar_session.user_agent = "Artemis/0.1.0";
+        avatar_session.user_agent = "Artemis/1.0.0";
     }
 
     private bool is_entry_expired (CallsignCacheEntry? entry) {
