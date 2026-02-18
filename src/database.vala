@@ -81,8 +81,9 @@ public sealed class ParkRow : Object {
     }
 
     public ParkRow.from_statement (Sqlite.Statement st) {
-        int id = st.column_int (0);
-        string reference = st.column_text (1);
+        // The parks table currently stores only reference/first_qso_date/qso_count.
+        int id = 0;
+        string reference = st.column_text (0);
 
         Object (
             id: id,
@@ -218,9 +219,7 @@ public class SpotDb : Object {
         const string PARK_SQL =
             """
             INSERT INTO parks(reference) VALUES(?)
-            ON CONFLICT(reference) DO UPDATE SET
-            park_name = COALESCE(excluded.park_name, parks.park_name),
-            location  = COALESCE(excluded.location,  parks.location);
+            ON CONFLICT(reference) DO NOTHING;
             """;
         if (db.prepare_v2 (PARK_SQL, -1, out st) != Sqlite.OK) {
             db.exec ("ROLLBACK;");
@@ -231,14 +230,6 @@ public class SpotDb : Object {
             return false;
         }
         st.bind_text (1, spot.park_ref);
-        if (spot.park_name != null)
-            st.bind_text (2, spot.park_name);
-        else
-            st.bind_null (2);
-        if (spot.location_desc != null)
-            st.bind_text (3, spot.location_desc);
-        else
-            st.bind_null (3);
 
         if (st.step () != Sqlite.DONE) {
             db.exec ("ROLLBACK;");
@@ -308,8 +299,11 @@ public class SpotDb : Object {
 
         const string SQL =
             """
-        INSERT OR REPLACE INTO parks(reference, park_name, dx_entity, location, hasc, first_qso_date, qso_count)
-        VALUES(?, ?, ?, ?, ?, ?, ?);
+        INSERT INTO parks(reference, first_qso_date, qso_count)
+        VALUES(?, ?, ?)
+        ON CONFLICT(reference) DO UPDATE SET
+            first_qso_date = COALESCE(excluded.first_qso_date, parks.first_qso_date),
+            qso_count = MAX(parks.qso_count, excluded.qso_count);
         """;
 
         Statement st;
@@ -320,12 +314,11 @@ public class SpotDb : Object {
             return false;
         }
         st.bind_text (1, reference);
-        st.bind_text (2, park_name != null ? park_name : "");
-        st.bind_text (3, dx_entity != null ? dx_entity : "");
-        st.bind_text (4, location != null ? location : "");
-        st.bind_text (5, hasc != null ? hasc : "");
-        st.bind_text (6, first_qso_date);
-        st.bind_int (7, qso_count >= 0 ? qso_count : 0);
+        if ((first_qso_date != null) && (first_qso_date.strip () != ""))
+            st.bind_text (2, first_qso_date);
+        else
+            st.bind_null (2);
+        st.bind_int (3, qso_count >= 0 ? qso_count : 0);
         if (st.step () != Sqlite.DONE) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
@@ -385,7 +378,7 @@ public class SpotDb : Object {
 
         const string SQL =
             """
-            SELECT id, reference
+            SELECT reference
             FROM parks
             WHERE reference = ?
             LIMIT 1;

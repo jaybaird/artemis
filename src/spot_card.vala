@@ -129,12 +129,12 @@ public sealed class AddSpot : Adw.Dialog {
                     Application.pota_client.post_spot.end (res);
                     Application.spot_database.add_qso_from_spot (spot, out err);
                     if (err != null) {
-                        error ("Unable to save qso: %s".printf (err.message));
+                        warning ("Unable to save qso: %s".printf (err.message));
                     }
                     Application.spot_repo.update_spots.begin ();
                 } catch (Error err) {
                     var errmsg = err.message;
-                    error (@"Unable to post spot: $errmsg");
+                    warning (@"Unable to post spot: $errmsg");
                 }
             });
         });
@@ -253,17 +253,22 @@ public sealed class SpotCard : Gtk.Box {
             fetch_avatars.end (res);
         });
 
+        // Keep the Tune button visible whenever radio support is configured.
+        // Connection state should change sensitivity, not visibility.
+        tune_button.visible = Application.is_radio_configured;
+        tune_button.sensitive = Application.radio_control.is_rig_connected;
         Application.radio_control.radio_connected.connect (() => {
-            tune_button.visible = true;
+            tune_button.sensitive = true;
         });
         Application.radio_control.radio_disconnected.connect (() => {
-            tune_button.visible = false;
+            tune_button.sensitive = false;
+        });
+        Application.radio_control.radio_error.connect ((error) => {
+            tune_button.sensitive = false;
         });
         Application.radio_control.radio_status.connect ((frequency, mode) => {
-            tune_button.visible = Application.radio_control.is_rig_connected;
+            tune_button.sensitive = Application.radio_control.is_rig_connected;
         });
-
-        tune_button.visible = Application.radio_control.is_rig_connected;
 
         refresh_highlight ();
     }
