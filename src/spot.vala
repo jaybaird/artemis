@@ -172,12 +172,16 @@ public sealed class Spot : Object {
         is_new_park = !Application.spot_database.is_park_hunted (park_ref, out
             error);
 
+        coordinate = null;
+        distance = -1.0;
+        bearing = -1.0;
+
         var grid = Application.settings.get_string ("location");
         if (grid != "") {
             try {
                 var latlon = Distance.maidenhead_to_latlon (grid);
-                var park_grid = (grid6 == "") ? grid4 : grid6;
-                if (park_grid != "") {
+                var park_grid = ((grid6 ?? "") == "") ? (grid4 ?? "") : grid6;
+                if ((park_grid != null) && (park_grid.strip () != "")) {
                     coordinate = Distance.maidenhead_to_latlon (park_grid);
                     distance = Distance.haversine_distance_km (latlon,
                         coordinate);
@@ -189,9 +193,6 @@ public sealed class Spot : Object {
                 distance = -1.0;
                 bearing = -1.0;
             }
-        } else {
-            distance = -1.0;
-            bearing = -1.0;
         }
     }
 

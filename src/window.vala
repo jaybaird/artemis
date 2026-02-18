@@ -86,6 +86,8 @@ public sealed class AppWindow : Gtk.Window {
     private int radio_vfo_anim_target_khz = 0;
 
     private ulong program_select_handler = 0;
+    private ulong radio_status_handler = 0;
+    private ulong radio_error_handler = 0;
 
     public AppWindow (Gtk.Application app) {
         Object (application: app);
@@ -204,7 +206,7 @@ public sealed class AppWindow : Gtk.Window {
             if (spot == null)
                 return;
 
-            if (band_stack.get_visible_child_name () != _ ("All"))
+            if (band_stack.get_visible_child_name () != "All")
                 band_stack.set_visible_child_name (spot.band);
 
             var band_view = band_stack.get_visible_child () as BandView;
@@ -234,7 +236,7 @@ public sealed class AppWindow : Gtk.Window {
         band_stack.set_visible_child_name (Application.settings.get_string (
             "default-band"));
         Application.current_band_filter = band_stack.visible_child_name;
-        Application.current_program_filter = _ ("All");
+        Application.current_program_filter = null;
         Application.current_search_text = null;
         band_stack.notify["visible-child-name"].connect (() => {
             Application.current_band_filter = band_stack.visible_child_name;
@@ -264,7 +266,7 @@ public sealed class AppWindow : Gtk.Window {
                 Application.current_mode_filter = model.get_string (
                     search_select.selected);
             } else {
-                Application.current_mode_filter = _ ("All");
+                Application.current_mode_filter = null;
             }
         }
 
@@ -404,11 +406,23 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     private void power_off_radio () {
+        disconnect_radio_handlers ();
         Application.radio_control.disconnect ().disown ();
         stop_radio_vfo_animation ();
         has_displayed_radio_vfo = false;
         radio_vfo.label = _("Radio disconnected");
         radio_mode.visible = false;
+    }
+
+    private void disconnect_radio_handlers () {
+        if (radio_status_handler != 0) {
+            SignalHandler.disconnect (Application.radio_control, radio_status_handler);
+            radio_status_handler = 0;
+        }
+        if (radio_error_handler != 0) {
+            SignalHandler.disconnect (Application.radio_control, radio_error_handler);
+            radio_error_handler = 0;
+        }
     }
 
     private void start_radio () {
@@ -432,7 +446,8 @@ public sealed class AppWindow : Gtk.Window {
 
             Dex.Scheduler.get_default ().spawn (0, () => {
                 if (success) {
-                    Application.radio_control.radio_status.connect ((freq, mode) => {
+                    disconnect_radio_handlers ();
+                    radio_status_handler = Application.radio_control.radio_status.connect ((freq, mode) => {
                         if (freq > 0 && mode != 0) {
                             radio_mode.visible = true;
                             set_radio_vfo_label_animated (freq);
@@ -446,7 +461,15 @@ public sealed class AppWindow : Gtk.Window {
                             radio_vfo.label = _("Radio disconnected");
                         }
                     });
+                    radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
+                        stop_radio_vfo_animation ();
+                        has_displayed_radio_vfo = false;
+                        radio_mode.visible = false;
+                        radio_power_button.active = false;
+                        radio_vfo.label = _("Radio disconnected");
+                    });
                 } else {
+                    disconnect_radio_handlers ();
                     stop_radio_vfo_animation ();
                     has_displayed_radio_vfo = false;
                     radio_mode.visible = false;
@@ -564,5 +587,6 @@ public sealed class AppWindow : Gtk.Window {
             Source.remove (progress_timer_id);
 
         stop_radio_vfo_animation ();
+        disconnect_radio_handlers ();
     }
 } /* class AppWindow */

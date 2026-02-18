@@ -229,11 +229,11 @@ typedef struct {
 void
 radio_configuration_destroy(RadioConfiguration *config)
 {
-    if (config) {
-        g_free(config->connection_type);
-        g_free(config->device_path);
-        g_free(config->network_host);
-    }
+  if (config) {
+    g_free(config->connection_type);
+    g_free(config->device_path);
+    g_free(config->network_host);
+  }
 }
 
 void
@@ -401,6 +401,7 @@ radio_status_free(_RadioStatus *data)
 {
   g_object_unref(data->radio);
   g_clear_error(&data->error);
+  g_free(data);
 }
 
 static DexFuture *
@@ -435,6 +436,7 @@ connect_data_free(ConnectData *data) {
     if (data) {
         g_object_unref(data->radio_control);
         radio_configuration_destroy(data->config);
+        g_free(data->config);
     }
     g_free(data);
 }
@@ -602,6 +604,7 @@ static void
 set_mode_data_free(_SetModeData *data)
 {
   g_object_unref(data->radio);
+  g_free(data);
 }
 
 static DexFuture *
@@ -647,6 +650,7 @@ static void
 set_vfo_data_free(_SetVFOData *data)
 {
   g_object_unref(data->radio);
+  g_free(data);
 }
 
 static DexFuture *
@@ -688,15 +692,15 @@ static DexFuture *
 watcher_iteration(DexFuture *_, gpointer user_data)
 {
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
-  
-  if (!self->is_connected || self->rig == NULL)
-  {
-    return dex_future_new_for_boolean(TRUE);
+
+  /* Exit the watcher loop once disposal has requested cancellation. */
+  if (dex_future_get_status(DEX_FUTURE(self->canceled)) != DEX_FUTURE_STATUS_PENDING) {
+    return NULL;
   }
 
-  if (!self->canceled)
-  {
-    return dex_future_new_for_boolean(FALSE);
+  /* Stay idle while disconnected instead of running a tight loop. */
+  if (!self->is_connected || self->rig == NULL) {
+    return dex_timeout_new_msec(self->poll_interval_ms);
   }
 
   freq_t freq;
@@ -732,6 +736,24 @@ watcher_iteration(DexFuture *_, gpointer user_data)
 
     GError *error = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED, "[RadioControl] heartbeat received error from hamlib: %s; %s", rigerror(r_f), rigerror(r_ps));
     status->error = g_steal_pointer(&error);
+
+    if (self->is_connected)
+    {
+      self->is_connected = FALSE;
+      if (self->rig != NULL)
+      {
+        rig_close(self->rig);
+        rig_cleanup(self->rig);
+        self->rig = NULL;
+      }
+
+      _RadioStatus *disconnect_status = g_new0(_RadioStatus, 1);
+      disconnect_status->radio = g_object_ref(self);
+      disconnect_status->status = SIG_DISCONNECTED;
+      dex_future_disown(
+        dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, disconnect_status, (GDestroyNotify)radio_status_free)
+      );
+    }
   }
   
   dex_future_disown(
