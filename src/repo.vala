@@ -38,6 +38,7 @@ public class CallsignCache : Object {
     private HashSet<string> avatar_fetch_inflight;
     private Soup.Session avatar_session;
     public uint ttl_seconds { get; construct; default = 3600; }
+    public signal void entry_updated (string callsign);
 
     public CallsignCache (uint ttl_seconds) {
         Object (
@@ -83,6 +84,20 @@ public class CallsignCache : Object {
         }
     }
 
+    public Gdk.Texture? peek_avatar (string callsign) {
+        var entry = ham_cache.lookup (callsign);
+        if (is_entry_expired (entry) || (entry == null))
+            return null;
+        return entry.avatar;
+    }
+
+    public Activator? peek_callsign (string callsign) {
+        var entry = ham_cache.lookup (callsign);
+        if (is_entry_expired (entry) || (entry == null))
+            return null;
+        return entry.activator;
+    }
+
     public async Gdk.Texture? get_avatar_for (string callsign) {
         var entry = yield get_callsign (callsign);
 
@@ -114,6 +129,7 @@ public class CallsignCache : Object {
                     var texture = Gdk.Texture.for_pixbuf (pixbuf);
                     cached_entry.avatar = texture;
                     avatar = texture;
+                    entry_updated (callsign);
                 }
             }
         } catch (Error e) {
@@ -140,6 +156,7 @@ public class CallsignCache : Object {
                                               )
                 );
             ham_cache.set (callsign, callsign_entry);
+            entry_updated (callsign);
             return callsign_entry.activator;
         } catch (Error err) {
             return null;

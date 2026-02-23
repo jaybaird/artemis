@@ -204,6 +204,40 @@ public sealed class SpotCard : Gtk.Box {
     public string callsign { get; construct; }
     public string park_ref { get; construct; }
     public Spot spot { get; construct; }
+    private ulong callsign_cache_updated_handler = 0;
+
+    private Gdk.Texture? activator_avatar_texture {
+        set {
+            if (value != null)
+                activator_avatar.set_custom_image (value);
+        }
+    }
+
+    private Gdk.Texture? spotter_avatar_texture {
+        set {
+            if (value != null)
+                hunter_avatar.set_custom_image (value);
+        }
+    }
+
+    private Activator? activator_info {
+        set {
+            if (value != null) {
+                bool has_name = value.name != null && value.name.length > 0;
+                bool has_qth = value.qth != null && value.qth.length > 0;
+
+                if (has_name && has_qth)
+                    activator_avatar.tooltip_text = "%s (%s)".printf (value.name, value.qth);
+                else if (has_name)
+                    activator_avatar.tooltip_text = value.name;
+                else
+                    activator_avatar.tooltip_text = null;
+            } else {
+                activator_avatar.tooltip_text = null;
+            }
+        }
+    }
+
     public SpotCard () {
         Object ();
     }
@@ -252,6 +286,9 @@ public sealed class SpotCard : Gtk.Box {
         fetch_avatars.begin ((obj, res) => {
             fetch_avatars.end (res);
         });
+        callsign_cache_updated_handler = Application.callsign_cache.entry_updated.connect ((updated_callsign) => {
+            update_avatars_from_cache (updated_callsign);
+        });
 
         Application.radio_control.radio_connected.connect (() => {
             tune_button.visible = true;
@@ -275,29 +312,37 @@ public sealed class SpotCard : Gtk.Box {
         var ava_spotter = yield Application.callsign_cache.get_avatar_for (spot.
             spotter);
 
-        if (ava_activator != null)
-            activator_avatar.set_custom_image (ava_activator);
-        if (ava_spotter != null)
-            hunter_avatar.set_custom_image (ava_spotter);
+        activator_avatar_texture = ava_activator;
+        spotter_avatar_texture = ava_spotter;
 
         var activator = yield Application.callsign_cache.get_callsign (spot.
             callsign);
 
-        if (activator != null) {
-            bool has_name = activator.name != null && activator.name.length > 0;
-            bool has_qth = activator.qth != null && activator.qth.length > 0;
-
-            if (has_name && has_qth)
-                activator_avatar.tooltip_text = "%s (%s)".printf (activator.name
-                    , activator.qth);
-            else if (has_name)
-                activator_avatar.tooltip_text = activator.name;
-            else
-                activator_avatar.tooltip_text = null;
-        } else {
-            activator_avatar.tooltip_text = null;
-        }
+        activator_info = activator;
     } /* fetch_avatars */
+
+    private void update_avatars_from_cache (string updated_callsign) {
+        if (updated_callsign == spot.callsign) {
+            var activator_image = Application.callsign_cache.peek_avatar (spot.callsign);
+            activator_avatar_texture = activator_image;
+
+            var activator = Application.callsign_cache.peek_callsign (spot.callsign);
+            activator_info = activator;
+        }
+
+        if (updated_callsign == spot.spotter) {
+            var spotter_image = Application.callsign_cache.peek_avatar (spot.spotter);
+            spotter_avatar_texture = spotter_image;
+        }
+    }
+
+    ~SpotCard () {
+        if (callsign_cache_updated_handler != 0) {
+            if (SignalHandler.is_connected (Application.callsign_cache, callsign_cache_updated_handler))
+                SignalHandler.disconnect (Application.callsign_cache, callsign_cache_updated_handler);
+            callsign_cache_updated_handler = 0;
+        }
+    }
 
     public void refresh_highlight () {
         corner_image.visible = false;
