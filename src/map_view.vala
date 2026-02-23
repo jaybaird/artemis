@@ -311,12 +311,10 @@ public class MapView : Gtk.Box {
                 return false;
 
             if ((Application.current_program_filter != null) &&
-                (Application.current_program_filter != _ ("All")) &&
                 !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
                 return false;
 
             if ((Application.current_mode_filter != null) &&
-                (Application.current_mode_filter != _ ("All")) &&
                 !spot.mode.down ().contains (Application.current_mode_filter.down ()))
                 return false;
 
