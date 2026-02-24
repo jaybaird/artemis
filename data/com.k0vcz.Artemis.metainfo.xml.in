@@ -80,6 +80,27 @@
   </screenshots>
 
   <releases>
+    <release version="1.0.1" date="2026-02-24">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.1</url>
+      <description>
+        <p>Fixed a crash when submitting a new spot. Avatar cache updates are now more responsive, and a bug that could
+         cause high CPU usage after disconnecting a radio has been fixed. Full changelog
+         below:</p>
+        <ul>
+          <li>Fixed a crash and multiple SQL errors when submitting/re-spotting a park.</li>
+          <li>Added null checks to lat/long parsing and grid handling.</li>
+          <li>Fixed radio status watcher loop behavior.</li>
+          <li>Fixed multiple memory leaks.</li>
+          <li>Removed duplicate <code>radio_status</code> signal handlers on reconnect.</li>
+          <li>Fixed radio UI state getting out of sync.</li>
+          <li>Fixed Tune button behavior on spot cards so it no longer disappears.</li>
+          <li>Fixed inconsistent “All” filter handling (<code>_("All")</code> vs <code>"All"</code>).</li>
+          <li>Fixed avatar updates lagging until a second sync.</li>
+          <li>Improved avatar update efficiency so spot cards update only the affected avatar/tooltip from cache instead of re-fetching/reprocessing both callsigns.</li>
+          <li>Fixed a spot-card signal teardown warning.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-02-14">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.0</url>
       <description translate="no">
@@ -92,27 +113,6 @@
         </ul>
       </description>
     </release>
-    <release version="1.0.1" date="2026-02-23">
-    <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.1</url>
-    <description>
-      <p>Fixed a crash when submitting a new spot. Avatar cache updates are now more responsive, and a bug that could
-         cause high CPU usage after disconnecting a radio has been fixed. Full changelog
-         below:</p>
-      <ul>
-        <li>Fixed a crash and multiple SQL errors when submitting/re-spotting a park.</li>
-        <li>Added null checks to lat/long parsing and grid handling.</li>
-        <li>Fixed radio status watcher loop behavior.</li>
-        <li>Fixed multiple memory leaks.</li>
-        <li>Removed duplicate <code>radio_status</code> signal handlers on reconnect.</li>
-        <li>Fixed radio UI state getting out of sync.</li>
-        <li>Fixed Tune button behavior on spot cards so it no longer disappears.</li>
-        <li>Fixed inconsistent “All” filter handling (<code>_("All")</code> vs <code>"All"</code>).</li>
-        <li>Fixed avatar updates lagging until a second sync.</li>
-        <li>Improved avatar update efficiency so spot cards update only the affected avatar/tooltip from cache instead of re-fetching/reprocessing both callsigns.</li>
-        <li>Fixed a spot-card signal teardown warning.</li>
-      </ul>
-    </description>
-  </release>
   </releases>
 
 </component>
