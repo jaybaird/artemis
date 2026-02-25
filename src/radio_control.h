@@ -38,6 +38,8 @@ typedef struct {
   gchar *network_host;
   gint network_port;
   gint baud_rate;
+  gint data_bits;
+  gint stop_bits;
 } RadioConfiguration;
 
 

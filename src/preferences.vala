@@ -40,6 +40,8 @@ public sealed class PreferencesDialog : Object {
     private Adw.ComboRow row_radio_model;
     private Adw.ComboRow row_device_path;
     private Adw.ComboRow row_baud_rate;
+    private Adw.ComboRow row_data_bits;
+    private Adw.ComboRow row_stop_bits;
     private Adw.EntryRow row_network_host;
     private Adw.SpinRow row_network_port;
     private Adw.PreferencesGroup serial_settings_group;
@@ -104,6 +106,8 @@ public sealed class PreferencesDialog : Object {
         row_device_path.model = get_serial_devices ();
 
         row_baud_rate = builder.get_object ("row_baud_rate") as Adw.ComboRow;
+        row_data_bits = builder.get_object ("row_data_bits") as Adw.ComboRow;
+        row_stop_bits = builder.get_object ("row_stop_bits") as Adw.ComboRow;
         row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
         row_network_port = builder.get_object ("row_network_port") as Adw.SpinRow;
         serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
@@ -220,6 +224,9 @@ public sealed class PreferencesDialog : Object {
         );
 
         bind_baud_rate_combo ();
+        bind_data_bits_combo ();
+        bind_stop_bits_combo ();
+
         Application.settings.bind ("radio-network-host", row_network_host,
             "text",
             SettingsBindFlags.DEFAULT);
@@ -280,6 +287,108 @@ public sealed class PreferencesDialog : Object {
             }
         });
     } /* bind_combo_to_string_setting */
+
+    void bind_data_bits_combo () {
+        var model = row_data_bits.model as Gtk.StringList;
+
+        if (model == null) 
+            return;
+        
+        var current_data_bits = Application.settings.get_int("radio-data-bits");
+        switch (current_data_bits) {
+            case 0: 
+                row_data_bits.selected = 0;
+                break;
+            case 7:
+                row_data_bits.selected = 1;
+                break;
+            case 8:
+                row_data_bits.selected = 2;
+                break;
+        }
+
+        row_data_bits.notify["selected"].connect (() => {
+            int data_bits = 0;
+            switch (row_data_bits.selected) {
+                case 0:
+                    data_bits = 0;
+                    break;
+                case 1:
+                    data_bits = 7;
+                    break;
+                case 2:
+                    data_bits = 8;
+                    break;
+            }
+            Application.settings.set_int("radio-data-bits", data_bits);
+        });
+
+        Application.settings.changed["radio-data-bits"].connect (() => {
+            var data_bits = Application.settings.get_int ("radio-data-bits");
+            switch (data_bits) {
+                case 0: 
+                    row_data_bits.selected = 0;
+                    break;
+                case 7:
+                    row_data_bits.selected = 1;
+                    break;
+                case 8:
+                    row_data_bits.selected = 2;
+                    break;
+            }
+        });
+    }   
+
+    void bind_stop_bits_combo () {
+        var model = row_data_bits.model as Gtk.StringList;
+
+        if (model == null) 
+            return;
+        
+        var current_stop_bits = Application.settings.get_int("radio-stop-bits");
+        switch (current_stop_bits) {
+            case 0: 
+                row_stop_bits.selected = 0;
+                break;
+            case 1:
+                row_stop_bits.selected = 1;
+                break;
+            case 2:
+                row_stop_bits.selected = 2;
+                break;
+        }
+
+        row_stop_bits.notify["selected"].connect (() => {
+            int stop_bits = 0;
+            switch (row_stop_bits.selected) {
+                case 0:
+                    stop_bits = 0;
+                    break;
+                case 1:
+                    stop_bits = 1;
+                    break;
+                case 2:
+                    stop_bits = 2;
+                    break;
+            }
+            Application.settings.set_int("radio-stop-bits", stop_bits);
+        });
+
+        Application.settings.changed["radio-stop-bits"].connect (() => {
+            var data_bits = Application.settings.get_int ("radio-data-bits");
+            switch (data_bits) {
+                case 0: 
+                    row_data_bits.selected = 0;
+                    break;
+                case 1:
+                    row_data_bits.selected = 1;
+                    break;
+                case 2:
+                    row_data_bits.selected = 2;
+                    break;
+            }
+        });
+    }
 
     void bind_baud_rate_combo () {
         var model = row_baud_rate.model as Gtk.StringList;

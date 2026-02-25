@@ -30,6 +30,10 @@ install_data('com.k0vcz.Artemis.gschema.xml',
   install_dir: get_option('datadir') / 'glib-2.0' / 'schemas'
 )
 
+gnome.compile_schemas(
+  depend_files: files('com.k0vcz.Artemis.gschema.xml')
+)
+
 compile_schemas = find_program('glib-compile-schemas', required: false, disabler: true)
 if compile_schemas.found()
   test('Validate schema file',

@@ -245,6 +245,8 @@ radio_configuration_copy(RadioConfiguration *config, RadioConfiguration *new_con
   new_config->network_host = g_strdup(config->network_host);
   new_config->network_port = config->network_port;
   new_config->baud_rate = config->baud_rate;
+  new_config->data_bits = config->data_bits;
+  new_config->stop_bits = config->stop_bits;
 }
 
 G_DEFINE_FINAL_TYPE(RadioControl, radio_control, G_TYPE_OBJECT);
@@ -463,8 +465,20 @@ connect_worker(gpointer user_data)
     rig_set_conf(self->rig, rig_token_lookup(self->rig, "rig_pathname"), (char*)config->device_path);
     if (config->baud_rate > 0) {
       char baudstr[16]; 
+      char datastr[1];
+      char stopstr[1];
+
       g_snprintf(baudstr, sizeof baudstr, "%d", config->baud_rate);
+      g_snprintf(datastr, 1, "%d", config->data_bits);
+      g_snprintf(stopstr, 1, "%d", config->stop_bits);
+
       rig_set_conf(self->rig, rig_token_lookup(self->rig, "serial_speed"), baudstr);
+      if (config->data_bits != 0) {
+        rig_set_conf(self->rig, rig_token_lookup(self->rig, "data_bits"), datastr);
+      }
+      if (config->stop_bits != 0) {
+        rig_set_conf(self->rig, rig_token_lookup(self->rig, "stop_bits"), stopstr);
+      }
     }
   } 
   else if (g_strcmp0(config->connection_type, "network") == 0) 

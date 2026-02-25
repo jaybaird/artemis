@@ -205,6 +205,16 @@ Adw.PreferencesDialog prefs_dialog {
           title: _("Data Bits");
           model: data_bits_model;
         }
+
+        Adw.ComboRow row_stop_bits {
+          title: _("Stop Bits");
+          model: stop_bits_model;
+        }
+
+        Adw.ComboRow row_handshake_model {
+          title: _("Handshake Model");
+          model: handshake_model;
+        }
       }
 
       /* Network settings group */

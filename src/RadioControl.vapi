@@ -23,6 +23,8 @@ public struct RadioConfiguration {
     public string? network_host;
     public int network_port;
     public int baud_rate;
+    public int data_bits;
+    public int stop_bits;
 }
 
 [CCode (cname = "RadioModel", has_type_id = false)]
