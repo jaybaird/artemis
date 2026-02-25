@@ -53,6 +53,26 @@ Gtk.StringList radio_models_model {
   strings: ["Dummy Radio (Testing)"];
 }
 
+Gtk.StringList data_bits_model {
+  strings: ["Default", "Seven", "Eight"];
+}
+
+Gtk.StringList stop_bits_model {
+  strings: ["Default", "One", "Two"];
+}
+
+Gtk.StringList handshake_model {
+  strings: ["Default", "XON/XOFF", "None", "Hardware"];
+}
+
+Gtk.StringList control_lines_dtr_model {
+  strings: ["High", "Low"];
+}
+
+Gtk.StringList control_lines_rts_model {
+  strings: ["High", "Low"];
+}
+
 Adw.PreferencesDialog prefs_dialog {
   title: _("Preferences");
   search-enabled: true;
@@ -180,6 +200,11 @@ Adw.PreferencesDialog prefs_dialog {
           title: _("Baud Rate");
           model: baud_rates_model;
         }
+
+        Adw.ComboRow row_data_bits {
+          title: _("Data Bits");
+          model: data_bits_model;
+        }
       }
 
       /* Network settings group */
@@ -230,6 +255,10 @@ Adw.PreferencesDialog prefs_dialog {
             styles ["suggested-action"]
           }
         }
+      }
+
+      Label hamlib_version_label {
+        label: "";
       }
     }
   }

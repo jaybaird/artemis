@@ -61,6 +61,12 @@ public class RadioControl : GLib.Object {
 
     public static unowned RadioModel[] get_radio_models ();
 
+    [CCode (cname = "radio_control_hamlib_version")]
+    public static unowned string hamlib_version ();
+
+    [CCode (cname = "radio_control_hamlib_copyright")]
+    public static unowned string hamlib_copyright ();
+
     // Signals
     [CCode (cname = "radio-connected")]
     public signal void radio_connected ();

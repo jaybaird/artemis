@@ -60,6 +60,7 @@ public sealed class PreferencesDialog : Object {
     private Gtk.Button test_connection_button;
     private Gtk.Image connection_status_icon;
     private Gtk.Label connection_status_label;
+    private Gtk.Label hamlib_version_label;
 
     private File? logbook_csv = null;
     private GUdev.Client udev_client;
@@ -108,6 +109,11 @@ public sealed class PreferencesDialog : Object {
         serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
         network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
         radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
+        hamlib_version_label = builder.get_object ("hamlib_version_label") as Gtk.Label;
+
+        if (hamlib_version_label != null) {
+            hamlib_version_label.label = RadioControl.hamlib_version ();
+        }
 
         row_hide_qrt = builder.get_object ("row_hide_qrt") as Adw.SwitchRow;
         row_show_scale = builder.get_object ("row_show_scale") as Adw.SwitchRow;

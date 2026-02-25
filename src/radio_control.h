@@ -81,6 +81,12 @@ radio_control_get_vfo_async(RadioControl *self);
 DexFuture *
 radio_control_get_mode_async(RadioControl *self);
 
+const gchar *
+radio_control_hamlib_version(void);
+
+const gchar *
+radio_control_hamlib_copyright(void);
+
 /* Setters */
 
 DexFuture *

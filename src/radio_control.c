@@ -688,6 +688,18 @@ radio_control_set_vfo_async(RadioControl *self, int frequency)
   return dex_scheduler_spawn(self->scheduler, 0, set_vfo_worker, data, (GDestroyNotify)set_vfo_data_free);
 }
 
+const gchar *
+radio_control_hamlib_version(void)
+{
+  return rig_version();
+}
+
+const gchar *
+radio_control_hamlib_copyright(void)
+{
+  return rig_copyright();
+}
+
 static DexFuture *
 watcher_iteration(DexFuture *_, gpointer user_data)
 {
