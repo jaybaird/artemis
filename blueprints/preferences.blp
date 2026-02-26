@@ -62,15 +62,7 @@ Gtk.StringList stop_bits_model {
 }
 
 Gtk.StringList handshake_model {
-  strings: ["Default", "XON/XOFF", "None", "Hardware"];
-}
-
-Gtk.StringList control_lines_dtr_model {
-  strings: ["High", "Low"];
-}
-
-Gtk.StringList control_lines_rts_model {
-  strings: ["High", "Low"];
+  strings: ["None", "XON/XOFF", "Hardware"];
 }
 
 Adw.PreferencesDialog prefs_dialog {
@@ -211,8 +203,8 @@ Adw.PreferencesDialog prefs_dialog {
           model: stop_bits_model;
         }
 
-        Adw.ComboRow row_handshake_model {
-          title: _("Handshake Model");
+        Adw.ComboRow row_handshake {
+          title: _("Handshake");
           model: handshake_model;
         }
       }
@@ -268,6 +260,7 @@ Adw.PreferencesDialog prefs_dialog {
       }
 
       Label hamlib_version_label {
+        margin-top: 5;
         label: "";
       }
     }

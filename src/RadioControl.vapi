@@ -21,10 +21,11 @@ public struct RadioConfiguration {
     public string? device_path;
     [CCode (cname = "network_host")]
     public string? network_host;
-    public int network_port;
-    public int baud_rate;
-    public int data_bits;
-    public int stop_bits;
+    public uint network_port;
+    public uint baud_rate;
+    public uint data_bits;
+    public uint stop_bits;
+    public uint handshake;
 }
 
 [CCode (cname = "RadioModel", has_type_id = false)]

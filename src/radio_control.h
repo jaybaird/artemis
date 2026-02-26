@@ -36,10 +36,11 @@ typedef struct {
   gchar *connection_type;
   gchar *device_path;
   gchar *network_host;
-  gint network_port;
-  gint baud_rate;
-  gint data_bits;
-  gint stop_bits;
+  guint network_port;
+  guint baud_rate;
+  guint data_bits;
+  guint stop_bits;
+  guint handshake;
 } RadioConfiguration;
 
 
