@@ -1,6 +1,7 @@
 #include "radio_control.h"
 
 #include <glib.h>
+#include <glib/gi18n.h>
 #include <libdex.h>
 #include <hamlib/rig.h>
 #include <sched.h>
@@ -8,122 +9,71 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-static const RadioModel RADIO_MODELS[] = {
-  { RIG_MODEL_NETRIGCTL, "NET rigctl" },
-  { RIG_MODEL_FLRIG, "FLRig" },
-  
-  { RIG_MODEL_K2, "Elecraft - K2" },
-  { RIG_MODEL_K3, "Elecraft - K3" },
-  { RIG_MODEL_K3S, "Elecraft - K3S" },
-  { RIG_MODEL_K4, "Elecraft - K4" },
-  { RIG_MODEL_KX2, "Elecraft - KX2" },
-  { RIG_MODEL_KX3, "Elecraft - KX3" },
-  
-  { RIG_MODEL_F6K, "FlexRadio - 6xxx Series" },
-  
-  { RIG_MODEL_IC703, "Icom - IC-703" },
-  { RIG_MODEL_IC705, "Icom - IC-705" },
-  { RIG_MODEL_IC706, "Icom - IC-706" },
-  { RIG_MODEL_IC706MKII, "Icom - IC-706MkII" },
-  { RIG_MODEL_IC706MKIIG, "Icom - IC-706MkIIG" },
-  { RIG_MODEL_IC707, "Icom - IC-707" },
-  { RIG_MODEL_IC718, "Icom - IC-718" },
-  { RIG_MODEL_IC746, "Icom - IC-746" },
-  { RIG_MODEL_IC746PRO, "Icom - IC-746PRO" },
-  { RIG_MODEL_IC756, "Icom - IC-756" },
-  { RIG_MODEL_IC756PRO, "Icom - IC-756PRO" },
-  { RIG_MODEL_IC756PROII, "Icom - IC-756PROII" },
-  { RIG_MODEL_IC756PROIII, "Icom - IC-756PROIII" },
-  { RIG_MODEL_IC7000, "Icom - IC-7000" },
-  { RIG_MODEL_IC7100, "Icom - IC-7100" },
-  { RIG_MODEL_IC7200, "Icom - IC-7200" },
-  { RIG_MODEL_IC7300, "Icom - IC-7300" },
-  { RIG_MODEL_IC7600, "Icom - IC-7600" },
-  { RIG_MODEL_IC7610, "Icom - IC-7610" },
-  { RIG_MODEL_IC7700, "Icom - IC-7700" },
-  { RIG_MODEL_IC7800, "Icom - IC-7800" },
-  { RIG_MODEL_IC785x, "Icom - IC-7850/7851" },
-  { RIG_MODEL_IC905, "Icom - IC-905" },
-  { RIG_MODEL_IC9100, "Icom - IC-9100" },
-  { RIG_MODEL_IC9700, "Icom - IC-9700" },
-  
-  { RIG_MODEL_TS50, "Kenwood - TS-50S" },
-  { RIG_MODEL_TS140S, "Kenwood - TS-140S" },
-  { RIG_MODEL_TS440, "Kenwood - TS-440S" },
-  { RIG_MODEL_TS450S, "Kenwood - TS-450S" },
-  { RIG_MODEL_TS480, "Kenwood - TS-480" },
-  { RIG_MODEL_TS570D, "Kenwood - TS-570D" },
-  { RIG_MODEL_TS570S, "Kenwood - TS-570S" },
-  { RIG_MODEL_TS590S, "Kenwood - TS-590S" },
-  { RIG_MODEL_TS590SG, "Kenwood - TS-590SG" },
-  { RIG_MODEL_TS680S, "Kenwood - TS-680S" },
-  { RIG_MODEL_TS690S, "Kenwood - TS-690S" },
-  { RIG_MODEL_TS790, "Kenwood - TS-790" },
-  { RIG_MODEL_TS850, "Kenwood - TS-850" },
-  { RIG_MODEL_TS870S, "Kenwood - TS-870S" },
-  { RIG_MODEL_TS890S, "Kenwood - TS-890S" },
-  { RIG_MODEL_TS940, "Kenwood - TS-940S" },
-  { RIG_MODEL_TS950S, "Kenwood - TS-950S" },
-  { RIG_MODEL_TS950SDX, "Kenwood - TS-950SDX" },
-  { RIG_MODEL_TS990S, "Kenwood - TS-990S" },
-  { RIG_MODEL_TS2000, "Kenwood - TS-2000" },
-  
-  { RIG_MODEL_TT516, "Ten-Tec - TT-516 Argonaut V" },
-  { RIG_MODEL_TT538, "Ten-Tec - TT-538 Jupiter" },
-  { RIG_MODEL_TT565, "Ten-Tec - TT-565/566 Orion I/II" },
-  { RIG_MODEL_TT588, "Ten-Tec - TT-588 Omni VII" },
-  { RIG_MODEL_TT599, "Ten-Tec - TT-599 Eagle" },
-  
-  { RIG_MODEL_G90, "Xiegu - G90" },
-  { RIG_MODEL_X108G, "Xiegu - X108G" },
-  { RIG_MODEL_X5105, "Xiegu - X5105" },
-  { RIG_MODEL_X6100, "Xiegu - X6100" },
-  { RIG_MODEL_X6200, "Xiegu - X6200" },
-  
-  { RIG_MODEL_FT100, "Yaesu - FT-100" },
-  { RIG_MODEL_FT1000D, "Yaesu - FT-1000D" },
-  { RIG_MODEL_FT1000MP, "Yaesu - FT-1000MP" },
-  { RIG_MODEL_FT450, "Yaesu - FT-450/450D" },
-  { RIG_MODEL_FT710, "Yaesu - FT-710" },
-  { RIG_MODEL_FT736R, "Yaesu - FT-736R" },
-  { RIG_MODEL_FT747, "Yaesu - FT-747GX" },
-  { RIG_MODEL_FT757, "Yaesu - FT-757GX" },
-  { RIG_MODEL_FT757GXII, "Yaesu - FT-757GXII" },
-  { RIG_MODEL_FT767, "Yaesu - FT-767GX" },
-  { RIG_MODEL_FT817, "Yaesu - FT-817" },
-  { RIG_MODEL_FT818, "Yaesu - FT-818" },
-  { RIG_MODEL_FT840, "Yaesu - FT-840" },
-  { RIG_MODEL_FT847, "Yaesu - FT-847" },
-  { RIG_MODEL_FT857, "Yaesu - FT-857" },
-  { RIG_MODEL_FT890, "Yaesu - FT-890" },
-  { RIG_MODEL_FT891, "Yaesu - FT-891" },
-  { RIG_MODEL_FT897, "Yaesu - FT-897" },
-  { RIG_MODEL_FT897D, "Yaesu - FT-897D" },
-  { RIG_MODEL_FT900, "Yaesu - FT-900" },
-  { RIG_MODEL_FT920, "Yaesu - FT-920" },
-  { RIG_MODEL_FT950, "Yaesu - FT-950" },
-  { RIG_MODEL_FT980, "Yaesu - FT-980" },
-  { RIG_MODEL_FT990, "Yaesu - FT-990" },
-  { RIG_MODEL_FT991, "Yaesu - FT-991" },
-  { RIG_MODEL_FT2000, "Yaesu - FT-2000" },
-  { RIG_MODEL_FTDX10, "Yaesu - FTDX-10" },
-  { RIG_MODEL_FTDX101D, "Yaesu - FTDX-101D" },
-  { RIG_MODEL_FTDX101MP, "Yaesu - FTDX-101MP" },
-  { RIG_MODEL_FTDX1200, "Yaesu - FTDX-1200" },
-  { RIG_MODEL_FTDX3000, "Yaesu - FTDX-3000" },
-  { RIG_MODEL_FTDX5000, "Yaesu - FTDX-5000" },
-  { RIG_MODEL_FT9000, "Yaesu - FTDX-9000" },
-  { RIG_MODEL_FT1000MPMKV, "Yaesu - MARK-V FT-1000MP" },
-  { RIG_MODEL_FT1000MPMKVFLD, "Yaesu - MARK-V Field FT-1000MP" }
-};
+static RadioModel *radio_models_cache = NULL;
+static gint radio_models_count = 0;
+static gsize radio_models_once = 0;
 
-static size_t get_radio_models_count(void) {
-    return sizeof(RADIO_MODELS) / sizeof(RADIO_MODELS[0]);
+static int 
+collect_radio(rig_model_t rig_model, rig_ptr_t data) {
+  GArray *rigs = (GArray *)data;
+  RadioModel m = {0};
+  
+#ifdef RIG_MODEL_DUMMY_NOVFO
+  if (rig_model == RIG_MODEL_DUMMY_NOVFO) return 1;
+#endif
+
+  if (rig_model == RIG_MODEL_DUMMY) {
+    m.display_name = _("None");
+  } else {
+    const char *mfg = rig_get_caps_cptr(rig_model, RIG_CAPS_MFG_NAME_CPTR);
+    const char *model = rig_get_caps_cptr (rig_model, RIG_CAPS_MODEL_NAME_CPTR);
+    m.display_name = g_strdup_printf("%s%s%s", mfg, (*mfg && *model) ? " - " : "", model);
+  }
+
+  m.model_id = rig_model;
+  m.port_type = RADIO_PORT_NONE;
+  switch (rig_get_caps_int(rig_model, RIG_CAPS_PORT_TYPE)) {
+    case RIG_PORT_SERIAL:
+      m.port_type = RADIO_PORT_SERIAL;
+      break;
+    case RIG_PORT_NETWORK:
+      m.port_type = RADIO_PORT_NETWORK;
+      break;
+    case RIG_PORT_USB:
+      m.port_type = RADIO_PORT_USB;
+      break;
+    default: break;
+  }
+
+  g_array_append_val(rigs, m);
+  return 1;
 }
 
-const RadioModel* radio_control_get_radio_models(gint *count) {
-    *count = get_radio_models_count();
-    return RADIO_MODELS;
+static gint
+radio_model_cmp(gconstpointer a, gconstpointer b) {
+  const RadioModel *ra = a;
+  const RadioModel *rb = b;
+
+  return g_ascii_strcasecmp(ra->display_name, rb->display_name);
+}
+
+const RadioModel* 
+radio_control_get_radio_models(gint *count) {
+  if (g_once_init_enter(&radio_models_once)) {
+    GArray *rigs = g_array_new(FALSE, FALSE, sizeof(RadioModel));
+    rig_load_all_backends();
+    rig_list_foreach_model(collect_radio, rigs);
+
+    g_array_sort(rigs, radio_model_cmp);
+    radio_models_count = rigs->len;
+    radio_models_cache = (RadioModel *)g_array_free(rigs, FALSE);
+    printf("Loaded %d rig models for hamlib version %s\n", radio_models_count, rig_version());
+
+    g_once_init_leave(&radio_models_once, 1);
+  }
+
+  if (count) *count = radio_models_count;
+  return radio_models_cache;
 }
 
 static enum RadioMode

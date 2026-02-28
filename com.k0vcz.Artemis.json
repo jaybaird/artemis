@@ -1,17 +1,17 @@
 {
-    "id" : "com.k0vcz.Artemis",
-    "runtime" : "org.gnome.Platform",
-    "runtime-version" : "49",
-    "sdk" : "org.gnome.Sdk",
-    "command" : "com.k0vcz.Artemis",
-    "finish-args" : [
+    "id": "com.k0vcz.Artemis",
+    "runtime": "org.gnome.Platform",
+    "runtime-version": "49",
+    "sdk": "org.gnome.Sdk",
+    "command": "com.k0vcz.Artemis",
+    "finish-args": [
         "--share=network",
         "--share=ipc",
         "--socket=fallback-x11",
-        "--device=dri",
+        "--device=all",
         "--socket=wayland"
     ],
-    "cleanup" : [
+    "cleanup": [
         "/include",
         "/lib/pkgconfig",
         "/man",
@@ -23,7 +23,7 @@
         "*.la",
         "*.a"
     ],
-    "modules" : [
+    "modules": [
         {
             "name": "hamlib",
             "buildsystem": "autotools",
@@ -39,9 +39,9 @@
             ],
             "sources": [
                 {
-                    "type": "archive",
-                    "url": "https://github.com/Hamlib/Hamlib/releases/download/4.6.5/hamlib-4.6.5.tar.gz",
-                    "sha256": "90d6f1dba59417c00f8f4545131c7efd31930cd0e178598980a8210425e3852e"
+                    "type": "git",
+                    "url": "https://github.com/Hamlib/Hamlib.git",
+                    "commit": "554e02b39442f002a9a14655d86cafab842573ba"
                 }
             ]
         },
@@ -62,7 +62,8 @@
                 {
                     "type": "git",
                     "url": "https://github.com/protocolbuffers/protobuf.git",
-                    "tag": "v32.1"
+                    "tag": "v32.1",
+                    "commit": "7fcfd66022455635fa29af92987cdc0967efd4f3"
                 }
             ]
         },
@@ -73,7 +74,8 @@
                 {
                     "type": "git",
                     "url": "https://github.com/protobuf-c/protobuf-c.git",
-                    "tag": "v1.5.2"
+                    "tag": "v1.5.2",
+                    "commit": "4719fdd7760624388c2c5b9d6759eb6a47490626"
                 }
             ]
         },
@@ -84,7 +86,8 @@
                 {
                     "type": "git",
                     "url": "https://gitlab.gnome.org/GNOME/libshumate.git",
-                    "tag": "1.5.0"
+                    "tag": "1.5.0",
+                    "commit": "570222efec093a1e9df928f62113e0756aa302a0"
                 }
             ]
         },
