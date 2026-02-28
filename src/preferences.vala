@@ -293,7 +293,31 @@ public sealed class PreferencesDialog : Object {
         });
     } /* bind_combo_to_string_setting */
 
-    private uint data_bits_selected_to_actual (uint selected) {
+    private static uint stop_bits_selected_to_actual (uint selected) {
+        switch (selected) {
+            case 0:
+                return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+        }
+        return 0;
+    }
+
+    private static uint stop_bits_actual_to_selected (uint stop_bits) {
+        switch (stop_bits) {
+            case 0:
+                return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+        }
+        return 0;
+    }
+
+    private static uint data_bits_selected_to_actual (uint selected) {
         switch (selected) {
             case 0:
                 return 0;
@@ -305,7 +329,7 @@ public sealed class PreferencesDialog : Object {
         return 0;
     }
 
-    private uint data_bits_actual_to_selected (uint data_bits) {
+    private static uint data_bits_actual_to_selected (uint data_bits) {
         switch (data_bits) {
             case 0:
                 return 0;
@@ -317,7 +341,7 @@ public sealed class PreferencesDialog : Object {
         return 0;
     }
 
-    private string handshake_selected_to_str (uint selected) {
+    private static string handshake_selected_to_str (uint selected) {
         switch (selected) {
             case 0:
                 return "None";
@@ -375,15 +399,15 @@ public sealed class PreferencesDialog : Object {
             return;
 
         var current_stop_bits = Application.settings.get_uint ("radio-stop-bits");
-        row_stop_bits.selected = current_stop_bits;
+        row_stop_bits.selected = stop_bits_actual_to_selected (current_stop_bits);
 
         row_stop_bits.notify["selected"].connect (() => {
-            Application.settings.set_uint ("radio-stop-bits", row_stop_bits.selected);
+            Application.settings.set_uint ("radio-stop-bits", stop_bits_selected_to_actual (row_stop_bits.selected));
         });
 
         Application.settings.changed["radio-stop-bits"].connect (() => {
             var stop_bits = Application.settings.get_uint ("radio-stop-bits");
-            row_stop_bits.selected = stop_bits;
+            row_stop_bits.selected = stop_bits_actual_to_selected (stop_bits);
         });
     }
 
