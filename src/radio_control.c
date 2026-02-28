@@ -171,7 +171,12 @@ try_set_rig_conf(RIG        *rig,
     return TRUE;
   }
 
+#ifdef HAVE_HAMLIB_SET_CONF2
+  rc = rig_set_conf2(rig, token, value, strlen(value));
+#else
   rc = rig_set_conf(rig, token, value);
+#endif
+
   if (rc != RIG_OK) {
     if (required) {
       g_set_error(error,

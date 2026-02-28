@@ -19,6 +19,19 @@ gio_dep = dependency('gio-2.0')
 libdex_dep = dependency('libdex-1')
 hamlib_dep = dependency('hamlib')
 
+cc = meson.get_compiler('c')
+
+has_set_conf2 = cc.has_function(
+  'rig_set_conf2',
+  prefix: '#include <hamlib/rig.h>',
+  dependencies: hamlib_dep
+)
+config.set('HAVE_HAMLIB_SET_CONF2', has_set_conf2 ? 1 : 0)
+if has_set_conf2
+  message('Hamlib >= 4.7 detected. Using set_conf2')
+  add_project_arguments('-DHAVE_HAMLIB_SET_CONF2=1', language: 'c')
+endif
+
 src_inc = include_directories('.')
 
 libradiocontrol = static_library(
@@ -28,7 +41,6 @@ libradiocontrol = static_library(
   dependencies: [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
 )
 
-cc = meson.get_compiler('c')
 mathlib = cc.find_library('m', required: true)
 
 artemis_vala_deps = [
