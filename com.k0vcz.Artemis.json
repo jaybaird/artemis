@@ -41,7 +41,7 @@
                 {
                     "type": "git",
                     "url": "https://github.com/Hamlib/Hamlib.git",
-                    "sha256": "554e02b39442f002a9a14655d86cafab842573ba"
+                    "commit": "554e02b39442f002a9a14655d86cafab842573ba"
                 }
             ]
         },
