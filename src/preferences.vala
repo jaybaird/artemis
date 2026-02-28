@@ -96,7 +96,7 @@ public sealed class PreferencesDialog : Object {
 
         row_radio_model = builder.get_object ("row_radio_model") as Adw.ComboRow;
         var radio_models = RadioControl.get_radio_models ();
-        var radio_model_list = new Gtk.StringList ({_("None")});
+        var radio_model_list = new Gtk.StringList ({});
         for (var i = 0; i < radio_models.length; i++) {
             radio_model_list.append (radio_models[i].display_name);
         }
@@ -210,7 +210,7 @@ public sealed class PreferencesDialog : Object {
                 var models = RadioControl.get_radio_models ();
                 for (var i = 1; i < models.length; i++) {
                     if (models[i].model_id == radio_model) {
-                        value.set_uint (i + 1); // offset for 'None'
+                        value.set_uint (i);
                         return true;
                     }
                 }
@@ -220,7 +220,7 @@ public sealed class PreferencesDialog : Object {
             (value, variant, user_data) => {
                 var models = RadioControl.get_radio_models ();
                 var idx = value.get_uint ();
-                var model_id = models[idx - 1].model_id; // offset for 'None'
+                var model_id = models[idx].model_id;
                 print ("model_id: %d".printf (model_id));
                 return new Variant.int32 (model_id);
             },

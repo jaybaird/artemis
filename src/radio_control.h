@@ -10,6 +10,13 @@ G_BEGIN_DECLS
 
 G_DECLARE_FINAL_TYPE(RadioControl, radio_control, ARTEMIS, RADIO_CONTROL, GObject)
 
+enum RadioPortType {
+  RADIO_PORT_NONE,
+  RADIO_PORT_SERIAL,
+  RADIO_PORT_NETWORK,
+  RADIO_PORT_USB
+};
+
 enum RadioMode {
   RADIO_MODE_UNKNOWN, 
   RADIO_MODE_CW, 
@@ -47,6 +54,7 @@ typedef struct {
 typedef struct {
   int model_id;
   const char *display_name;
+  enum RadioPortType port_type;
 } RadioModel;
 
 const 
