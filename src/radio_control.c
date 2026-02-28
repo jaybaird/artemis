@@ -67,6 +67,7 @@ radio_control_get_radio_models(gint *count) {
     g_array_sort(rigs, radio_model_cmp);
     radio_models_count = rigs->len;
     radio_models_cache = (RadioModel *)g_array_free(rigs, FALSE);
+    printf("Loaded %d rig models for hamlib version %s\n", radio_models_count, rig_version());
 
     g_once_init_leave(&radio_models_once, 1);
   }
