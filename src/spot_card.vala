@@ -18,7 +18,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#if ARTEMIS_UNIX
 using WebKit;
+#endif
 
 private static string humanize_ago (GLib.DateTime dt) {
     var now = new GLib.DateTime.now_utc ();
