@@ -89,11 +89,14 @@ public sealed class AppWindow : Gtk.Window {
     private ulong radio_status_handler = 0;
     private ulong radio_error_handler = 0;
 
+    private static Gee.HashSet<string> active_error_keys;
+
     public AppWindow (Gtk.Application app) {
         Object (application: app);
     }
 
     construct {
+        active_error_keys = new Gee.HashSet<string> ();
         radio_mode.visible = Application.is_radio_configured;
         if (Application.is_radio_configured) {
             start_radio ();
@@ -216,18 +219,40 @@ public sealed class AppWindow : Gtk.Window {
         });
 
         Application.spot_repo.update_error.connect ((error) => {
-            var alert_dialog = new Adw.AlertDialog (_ (
+            var error_key = "%s:%d".printf (error.domain.to_string (), error.code);
+            if (active_error_keys.contains (error_key))
+                return;
+
+            var alert_dialog = new Adw.AlertDialog (_(
                 "Unable to refresh spots"),
                 null);
-            alert_dialog.format_body (_ (
+            alert_dialog.format_body (_(
                 "Unable to refresh spots due to an error: %s"), error.message);
             alert_dialog.add_responses (
-                "cancel", _ ("Cancel"),
-                "retry", _ ("Retry")
+                "cancel", _("Cancel"),
+                "retry", _("Retry")
                 );
+            alert_dialog.set_response_appearance ("retry", Adw.ResponseAppearance.SUGGESTED);
             alert_dialog.set_default_response ("cancel");
             alert_dialog.set_close_response ("cancel");
-            alert_dialog.present (this);
+
+            active_error_keys.add (error_key);
+            alert_dialog.choose.begin (this, null, (obj, res) => {
+                active_error_keys.remove (error_key);
+                try {
+                    var response = alert_dialog.choose.end (res);
+                    switch (response) {
+                        case "retry":
+                            Application.spot_repo.update_spots.begin ();
+                            break;
+                        case "cancel":
+                        default:
+                            break;
+                    }
+                } catch (Error e) {
+                    warning ("Unable to alert user, dialog failed: %s", e.message);
+                }
+            });
         });
 
         setup_spot_updates ();
@@ -543,8 +568,8 @@ public sealed class AppWindow : Gtk.Window {
         if (update_paused) {
             current_ticks = 0;
             refresh_button.icon_name = "view-refresh-symbolic";
-            refresh_button.tooltip_text = _ ("Refresh");
-            refresh_progress.tooltip_text = _ ("Updates Paused");
+            refresh_button.tooltip_text = _("Refresh");
+            refresh_progress.tooltip_text = _("Updates Paused");
             refresh_progress.fraction = 0;
         } else {
             last_refresh_time = get_monotonic_time ();

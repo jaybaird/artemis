@@ -25,20 +25,20 @@ private static string humanize_ago (GLib.DateTime dt) {
     int64 span_us = now.difference (dt);
 
     if (span_us < 0)
-        return _ ("in the future");
+        return _("in the future");
 
     int64 sec = span_us / GLib.TimeSpan.SECOND;
     int64 min = span_us / GLib.TimeSpan.MINUTE;
 
     if (sec < 5)
-        return _ ("just now");
+        return _("just now");
     if (sec < 60)
-        return _ ("%ld seconds ago").printf ((long)sec);
+        return _("%ld seconds ago").printf ((long)sec);
     if (min == 1)
-        return _ ("a minute ago");
+        return _("a minute ago");
     if (min < 60)
-        return _ ("%ld minutes ago").printf ((long)min);
-    return _ ("more than an hour ago");
+        return _("%ld minutes ago").printf ((long)min);
+    return _("more than an hour ago");
 }
 
 private static string bearing_to_compass (double bearing) {
@@ -46,8 +46,8 @@ private static string bearing_to_compass (double bearing) {
     if (bearing < 0)
         bearing += 360.0;
 
-    string[] directions = { _ ("N"), _ ("NE"), _ ("E"), _ ("SE"), _ ("S"), _ (
-        "SW"), _ ("W"), _ ("NW") };
+    string[] directions = { _("N"), _("NE"), _("E"), _("SE"), _("S"), _(
+        "SW"), _("W"), _("NW") };
     int index = (int)Math.floor ((bearing + 22.5) / 45.0) % 8;
     return directions[index];
 }
@@ -355,14 +355,14 @@ public sealed class SpotCard : Gtk.Box {
         if (spot.is_new_park && Application.settings.get_boolean (
             "highlight-unhunted-parks")) {
             corner_image.icon_name = "starred-symbolic";
-            corner_image.tooltip_text = _ ("New park!");
+            corner_image.tooltip_text = _("New park!");
             corner_image.visible = true;
             corner_image.add_css_class ("unhunted");
             corner_image.remove_css_class ("hunted");
         }
 
         if (spot.was_hunted_today) {
-            corner_image.tooltip_text = _ ("Hunted today");
+            corner_image.tooltip_text = _("Hunted today");
             corner_image.icon_name = "bullseye-symbolic";
             corner_image.visible = true;
             corner_image.remove_css_class ("unhunted");
@@ -377,11 +377,11 @@ public sealed class SpotCard : Gtk.Box {
         } else {
             distance_bearing.visible = true;
             var use_metric = Application.settings.get_boolean ("use-metric");
-            var unit = _ ("km");
+            var unit = _("km");
             var distance = spot.distance;
 
             if (!use_metric) {
-                unit = _ ("mi");
+                unit = _("mi");
                 distance = spot.distance * 0.6213712;
             }
             bearing_label.label = "%d° %s".printf ((int)spot.bearing,
@@ -593,13 +593,13 @@ public class SpotHistoryDialog : Adw.Dialog {
         history_list.remove_all ();
 
         if (history_data.get_node_type () != Json.NodeType.ARRAY) {
-            show_error (_ ("Invalid response format from POTA API"));
+            show_error (_("Invalid response format from POTA API"));
             return;
         }
 
         var spots_array = history_data.get_array ();
         if (spots_array.get_length () == 0) {
-            show_error (_ ("No spot history found"));
+            show_error (_("No spot history found"));
             return;
         }
 
@@ -630,7 +630,7 @@ public class ParkDetailsView : Adw.Dialog {
         var toolbar_view = new Adw.ToolbarView ();
 
         var headerbar = new Adw.HeaderBar ();
-        title_widget = new Adw.WindowTitle (_ ("Park Details"), "");
+        title_widget = new Adw.WindowTitle (_("Park Details"), "");
         headerbar.set_title_widget (title_widget);
 
         toolbar_view.add_top_bar (headerbar);
