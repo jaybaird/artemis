@@ -19,6 +19,7 @@ BUILD_DIR="${BUILD_DIR:-$ROOT_DIR/build-windows}"
 DESTDIR="${DESTDIR:-$ROOT_DIR/dist/windows/stage}"
 BUNDLE_DIR="${BUNDLE_DIR:-$ROOT_DIR/dist/windows/Artemis}"
 BUILD_TYPE="${BUILD_TYPE:-release}"
+WINDOWS_LINK_ARGS="${WINDOWS_LINK_ARGS:--mwindows}"
 APP_EXE_NAME="${APP_EXE_NAME:-com.k0vcz.Artemis.exe}"
 ICON_SVG="${ICON_SVG:-$ROOT_DIR/data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg}"
 ICON_ICO_BUILD="${ICON_ICO_BUILD:-$ROOT_DIR/data/icons/windows/com.k0vcz.Artemis.ico}"
@@ -85,6 +86,7 @@ echo "==> Configuring Meson build dir: $BUILD_DIR"
 meson setup "$BUILD_DIR" \
   --wipe \
   --buildtype "$BUILD_TYPE" \
+  -Dc_link_args="$WINDOWS_LINK_ARGS" \
   --prefix /
 
 echo "==> Compiling"
@@ -332,10 +334,10 @@ set "GIO_USE_TLS=gnutls"
 set "FONTCONFIG_PATH=%APPDIR%etc\fonts"
 set "FONTCONFIG_FILE=%APPDIR%etc\fonts\fonts.conf"
 set "SSL_CERT_DIR=%APPDIR%etc\ssl\certs"
-set "SSL_CERT_FILE=%APPDIR%etc\ssl\certs\${CERT_FILE_BASENAME}"
-set "G_TLS_CA_FILE=%APPDIR%etc\ssl\certs\${CERT_FILE_BASENAME}"
-set "CURL_CA_BUNDLE=%APPDIR%etc\ssl\certs\${CERT_FILE_BASENAME}"
-"%APPDIR%bin\${APP_EXE_NAME}" %*
+set "SSL_CERT_FILE=%APPDIR%etc\ssl\certs\\${CERT_FILE_BASENAME}"
+set "G_TLS_CA_FILE=%APPDIR%etc\ssl\certs\\${CERT_FILE_BASENAME}"
+set "CURL_CA_BUNDLE=%APPDIR%etc\ssl\certs\\${CERT_FILE_BASENAME}"
+"%APPDIR%bin\\${APP_EXE_NAME}" %*
 endlocal
 EOF
 
