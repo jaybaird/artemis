@@ -186,6 +186,15 @@ fi
 
 # Ensure schemas are compiled inside the staged bundle.
 SCHEMA_DIR="$BUNDLE_DIR/share/glib-2.0/schemas"
+if [[ ! -d "$SCHEMA_DIR" ]]; then
+  mkdir -p "$SCHEMA_DIR"
+fi
+
+if [[ ! -f "$SCHEMA_DIR/com.k0vcz.Artemis.gschema.xml" ]] && [[ -f "$ROOT_DIR/data/com.k0vcz.Artemis.gschema.xml" ]]; then
+  echo "==> Restoring missing app schema into bundle"
+  cp -f "$ROOT_DIR/data/com.k0vcz.Artemis.gschema.xml" "$SCHEMA_DIR/"
+fi
+
 if [[ -d "$SCHEMA_DIR" ]]; then
   echo "==> Compiling GSettings schemas in bundle"
   glib-compile-schemas "$SCHEMA_DIR"
@@ -211,6 +220,7 @@ fi
 echo "==> Bundling fontconfig + fonts"
 if ! copy_first_existing_tree \
   "$BUNDLE_DIR/etc/fonts" \
+  "/etc/fonts" \
   "/ucrt64/etc/fonts" \
   "/ucrt32/etc/fonts" \
   "/mingw64/etc/fonts" \
@@ -223,6 +233,7 @@ fi
 
 if ! copy_first_existing_tree \
   "$BUNDLE_DIR/share/fonts" \
+  "/usr/share/fonts" \
   "/ucrt64/share/fonts" \
   "/ucrt32/share/fonts" \
   "/mingw64/share/fonts" \
@@ -240,6 +251,11 @@ if command -v fc-cache >/dev/null 2>&1 && [[ -d "$BUNDLE_DIR/etc/fonts" ]]; then
   FONTCONFIG_FILE="$BUNDLE_DIR/etc/fonts/fonts.conf" \
   XDG_DATA_HOME="$BUNDLE_DIR/share" \
   fc-cache -f -v "$BUNDLE_DIR/share/fonts" >/dev/null || true
+fi
+
+if [[ ! -f "$BUNDLE_DIR/share/glib-2.0/schemas/gschemas.compiled" ]]; then
+  echo "error: gschemas.compiled not found in bundle at $BUNDLE_DIR/share/glib-2.0/schemas" >&2
+  exit 1
 fi
 
 # Rebuild GIO module cache in the bundled module dir.
