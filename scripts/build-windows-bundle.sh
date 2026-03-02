@@ -173,7 +173,12 @@ scan_bundle_deps() {
   for pass in 1 2 3; do
     echo "  pass $pass"
     shopt -s nullglob
-    for f in "$BUNDLE_DIR/bin/"*.exe "$BUNDLE_DIR/bin/"*.dll; do
+    for f in \
+      "$BUNDLE_DIR/bin/"*.exe \
+      "$BUNDLE_DIR/bin/"*.dll \
+      "$BUNDLE_DIR/lib/gio/modules/"*.dll \
+      "$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders/"*.dll
+    do
       copy_runtime_deps "$f"
     done
     shopt -u nullglob
@@ -226,11 +231,26 @@ fi
 
 # Bundle CA certificates used by TLS backends/libsoup.
 echo "==> Bundling CA certificates"
-if ! copy_first_existing_tree \
-  "$BUNDLE_DIR/etc/ssl/certs" \
-  "$MINGW_PREFIX/etc/ssl/certs"
-then
+if [[ -d "$MINGW_PREFIX/etc/ssl/certs" ]]; then
+  mkdir -p "$BUNDLE_DIR/etc/ssl"
+  rm -rf "$BUNDLE_DIR/etc/ssl/certs"
+  # Follow symlinks so CA files are materialized in bundles on shared filesystems.
+  cp -aL "$MINGW_PREFIX/etc/ssl/certs" "$BUNDLE_DIR/etc/ssl/"
+else
   echo "warning: could not find $MINGW_PREFIX/etc/ssl/certs; TLS cert validation may fail" >&2
+fi
+
+CERT_FILE_BASENAME=""
+for c in ca-bundle.crt ca-certificates.crt ca-bundle.trust.crt; do
+  if [[ -f "$BUNDLE_DIR/etc/ssl/certs/$c" ]]; then
+    CERT_FILE_BASENAME="$c"
+    break
+  fi
+done
+
+if [[ -z "$CERT_FILE_BASENAME" ]]; then
+  echo "warning: no recognized CA bundle found in $BUNDLE_DIR/etc/ssl/certs" >&2
+  CERT_FILE_BASENAME="ca-bundle.crt"
 fi
 
 # Bundle fontconfig config + fonts so GTK can resolve Adwaita/Cantarell/mono faces.
@@ -274,6 +294,14 @@ else
   echo "warning: gio-querymodules not found or no bundled gio/modules; skipping cache generation" >&2
 fi
 
+# Build GdkPixbuf loader cache used at runtime for image decoding.
+GDK_PIXBUF_LOADERS_DIR="$BUNDLE_DIR/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+GDK_PIXBUF_LOADERS_CACHE="$GDK_PIXBUF_LOADERS_DIR/loaders.cache"
+if command -v gdk-pixbuf-query-loaders >/dev/null 2>&1 && [[ -d "$GDK_PIXBUF_LOADERS_DIR" ]]; then
+  echo "==> Generating GDK Pixbuf loader cache"
+  gdk-pixbuf-query-loaders "$GDK_PIXBUF_LOADERS_DIR"/*.dll > "$GDK_PIXBUF_LOADERS_CACHE" || true
+fi
+
 # Include icon themes used by GTK runtime where available.
 for d in \
   "$MINGW_PREFIX/share/icons/Adwaita" \
@@ -294,14 +322,19 @@ cat > "$BUNDLE_DIR/Artemis.bat" <<EOF
 @echo off
 setlocal
 set "APPDIR=%~dp0"
+set "PATH=%APPDIR%bin;%PATH%"
 set "GSETTINGS_SCHEMA_DIR=%APPDIR%share\glib-2.0\schemas"
 set "XDG_DATA_DIRS=%APPDIR%share"
 set "GDK_PIXBUF_MODULEDIR=%APPDIR%lib\gdk-pixbuf-2.0\2.10.0\loaders"
+set "GDK_PIXBUF_MODULE_FILE=%APPDIR%lib\gdk-pixbuf-2.0\2.10.0\loaders\loaders.cache"
 set "GIO_MODULE_DIR=%APPDIR%lib\gio\modules"
+set "GIO_USE_TLS=gnutls"
 set "FONTCONFIG_PATH=%APPDIR%etc\fonts"
 set "FONTCONFIG_FILE=%APPDIR%etc\fonts\fonts.conf"
-set "SSL_CERT_FILE=%APPDIR%etc\ssl\certs\ca-certificates.crt"
-set "G_TLS_CA_FILE=%APPDIR%etc\ssl\certs\ca-certificates.crt"
+set "SSL_CERT_DIR=%APPDIR%etc\ssl\certs"
+set "SSL_CERT_FILE=%APPDIR%etc\ssl\certs\${CERT_FILE_BASENAME}"
+set "G_TLS_CA_FILE=%APPDIR%etc\ssl\certs\${CERT_FILE_BASENAME}"
+set "CURL_CA_BUNDLE=%APPDIR%etc\ssl\certs\${CERT_FILE_BASENAME}"
 "%APPDIR%bin\${APP_EXE_NAME}" %*
 endlocal
 EOF
