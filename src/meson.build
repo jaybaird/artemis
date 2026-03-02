@@ -13,8 +13,6 @@ artemis_vala_sources = [
   'src/map_view.vala',
 ]
 
-is_windows = host_machine.system() == 'windows'
-
 if is_windows
   add_project_arguments(
     ['--define=ARTEMIS_WINDOWS'],
