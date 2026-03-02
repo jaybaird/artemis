@@ -167,16 +167,21 @@ copy_first_existing_tree() {
   return 1
 }
 
-echo "==> Copying runtime DLL dependencies"
-for pass in 1 2 3; do
-  echo "  pass $pass"
-  shopt -s nullglob
-  for f in "$BUNDLE_DIR/bin/"*.exe "$BUNDLE_DIR/bin/"*.dll; do
-    copy_runtime_deps "$f"
+scan_bundle_deps() {
+  local pass
+  echo "==> Copying runtime DLL dependencies"
+  for pass in 1 2 3; do
+    echo "  pass $pass"
+    shopt -s nullglob
+    for f in "$BUNDLE_DIR/bin/"*.exe "$BUNDLE_DIR/bin/"*.dll; do
+      copy_runtime_deps "$f"
+    done
+    shopt -u nullglob
   done
-  shopt -u nullglob
-done
-echo "==> Runtime DLL dependency scan complete"
+  echo "==> Runtime DLL dependency scan complete"
+}
+
+scan_bundle_deps
 
 # Bundle GIO modules (includes glib-networking TLS backend) explicitly.
 echo "==> Bundling GIO modules"
@@ -200,6 +205,11 @@ fi
 SCHEMA_DIR="$BUNDLE_DIR/share/glib-2.0/schemas"
 if [[ ! -d "$SCHEMA_DIR" ]]; then
   mkdir -p "$SCHEMA_DIR"
+fi
+
+# Bring in system schemas (e.g. org.gnome.system.proxy) required by some GIO modules.
+if [[ -d "$MINGW_PREFIX/share/glib-2.0/schemas" ]]; then
+  cp -af "$MINGW_PREFIX/share/glib-2.0/schemas/." "$SCHEMA_DIR/"
 fi
 
 if [[ ! -f "$SCHEMA_DIR/com.k0vcz.Artemis.gschema.xml" ]] && [[ -f "$ROOT_DIR/data/com.k0vcz.Artemis.gschema.xml" ]]; then
@@ -252,6 +262,9 @@ if [[ ! -f "$BUNDLE_DIR/share/glib-2.0/schemas/gschemas.compiled" ]]; then
   echo "error: gschemas.compiled not found in bundle at $BUNDLE_DIR/share/glib-2.0/schemas" >&2
   exit 1
 fi
+
+# Modules copied above may pull in additional DLLs not referenced by the app EXE.
+scan_bundle_deps
 
 # Rebuild GIO module cache in the bundled module dir.
 if command -v gio-querymodules >/dev/null 2>&1 && [[ -d "$BUNDLE_DIR/lib/gio/modules" ]]; then
