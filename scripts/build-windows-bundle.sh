@@ -86,13 +86,30 @@ meson compile -C "$BUILD_DIR"
 echo "==> Installing to staged DESTDIR: $DESTDIR"
 meson install -C "$BUILD_DIR" --destdir "$DESTDIR"
 
-if [[ ! -d "$DESTDIR/bin" ]]; then
-  echo "error: expected $DESTDIR/bin after install" >&2
+# Meson on Windows/MSYS can stage under DESTDIR/<prefix>/... (e.g. DESTDIR/msys64/bin).
+STAGE_ROOT=""
+APP_STAGE_EXE="$(find "$DESTDIR" -type f -name "$APP_EXE_NAME" | head -n 1 || true)"
+if [[ -z "$APP_STAGE_EXE" ]]; then
+  echo "error: missing staged executable '$APP_EXE_NAME' under $DESTDIR" >&2
   exit 1
 fi
 
+APP_STAGE_DIR="$(dirname "$APP_STAGE_EXE")"
+if [[ "$(basename "$APP_STAGE_DIR")" != "bin" ]]; then
+  echo "error: staged executable not under a bin directory: $APP_STAGE_EXE" >&2
+  exit 1
+fi
+STAGE_ROOT="$(dirname "$APP_STAGE_DIR")"
+
+if [[ ! -d "$STAGE_ROOT/bin" ]]; then
+  echo "error: detected stage root has no bin dir: $STAGE_ROOT" >&2
+  exit 1
+fi
+
+echo "==> Detected staged install root: $STAGE_ROOT"
+
 echo "==> Copying staged install to bundle dir: $BUNDLE_DIR"
-cp -a "$DESTDIR/." "$BUNDLE_DIR/"
+cp -a "$STAGE_ROOT/." "$BUNDLE_DIR/"
 
 if [[ ! -f "$BUNDLE_DIR/bin/$APP_EXE_NAME" ]]; then
   echo "error: missing app executable: $BUNDLE_DIR/bin/$APP_EXE_NAME" >&2
