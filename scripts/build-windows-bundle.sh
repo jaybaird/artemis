@@ -23,6 +23,7 @@ APP_EXE_NAME="${APP_EXE_NAME:-com.k0vcz.Artemis.exe}"
 ICON_SVG="${ICON_SVG:-$ROOT_DIR/data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg}"
 ICON_ICO_BUILD="${ICON_ICO_BUILD:-$ROOT_DIR/data/icons/windows/com.k0vcz.Artemis.ico}"
 ICON_ICO_BUNDLE="${ICON_ICO_BUNDLE:-$BUNDLE_DIR/com.k0vcz.Artemis.ico}"
+MINGW_PREFIX="${MINGW_PREFIX:-}"
 
 if ! command -v meson >/dev/null 2>&1; then
   echo "error: meson not found in PATH" >&2
@@ -42,6 +43,12 @@ fi
 mkdir -p "$ROOT_DIR/dist/windows"
 rm -rf "$DESTDIR" "$BUNDLE_DIR"
 mkdir -p "$DESTDIR" "$BUNDLE_DIR"
+
+if [[ -z "$MINGW_PREFIX" ]]; then
+  echo "error: MINGW_PREFIX is not set. Run from an MSYS2 MinGW/UCRT shell." >&2
+  exit 1
+fi
+echo "==> Using MINGW_PREFIX: $MINGW_PREFIX"
 
 build_windows_icon() {
   echo "==> Building Windows .ico from SVG"
@@ -174,14 +181,18 @@ done
 echo "==> Bundling GIO modules"
 if ! copy_first_existing_tree \
   "$BUNDLE_DIR/lib/gio/modules" \
-  "/ucrt64/lib/gio/modules" \
-  "/ucrt32/lib/gio/modules" \
-  "/mingw64/lib/gio/modules" \
-  "/mingw32/lib/gio/modules" \
-  "/clang64/lib/gio/modules" \
-  "/clang32/lib/gio/modules"
+  "$MINGW_PREFIX/lib/gio/modules"
 then
   echo "warning: could not find source gio/modules directory; TLS may fail at runtime" >&2
+fi
+
+# Bundle GDK Pixbuf loaders/modules explicitly.
+echo "==> Bundling GDK Pixbuf loaders"
+if ! copy_first_existing_tree \
+  "$BUNDLE_DIR/lib/gdk-pixbuf-2.0" \
+  "$MINGW_PREFIX/lib/gdk-pixbuf-2.0"
+then
+  echo "warning: could not find source gdk-pixbuf-2.0 directory; image loader support may be incomplete" >&2
 fi
 
 # Ensure schemas are compiled inside the staged bundle.
@@ -206,40 +217,23 @@ fi
 echo "==> Bundling CA certificates"
 if ! copy_first_existing_tree \
   "$BUNDLE_DIR/etc/ssl/certs" \
-  "/ucrt64/etc/ssl/certs" \
-  "/ucrt32/etc/ssl/certs" \
-  "/mingw64/etc/ssl/certs" \
-  "/mingw32/etc/ssl/certs" \
-  "/clang64/etc/ssl/certs" \
-  "/clang32/etc/ssl/certs"
+  "$MINGW_PREFIX/etc/ssl/certs"
 then
-  echo "warning: could not find /etc/ssl/certs from MSYS2 runtime; TLS cert validation may fail" >&2
+  echo "warning: could not find $MINGW_PREFIX/etc/ssl/certs; TLS cert validation may fail" >&2
 fi
 
 # Bundle fontconfig config + fonts so GTK can resolve Adwaita/Cantarell/mono faces.
 echo "==> Bundling fontconfig + fonts"
 if ! copy_first_existing_tree \
   "$BUNDLE_DIR/etc/fonts" \
-  "/etc/fonts" \
-  "/ucrt64/etc/fonts" \
-  "/ucrt32/etc/fonts" \
-  "/mingw64/etc/fonts" \
-  "/mingw32/etc/fonts" \
-  "/clang64/etc/fonts" \
-  "/clang32/etc/fonts"
+  "$MINGW_PREFIX/etc/fonts"
 then
   echo "warning: could not find fontconfig config dir; font fallback warnings may occur" >&2
 fi
 
 if ! copy_first_existing_tree \
   "$BUNDLE_DIR/share/fonts" \
-  "/usr/share/fonts" \
-  "/ucrt64/share/fonts" \
-  "/ucrt32/share/fonts" \
-  "/mingw64/share/fonts" \
-  "/mingw32/share/fonts" \
-  "/clang64/share/fonts" \
-  "/clang32/share/fonts"
+  "$MINGW_PREFIX/share/fonts"
 then
   echo "warning: could not find shared fonts dir; font fallback warnings may occur" >&2
 fi
@@ -268,10 +262,8 @@ fi
 
 # Include icon themes used by GTK runtime where available.
 for d in \
-  "/ucrt64/share/icons/Adwaita" \
-  "/ucrt64/share/icons/hicolor" \
-  "/ucrt32/share/icons/Adwaita" \
-  "/ucrt32/share/icons/hicolor"
+  "$MINGW_PREFIX/share/icons/Adwaita" \
+  "$MINGW_PREFIX/share/icons/hicolor"
 do
   if [[ -d "$d" ]]; then
     mkdir -p "$BUNDLE_DIR/share/icons"
