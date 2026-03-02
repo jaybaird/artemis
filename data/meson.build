@@ -28,7 +28,7 @@ if not is_windows
   endif
 endif
 
-schema_install_dir = is_windows ? (get_option('prefix') / 'share' / 'glib-2.0' / 'schemas') : (get_option('datadir') / 'glib-2.0' / 'schemas')
+schema_install_dir = get_option('datadir') / 'glib-2.0' / 'schemas'
 
 install_data('com.k0vcz.Artemis.gschema.xml',
   install_dir: schema_install_dir
@@ -39,10 +39,12 @@ if compile_schemas.found()
   test('Validate schema file',
      compile_schemas,
      args: ['--strict', '--dry-run', meson.current_source_dir()])
-  meson.add_install_script(
-    compile_schemas,
-    schema_install_dir
-  )
+  if not is_windows
+    meson.add_install_script(
+      compile_schemas,
+      schema_install_dir
+    )
+  endif
 endif
 
 service_conf = configuration_data()
