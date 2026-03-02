@@ -61,15 +61,26 @@ subdir('data')
 subdir('src')
 subdir('po')
 
+win_sources = []
+if is_windows
+  windows = import('windows')
+  app_icon_res = windows.compile_resources(
+    'artemis-app-icon',
+    'data/icons/windows/app.rc',
+    depend_files: ['data/icons/windows/com.k0vcz.Artemis.ico'],
+  )
+  win_sources += app_icon_res
+endif
+
 if devel 
-  executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
+  executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
     dependencies: artemis_vala_deps,
     vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
     link_with: [libradiocontrol],
     install: true,
   )
 else
-  executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
+  executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
     dependencies: artemis_vala_deps,
     vala_args: ['--pkg=RadioControl', '--vapidir='+srcdir],
     link_with: [libradiocontrol],
