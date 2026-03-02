@@ -133,9 +133,9 @@ copy_runtime_deps() {
       /=>/ {print $3}
       /^[A-Za-z]:\\/ {print $1}
       /^\/(ucrt64|ucrt32|mingw64|mingw32|clang64|clang32)\// {print $1}
-    ' | tr -d "\r" | sort -u)"
+    ' | tr -d "\r" | sort -u || true)"
   else
-    dep_list="$(ldd "$target" 2>/dev/null | awk '/=> \// {print $3}' | tr -d "\r" | sort -u)"
+    dep_list="$(ldd "$target" 2>/dev/null | awk '/=> \// {print $3}' | tr -d "\r" | sort -u || true)"
   fi
 
   while IFS= read -r dep; do
@@ -176,6 +176,7 @@ for pass in 1 2 3; do
   done
   shopt -u nullglob
 done
+echo "==> Runtime DLL dependency scan complete"
 
 # Bundle GIO modules (includes glib-networking TLS backend) explicitly.
 echo "==> Bundling GIO modules"
