@@ -65,7 +65,6 @@ win_sources = []
 if is_windows
   windows = import('windows')
   app_icon_res = windows.compile_resources(
-    'artemis-app-icon',
     'data/icons/windows/app.rc',
     depend_files: ['data/icons/windows/com.k0vcz.Artemis.ico'],
   )
