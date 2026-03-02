@@ -411,8 +411,12 @@ public sealed class SpotCard : Gtk.Box {
 
     [GtkCallback]
     private void on_park_details_button_clicked () {
+#if ARTEMIS_UNIX
         var park_details = new ParkDetailsView (park_url);
         park_details.present (this.get_root ());
+#else
+        GLib.AppInfo.launch_default_for_uri (park_url, null);
+#endif
     }
 
     [GtkCallback]
@@ -617,6 +621,7 @@ public class SpotHistoryDialog : Adw.Dialog {
     }
 } /* class SpotHistoryDialog */
 
+#if ARTEMIS_UNIX
 public class ParkDetailsView : Adw.Dialog {
     private WebKit.WebView webview;
     private Adw.WindowTitle title_widget;
@@ -650,3 +655,4 @@ public class ParkDetailsView : Adw.Dialog {
         this.set_child (toolbar_view);
     }
 } /* class ParkDetailsView */
+#endif
