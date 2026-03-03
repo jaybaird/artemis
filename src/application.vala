@@ -251,9 +251,8 @@ public sealed class Application : Adw.Application {
         });
 
         if (cert_file != null) {
-            Environment.set_variable ("SSL_CERT_FILE", cert_file, false);
-            Environment.set_variable ("G_TLS_CA_FILE", cert_file, false);
-            Environment.set_variable ("CURL_CA_BUNDLE", cert_file, false);
+            var db = TlsFileDatabase.@new(cert_file);
+            TlsBackend.get_default ().set_default_database (db);
         }
     }
 #endif
