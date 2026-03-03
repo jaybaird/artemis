@@ -79,7 +79,7 @@ if devel
     vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
     link_with: [libradiocontrol],
     link_args: windows_exe_link_args,
-    win_subsystem: is_windows ? 'windows' : 'console',
+    win_subsystem: 'console',
     install: true,
   )
 else
@@ -88,7 +88,7 @@ else
     vala_args: ['--pkg=RadioControl', '--vapidir='+srcdir],
     link_with: [libradiocontrol],
     link_args: windows_exe_link_args,
-    win_subsystem: is_windows ? 'windows' : 'console',
+    win_subsystem: 'console',
     install: true,
   )
 endif

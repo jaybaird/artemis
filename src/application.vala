@@ -178,6 +178,16 @@ public sealed class Application : Adw.Application {
     }
 
     public static int main (string[] args) {
+#if ARTEMIS_WINDOWS
+        Environment.set_variable ("GSETTINGS_SCHEMA_DIR", "../share/glib-2.0/schemas", false);
+        Environment.set_variable ("GIO_USE_TLS", "gnutls", false);
+        Environment.set_variable ("SSL_CERT_DIR", "../etc/ssl/certs", false);
+        Environment.set_variable ("SSL_CERT_FILE", "../etc/ssl/certs/ca-bundle.crt", false);
+        Environment.set_variable ("G_TLS_CA_FILE", "../etc/ssl/certs/ca-bundle.crt", false);
+        Environment.set_variable ("CURL_CA_BUNDLE", "../etc/ssl/certs/ca-bundle.crt", false);
+        Environment.set_variable ("GIO_MODULE_DIR", "../lib/gio/modules", false);
+        Environment.set_variable ("GIO_EXTRA_MODULES", "../lib/gio/modules", false);
+#endif
         Intl.setlocale (LocaleCategory.ALL, "");
         Intl.bindtextdomain (Build.GETTEXT_PACKAGE, Build.LOCALEDIR);
         Intl.bind_textdomain_codeset (Build.GETTEXT_PACKAGE, "UTF-8");
