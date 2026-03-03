@@ -62,6 +62,7 @@ subdir('src')
 subdir('po')
 
 win_sources = []
+windows_exe_link_args = []
 if is_windows
   windows = import('windows')
   app_icon_res = windows.compile_resources(
@@ -69,6 +70,7 @@ if is_windows
     depend_files: ['data/icons/windows/com.k0vcz.Artemis.ico'],
   )
   win_sources += app_icon_res
+  windows_exe_link_args = ['-mwindows']
 endif
 
 if devel 
@@ -76,6 +78,8 @@ if devel
     dependencies: artemis_vala_deps,
     vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
     link_with: [libradiocontrol],
+    link_args: windows_exe_link_args,
+    win_subsystem: is_windows ? 'windows' : 'console',
     install: true,
   )
 else
@@ -83,6 +87,8 @@ else
     dependencies: artemis_vala_deps,
     vala_args: ['--pkg=RadioControl', '--vapidir='+srcdir],
     link_with: [libradiocontrol],
+    link_args: windows_exe_link_args,
+    win_subsystem: is_windows ? 'windows' : 'console',
     install: true,
   )
 endif
