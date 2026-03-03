@@ -48,6 +48,9 @@ public sealed class Application : Adw.Application {
     public static string? current_program_filter { get; set; }
     public static string? current_search_text { get; set; }
     public static string? current_band_filter { get; set; }
+#if ARTEMIS_WINDOWS
+    private static string? windows_bundle_root = null;
+#endif
 
     public static bool is_radio_configured {
         get {
@@ -103,7 +106,13 @@ public sealed class Application : Adw.Application {
 
         // Add application icon directory to icon theme search path
         var icon_theme = Gtk.IconTheme.get_for_display (Gdk.Display.get_default ());
-        var icon_dir = File.new_for_path ("%s/%s".printf (Build.DATADIR, Build.DOMAIN)).get_child ("icons");
+        string data_dir = Build.DATADIR;
+#if ARTEMIS_WINDOWS
+        if (windows_bundle_root != null) {
+            data_dir = Path.build_filename (windows_bundle_root, "share");
+        }
+#endif
+        var icon_dir = File.new_for_path (Path.build_filename (data_dir, Build.DOMAIN)).get_child ("icons");
         debug (icon_dir.get_path ());
         if (icon_dir.query_exists ()) {
             icon_theme.add_search_path (icon_dir.get_path ());
@@ -177,16 +186,81 @@ public sealed class Application : Adw.Application {
         preferences.present (win);
     }
 
+#if ARTEMIS_WINDOWS
+    private static string? find_existing_file (string[] candidates) {
+        foreach (var path in candidates) {
+            if (FileUtils.test (path, FileTest.IS_REGULAR)) {
+                return path;
+            }
+        }
+        return null;
+    }
+
+    private static string resolve_windows_bundle_root (string[] args) {
+        var cwd = Environment.get_current_dir ();
+        var exe_dir = cwd;
+
+        if (args.length > 0) {
+            var exe_path = args[0];
+            if (!Path.is_absolute (exe_path)) {
+                exe_path = Path.build_filename (cwd, exe_path);
+            }
+
+            exe_dir = Path.get_dirname (exe_path);
+            if (!Path.is_absolute (exe_dir)) {
+                exe_dir = Path.build_filename (cwd, exe_dir);
+            }
+        }
+
+        string[] candidate_roots = {
+            Path.get_dirname (exe_dir),
+            exe_dir,
+            cwd,
+            Path.get_dirname (cwd)
+        };
+
+        foreach (var root in candidate_roots) {
+            var schema_dir = Path.build_filename (root, "share", "glib-2.0", "schemas");
+            var gio_modules_dir = Path.build_filename (root, "lib", "gio", "modules");
+            if (FileUtils.test (schema_dir, FileTest.IS_DIR) &&
+                FileUtils.test (gio_modules_dir, FileTest.IS_DIR)) {
+                return root;
+            }
+        }
+
+        return Path.get_dirname (exe_dir);
+    }
+
+    private static void configure_windows_runtime_environment (string[] args) {
+        var bundle_root = resolve_windows_bundle_root (args);
+        windows_bundle_root = bundle_root;
+        var schema_dir = Path.build_filename (bundle_root, "share", "glib-2.0", "schemas");
+        var cert_dir = Path.build_filename (bundle_root, "etc", "ssl", "certs");
+        var gio_modules_dir = Path.build_filename (bundle_root, "lib", "gio", "modules");
+
+        Environment.set_variable ("GSETTINGS_SCHEMA_DIR", schema_dir, false);
+        Environment.set_variable ("GIO_USE_TLS", "gnutls", false);
+        Environment.set_variable ("SSL_CERT_DIR", cert_dir, false);
+        Environment.set_variable ("GIO_MODULE_DIR", gio_modules_dir, false);
+        Environment.set_variable ("GIO_EXTRA_MODULES", gio_modules_dir, false);
+
+        var cert_file = find_existing_file ({
+            Path.build_filename (cert_dir, "ca-bundle.crt"),
+            Path.build_filename (cert_dir, "ca-certificates.crt"),
+            Path.build_filename (cert_dir, "ca-bundle.trust.crt")
+        });
+
+        if (cert_file != null) {
+            Environment.set_variable ("SSL_CERT_FILE", cert_file, false);
+            Environment.set_variable ("G_TLS_CA_FILE", cert_file, false);
+            Environment.set_variable ("CURL_CA_BUNDLE", cert_file, false);
+        }
+    }
+#endif
+
     public static int main (string[] args) {
 #if ARTEMIS_WINDOWS
-        Environment.set_variable ("GSETTINGS_SCHEMA_DIR", "../share/glib-2.0/schemas", false);
-        Environment.set_variable ("GIO_USE_TLS", "gnutls", false);
-        Environment.set_variable ("SSL_CERT_DIR", "../etc/ssl/certs", false);
-        Environment.set_variable ("SSL_CERT_FILE", "../etc/ssl/certs/ca-bundle.crt", false);
-        Environment.set_variable ("G_TLS_CA_FILE", "../etc/ssl/certs/ca-bundle.crt", false);
-        Environment.set_variable ("CURL_CA_BUNDLE", "../etc/ssl/certs/ca-bundle.crt", false);
-        Environment.set_variable ("GIO_MODULE_DIR", "../lib/gio/modules", false);
-        Environment.set_variable ("GIO_EXTRA_MODULES", "../lib/gio/modules", false);
+        configure_windows_runtime_environment (args);
 #endif
         Intl.setlocale (LocaleCategory.ALL, "");
         Intl.bindtextdomain (Build.GETTEXT_PACKAGE, Build.LOCALEDIR);
