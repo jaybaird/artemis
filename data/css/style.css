@@ -2,6 +2,10 @@ notebook > stack {
     background-color: rgba(0, 0, 0, 0);
 }
 
+.monospace {
+    font-family: "Adwaita Mono", "Consolas", monospace;
+}
+
 scrollbar.hover,
 scrollbar {
     margin-left: 2px;

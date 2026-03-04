@@ -92,13 +92,7 @@ public sealed class Application : Adw.Application {
         }
 
         callsign_cache = new CallsignCache (3600);
-
         radio_control = new RadioControl ();
-        var radio_models = RadioControl.get_radio_models ();
-        for (int i = 0; i < radio_models.length; i++) {
-            var radio = radio_models[i];
-            print ("%s: %d\n".printf (radio.display_name, radio.model_id));
-        }
     }
 
     public override void activate () {
@@ -251,7 +245,7 @@ public sealed class Application : Adw.Application {
         });
 
         if (cert_file != null) {
-            var db = TlsFileDatabase.@new(cert_file);
+            var db = TlsFileDatabase.@new (cert_file);
             TlsBackend.get_default ().set_default_database (db);
         }
     }
