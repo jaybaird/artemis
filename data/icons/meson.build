@@ -17,6 +17,8 @@ install_data(
   [
     'hicolor/symbolic/actions/update-symbolic.svg',
     'hicolor/symbolic/actions/history-undo-symbolic.svg',
+    'hicolor/symbolic/actions/clocks-symbolic.svg',
+    'hicolor/symbolic/actions/maps-symbolic.svg',
     'hicolor/symbolic/actions/bullseye-symbolic.svg',
     'hicolor/symbolic/actions/test-pass-symbolic.svg',
     'hicolor/symbolic/actions/radio-console-symbolic.svg',
