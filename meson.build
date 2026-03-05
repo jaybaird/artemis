@@ -1,7 +1,7 @@
 project(
   'com.k0vcz.Artemis', 
   ['c', 'vala'],
-  version: '1.0.3',
+  version: '1.1',
   meson_version: '>= 1.0.0',
   default_options: [
     'warning_level=2',

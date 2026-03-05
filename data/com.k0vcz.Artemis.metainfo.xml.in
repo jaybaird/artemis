@@ -80,6 +80,15 @@
   </screenshots>
 
   <releases>
+    <release version="1.1" date="2026-02-25">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.1</url>
+      <description>
+        <p>Added much better hamlib support for radios and features</p>
+        <p>Fixed a map bug where unconfigured QTH grid square would cause map to just not work</p>
+        <p>Added support for Windows</p>
+        <p>Lots of other small bug fixes across the app</p>
+      </description>
+    </release>
     <release version="1.0.2" date="2026-02-25">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.2</url>
       <description>
