@@ -251,7 +251,7 @@ public sealed class SpotRepo : Object {
             }
             programs_sorted.sort ((a, b) => { return strcmp (a, b); });
 
-            program_model.append (_ ("All"));
+            program_model.append (_("All"));
             foreach (var program in programs_sorted) {
                 program_model.append (program);
             }

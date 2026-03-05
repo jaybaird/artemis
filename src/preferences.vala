@@ -491,7 +491,7 @@ public sealed class PreferencesDialog : Object {
     void on_test_connection () {
         test_connection_button.sensitive = false;
         connection_status_icon.icon_name = "content-loading-symbolic";
-        connection_status_label.label = _ ("Testing…");
+        connection_status_label.label = _("Testing…");
 
         test_radio_connection ();
     }
@@ -611,7 +611,7 @@ public sealed class PreferencesDialog : Object {
             description = ngettext ("Successfully imported one park",
                 "Succesfully imported %d parks", num_parks).printf (num_parks);
         } catch (Error err) {
-            description = _ (
+            description = _(
                 "Unable to import hunted parks. Please check your CSV file and try again.");
             error (err.message);
         }
@@ -620,8 +620,8 @@ public sealed class PreferencesDialog : Object {
         logbook_csv = null;
         import_log.remove_css_class ("suggested-action");
 
-        var alert = new Adw.AlertDialog (_ ("Import Parks"), description);
-        alert.add_response ("ok", _ ("Ok"));
+        var alert = new Adw.AlertDialog (_("Import Parks"), description);
+        alert.add_response ("ok", _("Ok"));
         alert.set_response_appearance ("ok", Adw.ResponseAppearance.SUGGESTED);
         alert.set_default_response ("ok");
         alert.set_close_response ("ok");
@@ -631,10 +631,10 @@ public sealed class PreferencesDialog : Object {
     void on_import_file () {
         var file_dialog = new Gtk.FileDialog ();
 
-        file_dialog.title = _ ("Select Logbook CSV File");
+        file_dialog.title = _("Select Logbook CSV File");
 
         var csv_filter = new Gtk.FileFilter ();
-        csv_filter.name = _ ("CSV Files");
+        csv_filter.name = _("CSV Files");
         csv_filter.add_mime_type ("text/csv");
         csv_filter.add_pattern ("*.csv");
 
