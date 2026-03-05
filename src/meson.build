@@ -38,7 +38,6 @@ radio_control_sources = ['radio_control.c']
 radio_control_deps = [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
 
 if is_windows
-  radio_control_sources += 'windows_serial.c'
   radio_control_deps += cc.find_library('setupapi', required: true)
 else
   radio_control_deps += dependency('gudev-1.0')
