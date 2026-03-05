@@ -1,4 +1,4 @@
 [Application]
 name=com.k0vcz.artemis
-runtime=org.gnome.Platform/x86_64/48
-sdk=org.gnome.Sdk/x86_64/48
+runtime=org.gnome.Platform/x86_64/49
+sdk=org.gnome.Sdk/x86_64/49

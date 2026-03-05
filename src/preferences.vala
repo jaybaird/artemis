@@ -39,6 +39,10 @@ public sealed class PreferencesDialog : Object {
     private Adw.ComboRow row_radio_model;
     private Adw.ComboRow row_device_path;
     private Adw.ComboRow row_baud_rate;
+    private Adw.ComboRow row_data_bits;
+    private Adw.ComboRow row_stop_bits;
+    private Adw.ComboRow row_handshake;
+
     private Adw.EntryRow row_network_host;
     private Adw.SpinRow row_network_port;
     private Adw.PreferencesGroup serial_settings_group;
@@ -59,6 +63,7 @@ public sealed class PreferencesDialog : Object {
     private Gtk.Button test_connection_button;
     private Gtk.Image connection_status_icon;
     private Gtk.Label connection_status_label;
+    private Gtk.Label hamlib_version_label;
 
     private File? logbook_csv = null;
 
@@ -93,11 +98,20 @@ public sealed class PreferencesDialog : Object {
         row_device_path.model = get_serial_devices ();
 
         row_baud_rate = builder.get_object ("row_baud_rate") as Adw.ComboRow;
+        row_data_bits = builder.get_object ("row_data_bits") as Adw.ComboRow;
+        row_stop_bits = builder.get_object ("row_stop_bits") as Adw.ComboRow;
+        row_handshake = builder.get_object ("row_handshake") as Adw.ComboRow;
+
         row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
         row_network_port = builder.get_object ("row_network_port") as Adw.SpinRow;
         serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
         network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
         radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
+        hamlib_version_label = builder.get_object ("hamlib_version_label") as Gtk.Label;
+
+        if (hamlib_version_label != null) {
+            hamlib_version_label.label = RadioControl.hamlib_version ();
+        }
 
         row_hide_qrt = builder.get_object ("row_hide_qrt") as Adw.SwitchRow;
         row_show_scale = builder.get_object ("row_show_scale") as Adw.SwitchRow;
@@ -204,6 +218,10 @@ public sealed class PreferencesDialog : Object {
         );
 
         bind_baud_rate_combo ();
+        bind_data_bits_combo ();
+        bind_stop_bits_combo ();
+        bind_handshake_combo ();
+
         Application.settings.bind ("radio-network-host", row_network_host,
             "text",
             SettingsBindFlags.DEFAULT);
@@ -264,6 +282,124 @@ public sealed class PreferencesDialog : Object {
             }
         });
     } /* bind_combo_to_string_setting */
+
+    private static uint stop_bits_selected_to_actual (uint selected) {
+        switch (selected) {
+            case 0:
+                return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+        }
+        return 0;
+    }
+
+    private static uint stop_bits_actual_to_selected (uint stop_bits) {
+        switch (stop_bits) {
+            case 0:
+                return 0;
+            case 1:
+                return 1;
+            case 2:
+                return 2;
+        }
+        return 0;
+    }
+
+    private static uint data_bits_selected_to_actual (uint selected) {
+        switch (selected) {
+            case 0:
+                return 0;
+            case 1:
+                return 7;
+            case 2:
+                return 8;
+        }
+        return 0;
+    }
+
+    private static uint data_bits_actual_to_selected (uint data_bits) {
+        switch (data_bits) {
+            case 0:
+                return 0;
+            case 7:
+                return 1;
+            case 8:
+                return 2;
+        }
+        return 0;
+    }
+
+    private static string handshake_selected_to_str (uint selected) {
+        switch (selected) {
+            case 0:
+                return "None";
+            case 1:
+                return "XONXOFF";
+            case 2:
+                return "Hardware";
+        }
+        return "None";
+    }
+
+    void bind_data_bits_combo () {
+        var model = row_data_bits.model as Gtk.StringList;
+
+        if (model == null)
+            return;
+
+        var current_data_bits = Application.settings.get_int ("radio-data-bits");
+        row_data_bits.selected = data_bits_actual_to_selected (current_data_bits);
+
+        row_data_bits.notify["selected"].connect (() => {
+            var data_bits = data_bits_selected_to_actual (row_data_bits.selected);
+            Application.settings.set_uint ("radio-data-bits", data_bits);
+        });
+
+        Application.settings.changed["radio-data-bits"].connect (() => {
+            var data_bits = Application.settings.get_uint ("radio-data-bits");
+            row_data_bits.selected = data_bits_actual_to_selected (data_bits);
+        });
+    }
+
+    void bind_handshake_combo () {
+        var model = row_handshake.model as Gtk.StringList;
+
+        if (model == null)
+            return;
+
+        var current_handshake = Application.settings.get_uint ("radio-hardware-handshake");
+        row_handshake.selected = current_handshake;
+
+        row_handshake.notify["selected"].connect (() => {
+            Application.settings.set_uint ("radio-hardware-handshake", row_handshake.selected);
+        });
+
+        Application.settings.changed["radio-hardware-handshake"].connect (() => {
+            var handshake = Application.settings.get_uint ("radio-hardware-handshake");
+            row_handshake.selected = handshake;
+        });
+    }
+
+    void bind_stop_bits_combo () {
+        var model = row_stop_bits.model as Gtk.StringList;
+
+        if (model == null)
+            return;
+
+        var current_stop_bits = Application.settings.get_uint ("radio-stop-bits");
+        row_stop_bits.selected = stop_bits_actual_to_selected (current_stop_bits);
+
+        row_stop_bits.notify["selected"].connect (() => {
+            Application.settings.set_uint ("radio-stop-bits", stop_bits_selected_to_actual (row_stop_bits.selected));
+        });
+
+        Application.settings.changed["radio-stop-bits"].connect (() => {
+            var stop_bits = Application.settings.get_uint ("radio-stop-bits");
+            row_stop_bits.selected = stop_bits_actual_to_selected (stop_bits);
+        });
+    }
 
     void bind_baud_rate_combo () {
         var model = row_baud_rate.model as Gtk.StringList;
@@ -371,22 +507,31 @@ public sealed class PreferencesDialog : Object {
             device_path = device_path.get_string (),
             network_host = row_network_host.text,
             network_port = int.parse (row_network_port.text),
-            baud_rate = int.parse (baud_rate.get_string ())
+            baud_rate = int.parse (baud_rate.get_string ()),
+            data_bits = data_bits_selected_to_actual (row_data_bits.selected),
+            stop_bits = row_stop_bits.selected,
+            handshake = row_handshake.selected
         };
         print ("""Testing radio connection with:
         \tModel ID: %d\n
         \tConnection type: %s\n
         \tDevice path: %s\n
         \tNetwork host: %s\n
-        \tNetwork port: %d\n
-        \tBaud rate: %d\n
+        \tNetwork port: %u\n
+        \tBaud rate: %u\n
+        \tData bits: %u\n
+        \tStop bits: %u\n
+        \tHandshake: %s\n
         """.printf (
             radio_model,
             config.connection_type,
             config.device_path,
             config.network_host,
             config.network_port,
-            config.baud_rate
+            config.baud_rate,
+            config.data_bits,
+            config.stop_bits,
+            handshake_selected_to_str (config.handshake)
         ));
 
         var is_connected = Application.radio_control.connect (config);

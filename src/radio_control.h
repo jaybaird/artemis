@@ -43,8 +43,11 @@ typedef struct {
   gchar *connection_type;
   gchar *device_path;
   gchar *network_host;
-  gint network_port;
-  gint baud_rate;
+  guint network_port;
+  guint baud_rate;
+  guint data_bits;
+  guint stop_bits;
+  guint handshake;
 } RadioConfiguration;
 
 
@@ -101,6 +104,12 @@ radio_control_get_vfo_async(RadioControl *self);
 
 DexFuture *
 radio_control_get_mode_async(RadioControl *self);
+
+const gchar *
+radio_control_hamlib_version(void);
+
+const gchar *
+radio_control_hamlib_copyright(void);
 
 /* Setters */
 

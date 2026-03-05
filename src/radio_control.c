@@ -273,6 +273,60 @@ map_artemis_mode(enum RadioMode mode)
   return RIG_MODE_USB;
 }
 
+static gboolean
+try_set_rig_conf(RIG        *rig,
+                  const char *key,
+                  const char *value,
+                  gboolean    required,
+                  GError    **error)
+{
+  token_t token;
+  int rc;
+
+  g_return_val_if_fail(rig != NULL, FALSE);
+  g_return_val_if_fail(key != NULL, FALSE);
+  g_return_val_if_fail(value != NULL, FALSE);
+
+  token = rig_token_lookup(rig, key);
+
+  if (token == 0) {
+    if (required) {
+      g_set_error(error,
+                  G_IO_ERROR,
+                  G_IO_ERROR_NOT_SUPPORTED,
+                  "Hamlib backend does not support config key '%s'",
+                  key);
+      return FALSE;
+    }
+
+    g_debug("[RadioControl] Optional rig config unsupported: %s=%s", key, value);
+    return TRUE;
+  }
+
+#ifdef HAVE_HAMLIB_SET_CONF2
+  rc = rig_set_conf2(rig, token, value, strlen(value));
+#else
+  rc = rig_set_conf(rig, token, value);
+#endif
+
+  if (rc != RIG_OK) {
+    if (required) {
+      g_set_error(error,
+                  G_IO_ERROR,
+                  G_IO_ERROR_FAILED,
+                  "Failed to set rig config %s=%s: %s",
+                  key, value, rigerror(rc));
+      return FALSE;
+    }
+
+    g_warning("[RadioControl] Optional rig config rejected: %s=%s (%s)",
+              key, value, rigerror(rc));
+    return TRUE;
+  }
+
+  g_debug("[RadioControl] rig_set_conf ok: %s=%s", key, value);
+  return TRUE;
+}
 
 static DexFuture *
 watcher_iteration(DexFuture *future, gpointer user_data);
@@ -327,6 +381,9 @@ radio_configuration_copy(RadioConfiguration *config, RadioConfiguration *new_con
   new_config->network_host = g_strdup(config->network_host);
   new_config->network_port = config->network_port;
   new_config->baud_rate = config->baud_rate;
+  new_config->data_bits = config->data_bits;
+  new_config->stop_bits = config->stop_bits;
+  new_config->handshake = config->handshake;
 }
 
 G_DEFINE_FINAL_TYPE(RadioControl, radio_control, G_TYPE_OBJECT);
@@ -516,9 +573,9 @@ typedef struct {
 static void
 connect_data_free(ConnectData *data) {
     if (data) {
-        g_object_unref(data->radio_control);
-        radio_configuration_destroy(data->config);
-        g_free(data->config);
+      g_object_unref(data->radio_control);
+      radio_configuration_destroy(data->config);
+      g_free(data->config);
     }
     g_free(data);
 }
@@ -542,20 +599,56 @@ connect_worker(gpointer user_data)
 
   if (g_strcmp0(config->connection_type, "serial") == 0) 
   {
-    rig_set_conf(self->rig, rig_token_lookup(self->rig, "rig_pathname"), (char*)config->device_path);
+    if (!try_set_rig_conf(self->rig, "rig_pathname", config->device_path, TRUE, &error))
+      goto connect_fail;
+
     if (config->baud_rate > 0) {
-      char baudstr[16]; 
+      char baudstr[16];
       g_snprintf(baudstr, sizeof baudstr, "%d", config->baud_rate);
-      rig_set_conf(self->rig, rig_token_lookup(self->rig, "serial_speed"), baudstr);
+      try_set_rig_conf(self->rig, "serial_speed", baudstr, FALSE, NULL);
     }
-  } 
-  else if (g_strcmp0(config->connection_type, "network") == 0) 
-  {
-    char hostport[256];
-    g_snprintf(hostport, sizeof hostport, "%s:%d", config->network_host, config->network_port);
-    rig_set_conf(self->rig, rig_token_lookup(self->rig, "rig_pathname"), hostport);
+
+    if (config->data_bits != 0) {
+      char datastr[1];
+      g_snprintf(datastr, 1, "%d", config->data_bits);
+      try_set_rig_conf(self->rig, "data_bits", datastr, FALSE, NULL);
+    }
+    if (config->stop_bits != 0) {
+      char stopstr[1];
+      g_snprintf(stopstr, 1, "%d", config->stop_bits);
+      try_set_rig_conf(self->rig, "stop_bits", stopstr, FALSE, NULL);
+    }
+    
+    const char *handshake_str = NULL;
+    switch (config->handshake) {
+      case 0:
+        handshake_str = "None";
+        break;
+      case 1:
+        handshake_str = "XONXOFF";
+        break;
+      case 2:
+        handshake_str = "Hardware";
+        break;
+      default:
+        handshake_str = "None";
+        break;
+    }
+    try_set_rig_conf(self->rig, "serial_handshake", handshake_str, FALSE, NULL);
+  } else if (g_strcmp0(config->connection_type, "network") == 0) {
+      char hostport[256];
+      g_snprintf(hostport, sizeof hostport, "%s:%u", config->network_host, config->network_port);
+
+      if (!try_set_rig_conf(self->rig, "rig_pathname", hostport, TRUE, &error))
+        goto connect_fail;
+  } else {
+    g_set_error(&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
+                "Unsupported connection type: %s",
+                config->connection_type ? config->connection_type : "(null)");
+    goto connect_fail;
   }
-  rig_set_conf(self->rig, rig_token_lookup(self->rig, "timeout"), "3000");
+
+  try_set_rig_conf(self->rig, "timeout", "3000", FALSE, NULL);
   
   int result = rig_open(self->rig);
 
@@ -580,6 +673,19 @@ connect_worker(gpointer user_data)
   );
 
   return dex_future_new_true();
+
+  connect_fail:
+    if (self->rig != NULL) {
+      rig_cleanup(self->rig);
+      self->rig = NULL;
+    }
+    self->is_connected = FALSE;
+
+    if (error == NULL) {
+      g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Radio connection setup failed");
+    }
+
+    return dex_future_new_for_error(g_steal_pointer(&error));
 }
 
 DexFuture *
@@ -768,6 +874,18 @@ radio_control_set_vfo_async(RadioControl *self, int frequency)
   data->frequency = (double)frequency * 1000.0;
 
   return dex_scheduler_spawn(self->scheduler, 0, set_vfo_worker, data, (GDestroyNotify)set_vfo_data_free);
+}
+
+const gchar *
+radio_control_hamlib_version(void)
+{
+  return rig_version();
+}
+
+const gchar *
+radio_control_hamlib_copyright(void)
+{
+  return rig_copyright();
 }
 
 static DexFuture *

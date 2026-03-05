@@ -21,8 +21,11 @@ public struct RadioConfiguration {
     public string? device_path;
     [CCode (cname = "network_host")]
     public string? network_host;
-    public int network_port;
-    public int baud_rate;
+    public uint network_port;
+    public uint baud_rate;
+    public uint data_bits;
+    public uint stop_bits;
+    public uint handshake;
 }
 
 [CCode (cname = "RadioModel", has_type_id = false)]
@@ -62,6 +65,12 @@ public class RadioControl : GLib.Object {
     public static unowned RadioModel[] get_radio_models ();
     [CCode (cname = "radio_control_get_serial_devices")]
     public static unowned string[] get_serial_devices ();
+
+    [CCode (cname = "radio_control_hamlib_version")]
+    public static unowned string hamlib_version ();
+
+    [CCode (cname = "radio_control_hamlib_copyright")]
+    public static unowned string hamlib_copyright ();
 
     // Signals
     [CCode (cname = "radio-connected")]

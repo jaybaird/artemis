@@ -464,7 +464,10 @@ public sealed class AppWindow : Gtk.Window {
             device_path = Application.settings.get_string ("radio-device"),
             network_host = Application.settings.get_string ("radio-network-host"),
             network_port = Application.settings.get_int ("radio-network-port"),
-            baud_rate = Application.settings.get_int ("radio-baud-rate")
+            baud_rate = Application.settings.get_int ("radio-baud-rate"),
+            data_bits = Application.settings.get_int ("radio-data-bits"),
+            stop_bits = Application.settings.get_int ("radio-stop-bits"),
+            handshake = Application.settings.get_int ("radio-hardware-handshake")
         };
 
         radio_connect_inflight = true;
@@ -496,12 +499,14 @@ public sealed class AppWindow : Gtk.Window {
                             radio_mode.visible = true;
                             set_radio_vfo_label_animated (freq);
                             radio_mode.label = RadioControl.mode_string (mode);
+                            radio_power_button.tooltip_text = _("Disconnect from radio");
                             radio_power_button.active = true;
                         } else {
                             stop_radio_vfo_animation ();
                             has_displayed_radio_vfo = false;
                             radio_mode.visible = false;
                             radio_power_button.active = false;
+                            radio_power_button.tooltip_text = _("Connect to radio");
                             radio_vfo.label = _("Radio disconnected");
                         }
                     });
