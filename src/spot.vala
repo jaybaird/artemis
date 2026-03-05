@@ -176,20 +176,24 @@ public sealed class Spot : Object {
         distance = -1.0;
         bearing = -1.0;
 
-        var grid = Application.settings.get_string ("location");
-        if (grid != "") {
+        var park_grid = ((grid6 ?? "") == "") ? (grid4 ?? "") : grid6;
+        if ((park_grid != null) && (park_grid.strip () != "")) {
             try {
-                var latlon = Distance.maidenhead_to_latlon (grid);
-                var park_grid = ((grid6 ?? "") == "") ? (grid4 ?? "") : grid6;
-                if ((park_grid != null) && (park_grid.strip () != "")) {
-                    coordinate = Distance.maidenhead_to_latlon (park_grid);
-                    distance = Distance.haversine_distance_km (latlon,
-                        coordinate);
-                    bearing = Distance.bearing (latlon, coordinate);
-                }
+                coordinate = Distance.maidenhead_to_latlon (park_grid);
             } catch (Error error) {
                 warning (error.message);
                 coordinate = null;
+            }
+        }
+
+        var grid = Application.settings.get_string ("location");
+        if ((coordinate != null) && (grid != "")) {
+            try {
+                var latlon = Distance.maidenhead_to_latlon (grid);
+                distance = Distance.haversine_distance_km (latlon, coordinate);
+                bearing = Distance.bearing (latlon, coordinate);
+            } catch (Error error) {
+                warning (error.message);
                 distance = -1.0;
                 bearing = -1.0;
             }

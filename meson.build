@@ -9,6 +9,8 @@ project(
   ],
 )
 
+is_windows = host_machine.system() == 'windows'
+
 i18n = import('i18n')
 gnome = import('gnome')
 valac = meson.get_compiler('vala')
@@ -59,24 +61,45 @@ subdir('data')
 subdir('src')
 subdir('po')
 
-if devel 
-  executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
-    dependencies: artemis_vala_deps,
-    vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
-    link_with: [libradiocontrol],
-    install: true,
+win_sources = []
+windows_exe_link_args = []
+if is_windows
+  windows = import('windows')
+  app_icon_res = windows.compile_resources(
+    'data/icons/windows/app.rc',
+    depend_files: ['data/icons/windows/com.k0vcz.Artemis.ico'],
   )
-else
-  executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
-    dependencies: artemis_vala_deps,
-    vala_args: ['--pkg=RadioControl', '--vapidir='+srcdir],
-    link_with: [libradiocontrol],
-    install: true,
-  )
+  win_sources += app_icon_res
+  windows_exe_link_args = ['-mwindows']
 endif
 
-gnome.post_install(
-     glib_compile_schemas: true,
-    gtk_update_icon_cache: true,
-  update_desktop_database: true,
+link_deps = [
+  libradiocontrol
+]
+
+if is_windows
+  # Windows serial enumeration is compiled into libradiocontrol.
+endif
+
+if devel
+  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir]
+else
+  vala_args = ['--pkg=RadioControl', '--vapidir='+srcdir]
+endif
+
+executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
+  dependencies: artemis_vala_deps,
+  vala_args: vala_args,
+  link_with: link_deps,
+  link_args: windows_exe_link_args,
+  win_subsystem: is_windows ? 'windows' : 'console',
+  install: true,
 )
+
+if not is_windows
+  gnome.post_install(
+      glib_compile_schemas: true,
+      gtk_update_icon_cache: true,
+    update_desktop_database: true,
+  )
+endif

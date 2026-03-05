@@ -9,9 +9,131 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef ARTEMIS_UNIX
+#include <gudev/gudev.h>
+#endif
+#ifdef ARTEMIS_WINDOWS
+#include <windows.h>
+#include <devguid.h>
+#include <regstr.h>
+#include <setupapi.h>
+#endif
+
 static RadioModel *radio_models_cache = NULL;
 static gint radio_models_count = 0;
 static gsize radio_models_once = 0;
+
+#ifdef ARTEMIS_UNIX
+static GPtrArray *serial_devices_unix_cache = NULL;
+
+const gchar * const *
+radio_control_get_serial_devices_unix(gint *count)
+{
+  if (serial_devices_unix_cache == NULL) {
+    serial_devices_unix_cache = g_ptr_array_new_with_free_func(g_free);
+  } else {
+    g_ptr_array_set_size(serial_devices_unix_cache, 0);
+  }
+
+  const gchar *subsystems[] = { "tty", NULL };
+  GUdevClient *client = g_udev_client_new(subsystems);
+  GList *devices = g_udev_client_query_by_subsystem(client, "tty");
+
+  for (GList *iter = devices; iter != NULL; iter = iter->next) {
+    GUdevDevice *device = G_UDEV_DEVICE(iter->data);
+    const gchar *path = g_udev_device_get_device_file(device);
+    if (path != NULL && *path != '\0') {
+      g_ptr_array_add(serial_devices_unix_cache, g_strdup(path));
+    }
+  }
+
+  g_list_free_full(devices, g_object_unref);
+  g_object_unref(client);
+
+  g_ptr_array_sort(serial_devices_unix_cache, (GCompareFunc)g_strcmp0);
+
+  if (count != NULL) {
+    *count = (gint)serial_devices_unix_cache->len;
+  }
+
+  return (const gchar * const *)serial_devices_unix_cache->pdata;
+}
+#endif
+
+#ifdef ARTEMIS_WINDOWS
+static GPtrArray *serial_devices_windows_cache = NULL;
+
+static gboolean
+is_com_port_name(const gchar *name)
+{
+  return name != NULL && g_ascii_strncasecmp(name, "COM", 3) == 0;
+}
+
+const gchar * const *
+radio_control_get_serial_devices_windows(gint *count)
+{
+  if (serial_devices_windows_cache == NULL) {
+    serial_devices_windows_cache = g_ptr_array_new_with_free_func(g_free);
+  } else {
+    g_ptr_array_set_size(serial_devices_windows_cache, 0);
+  }
+
+  HDEVINFO devs = SetupDiGetClassDevsA(&GUID_DEVCLASS_PORTS, NULL, NULL, DIGCF_PRESENT);
+  if (devs == INVALID_HANDLE_VALUE) {
+    if (count != NULL) {
+      *count = 0;
+    }
+    return (const gchar * const *)serial_devices_windows_cache->pdata;
+  }
+
+  SP_DEVINFO_DATA dev_info = {0};
+  dev_info.cbSize = sizeof(dev_info);
+
+  for (DWORD index = 0; SetupDiEnumDeviceInfo(devs, index, &dev_info); index++) {
+    HKEY key = SetupDiOpenDevRegKey(devs, &dev_info, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_READ);
+    if (key == INVALID_HANDLE_VALUE) {
+      continue;
+    }
+
+    gchar port_name[64] = {0};
+    DWORD value_size = sizeof(port_name);
+    DWORD type = 0;
+    LSTATUS status = RegQueryValueExA(
+      key,
+      "PortName",
+      NULL,
+      &type,
+      (LPBYTE)port_name,
+      &value_size
+    );
+    RegCloseKey(key);
+
+    if (status == ERROR_SUCCESS && type == REG_SZ && is_com_port_name(port_name)) {
+      gboolean exists = FALSE;
+      for (guint i = 0; i < serial_devices_windows_cache->len; i++) {
+        const gchar *existing = g_ptr_array_index(serial_devices_windows_cache, i);
+        if (g_ascii_strcasecmp(existing, port_name) == 0) {
+          exists = TRUE;
+          break;
+        }
+      }
+      if (!exists) {
+        g_ptr_array_add(serial_devices_windows_cache, g_strdup(port_name));
+      }
+    }
+  }
+
+  SetupDiDestroyDeviceInfoList(devs);
+
+  g_ptr_array_sort(serial_devices_windows_cache, (GCompareFunc)g_strcmp0);
+
+  if (count != NULL) {
+    *count = (gint)serial_devices_windows_cache->len;
+  }
+
+  return (const gchar * const *)serial_devices_windows_cache->pdata;
+}
+#endif
 
 static int 
 collect_radio(rig_model_t rig_model, rig_ptr_t data) {
@@ -47,6 +169,16 @@ collect_radio(rig_model_t rig_model, rig_ptr_t data) {
 
   g_array_append_val(rigs, m);
   return 1;
+}
+
+const gchar * const *
+radio_control_get_serial_devices(gint *count)
+{
+#ifdef ARTEMIS_WINDOWS
+  return radio_control_get_serial_devices_windows(count);
+#else
+  return radio_control_get_serial_devices_unix(count);
+#endif
 }
 
 static gint

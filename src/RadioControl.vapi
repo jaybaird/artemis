@@ -60,6 +60,8 @@ public class RadioControl : GLib.Object {
     public bool is_rig_connected { get; }
 
     public static unowned RadioModel[] get_radio_models ();
+    [CCode (cname = "radio_control_get_serial_devices")]
+    public static unowned string[] get_serial_devices ();
 
     // Signals
     [CCode (cname = "radio-connected")]

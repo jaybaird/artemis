@@ -84,6 +84,7 @@ public sealed class AppWindow : Gtk.Window {
     private int displayed_radio_vfo_khz = 0;
     private int radio_vfo_anim_start_khz = 0;
     private int radio_vfo_anim_target_khz = 0;
+    private bool radio_connect_inflight = false;
 
     private ulong program_select_handler = 0;
     private ulong radio_status_handler = 0;
@@ -102,10 +103,10 @@ public sealed class AppWindow : Gtk.Window {
             start_radio ();
         } else {
             radio_vfo.label = _("Radio disconnected");
-            radio_power_button.remove_css_class ("green-button");
-            radio_power_button.add_css_class ("red-button");
         }
         radio_power_button.clicked.connect (() => {
+            if (radio_connect_inflight)
+                return;
             if (Application.radio_control.is_rig_connected) {
                 power_off_radio ();
             } else {
@@ -431,10 +432,13 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     private void power_off_radio () {
+        radio_connect_inflight = false;
         disconnect_radio_handlers ();
         Application.radio_control.disconnect ().disown ();
         stop_radio_vfo_animation ();
         has_displayed_radio_vfo = false;
+        radio_power_button.sensitive = true;
+        radio_power_button.active = false;
         radio_vfo.label = _("Radio disconnected");
         radio_mode.visible = false;
     }
@@ -451,6 +455,9 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     private void start_radio () {
+        if (radio_connect_inflight)
+            return;
+
         var config = RadioConfiguration () {
             model_id = Application.settings.get_int ("radio-model"),
             connection_type = Application.settings.get_string ("radio-connection-type"),
@@ -459,18 +466,30 @@ public sealed class AppWindow : Gtk.Window {
             network_port = Application.settings.get_int ("radio-network-port"),
             baud_rate = Application.settings.get_int ("radio-baud-rate")
         };
+
+        radio_connect_inflight = true;
+        radio_power_button.sensitive = false;
+        radio_vfo.label = _("Connecting radio…");
+
         var is_connected = Application.radio_control.connect (config);
         new Dex.Future.finally (is_connected, (result) => {
             var success = false;
+            string? error_message = null;
             try {
                 success = result.await_boolean ();
             } catch (Error err) {
                 success = false;
+                error_message = err.message;
                 Application.radio_control.disconnect ().disown ();
             }
 
             Dex.Scheduler.get_default ().spawn (0, () => {
+                radio_connect_inflight = false;
+                radio_power_button.sensitive = true;
                 if (success) {
+                    radio_power_button.active = true;
+                    if (!has_displayed_radio_vfo)
+                        radio_vfo.label = _("Radio connected");
                     disconnect_radio_handlers ();
                     radio_status_handler = Application.radio_control.radio_status.connect ((freq, mode) => {
                         if (freq > 0 && mode != 0) {
@@ -500,6 +519,15 @@ public sealed class AppWindow : Gtk.Window {
                     radio_mode.visible = false;
                     radio_power_button.active = false;
                     radio_vfo.label = _("Radio disconnected");
+                    var message = _("Radio connection failed.");
+                    if ((error_message != null) && (error_message != "")) {
+                        message = error_message;
+                    }
+                    var alert = new Adw.AlertDialog (_("Radio Connection Failed"), message);
+                    alert.add_response ("ok", _("OK"));
+                    alert.set_default_response ("ok");
+                    alert.set_close_response ("ok");
+                    alert.present (this);
                 }
 
                 return null;

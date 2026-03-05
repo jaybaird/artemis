@@ -57,6 +57,19 @@ typedef struct {
 const 
 RadioModel* radio_control_get_radio_models(gint *count);
 
+const gchar * const *
+radio_control_get_serial_devices(gint *count);
+
+#ifdef ARTEMIS_UNIX
+const gchar * const *
+radio_control_get_serial_devices_unix(gint *count);
+#endif
+
+#ifdef ARTEMIS_WINDOWS
+const gchar * const *
+radio_control_get_serial_devices_windows(gint *count);
+#endif
+
 void
 radio_configuration_destroy(RadioConfiguration *config);
 
