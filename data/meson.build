@@ -29,6 +29,7 @@ if not is_windows
 endif
 
 schema_install_dir = get_option('datadir') / 'glib-2.0' / 'schemas'
+schema_compile_dir = get_option('prefix') / schema_install_dir
 
 install_data('com.k0vcz.Artemis.gschema.xml',
   install_dir: schema_install_dir
@@ -46,7 +47,7 @@ if compile_schemas.found()
   if not is_windows
     meson.add_install_script(
       compile_schemas,
-      schema_install_dir
+      schema_compile_dir
     )
   endif
 endif
