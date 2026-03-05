@@ -1,47 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product
-    Id="*"
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
     Name="$(var.AppName)"
     Language="1033"
     Version="$(var.AppVersion)"
     Manufacturer="K0VCZ"
-    UpgradeCode="2C7EBB09-4A3C-4DB2-9D9F-95A4EB77960B">
-    <Package
-      InstallerVersion="500"
-      Compressed="yes"
-      InstallScope="perMachine"
-      Platform="x86" />
+    UpgradeCode="2C7EBB09-4A3C-4DB2-9D9F-95A4EB77960B"
+    Scope="perMachine"
+    InstallerVersion="500"
+    Compressed="yes"
+    Platform="x86">
 
-    <MajorUpgrade
-      DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
-
     <Property Id="ARPNOMODIFY" Value="1" />
 
     <Icon Id="ArtemisIcon" SourceFile="$(var.AppIcon)" />
     <Property Id="ARPPRODUCTICON" Value="ArtemisIcon" />
 
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="INSTALLFOLDER" Name="$(var.AppName)" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="$(var.StartMenuDir)" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
     <Feature Id="MainFeature" Title="$(var.AppName)" Level="1">
       <ComponentGroupRef Id="ArtemisFiles" />
       <ComponentRef Id="ApplicationShortcuts" />
+      <ComponentRef Id="DesktopShortcut" />
     </Feature>
-
-    <UIRef Id="WixUI_InstallDir" />
-    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
-  </Product>
-
-  <Fragment>
-    <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFilesFolder">
-        <Directory Id="INSTALLFOLDER" Name="$(var.AppName)" />
-      </Directory>
-      <Directory Id="ProgramMenuFolder">
-        <Directory Id="ApplicationProgramsFolder" Name="$(var.StartMenuDir)" />
-      </Directory>
-      <Directory Id="DesktopFolder" />
-    </Directory>
-  </Fragment>
+  </Package>
 
   <Fragment>
     <DirectoryRef Id="ApplicationProgramsFolder">

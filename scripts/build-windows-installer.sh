@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build a WiX MSI installer from a prepared Windows bundle.
+# Build a WiX v4 MSI installer from a prepared Windows bundle.
 #
 # Intended shell:
 #   MSYS2 UCRT32
 #
 # Prerequisites:
 #   - Bundle exists at dist/windows/Artemis (or override BUNDLE_DIR)
-#   - WiX v3 tools available in PATH: heat, candle, light
+#   - WiX v4 CLI available, either:
+#       - wix (global dotnet tool shim), or
+#       - dotnet tool run wix (local tool manifest)
 #
 # Output:
 #   dist/windows/Artemis-Setup-<version>.msi
@@ -22,16 +24,21 @@ APP_ICON="${APP_ICON:-$BUNDLE_DIR/com.k0vcz.Artemis.ico}"
 
 WIX_TEMPLATE="${WIX_TEMPLATE:-$ROOT_DIR/scripts/artemis.wxs}"
 WIX_FILES="${WIX_FILES:-$ROOT_DIR/scripts/wix-files.wxs}"
-WIX_OBJ_PRODUCT="${WIX_OBJ_PRODUCT:-$ROOT_DIR/scripts/artemis.wixobj}"
-WIX_OBJ_FILES="${WIX_OBJ_FILES:-$ROOT_DIR/scripts/wix-files.wixobj}"
 OUTPUT_MSI="${OUTPUT_MSI:-$ROOT_DIR/dist/windows/${APP_NAME}-Setup-${APP_VERSION}.msi}"
 
-for tool in heat candle light; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "error: '$tool' not found in PATH (install WiX Toolset v3)" >&2
+if command -v wix >/dev/null 2>&1; then
+  WIX_CMD=(wix)
+elif command -v dotnet >/dev/null 2>&1; then
+  if dotnet tool run wix --help >/dev/null 2>&1; then
+    WIX_CMD=(dotnet tool run wix)
+  else
+    echo "error: WiX v4 CLI not found. Install with: dotnet tool install --global wix" >&2
     exit 1
   fi
-done
+else
+  echo "error: neither 'wix' nor 'dotnet' is available in PATH" >&2
+  exit 1
+fi
 
 if [[ ! -d "$BUNDLE_DIR" ]]; then
   echo "error: bundle directory not found: $BUNDLE_DIR" >&2
@@ -61,42 +68,40 @@ to_win_path() {
 BUNDLE_DIR_WIN="$(to_win_path "$BUNDLE_DIR")"
 WIX_TEMPLATE_WIN="$(to_win_path "$WIX_TEMPLATE")"
 WIX_FILES_WIN="$(to_win_path "$WIX_FILES")"
-WIX_OBJ_PRODUCT_WIN="$(to_win_path "$WIX_OBJ_PRODUCT")"
-WIX_OBJ_FILES_WIN="$(to_win_path "$WIX_OBJ_FILES")"
 OUTPUT_MSI_WIN="$(to_win_path "$OUTPUT_MSI")"
 APP_ICON_WIN="$(to_win_path "$APP_ICON")"
 
-echo "==> Harvesting bundle files (heat)"
-heat dir "$BUNDLE_DIR_WIN" \
+echo "==> Harvesting bundle files (wix harvest)"
+if ! "${WIX_CMD[@]}" harvest directory "$BUNDLE_DIR_WIN" \
   -nologo \
   -gg \
   -srd \
   -dr INSTALLFOLDER \
   -cg ArtemisFiles \
   -var var.BundleDir \
-  -out "$WIX_FILES_WIN"
+  -out "$WIX_FILES_WIN"; then
+  echo "info: retrying with 'harvest dir' syntax" >&2
+  "${WIX_CMD[@]}" harvest dir "$BUNDLE_DIR_WIN" \
+    -nologo \
+    -gg \
+    -srd \
+    -dr INSTALLFOLDER \
+    -cg ArtemisFiles \
+    -var var.BundleDir \
+    -out "$WIX_FILES_WIN"
+fi
 
-echo "==> Compiling WiX sources (candle)"
-candle -nologo \
-  -dBundleDir="$BUNDLE_DIR_WIN" \
-  -dAppName="$APP_NAME" \
-  -dAppVersion="$APP_VERSION" \
-  -dStartMenuDir="$START_MENU_DIR" \
-  -dAppIcon="$APP_ICON_WIN" \
-  -out "$WIX_OBJ_PRODUCT_WIN" \
-  "$WIX_TEMPLATE_WIN"
-
-candle -nologo \
-  -dBundleDir="$BUNDLE_DIR_WIN" \
-  -out "$WIX_OBJ_FILES_WIN" \
+echo "==> Building MSI (wix build)"
+"${WIX_CMD[@]}" build \
+  -nologo \
+  -d BundleDir="$BUNDLE_DIR_WIN" \
+  -d AppName="$APP_NAME" \
+  -d AppVersion="$APP_VERSION" \
+  -d StartMenuDir="$START_MENU_DIR" \
+  -d AppIcon="$APP_ICON_WIN" \
+  -o "$OUTPUT_MSI_WIN" \
+  "$WIX_TEMPLATE_WIN" \
   "$WIX_FILES_WIN"
-
-echo "==> Linking MSI (light)"
-light -nologo \
-  -ext WixUIExtension \
-  -out "$OUTPUT_MSI_WIN" \
-  "$WIX_OBJ_PRODUCT_WIN" \
-  "$WIX_OBJ_FILES_WIN"
 
 echo
 echo "MSI created:"
