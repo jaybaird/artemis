@@ -20,12 +20,6 @@
 
 using Gee;
 
-#if ARTEMIS_UNIX
-using GUdev;
-#else
-
-#endif
-
 static string _strip_quotes (string s) {
     if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
         return s.substring (1, s.length - 2);
@@ -67,9 +61,6 @@ public sealed class PreferencesDialog : Object {
     private Gtk.Label connection_status_label;
 
     private File? logbook_csv = null;
-#if ARTEMIS_UNIX
-    private GUdev.Client udev_client;
-#endif
 
     public PreferencesDialog () {
         Object ();
@@ -79,15 +70,6 @@ public sealed class PreferencesDialog : Object {
         var builder = new Gtk.Builder.from_resource ("/com/k0vcz/artemis/ui/preferences.ui");
 
         dialog = builder.get_object ("prefs_dialog") as Adw.PreferencesDialog;
-
-#if ARTEMIS_UNIX
-        udev_client = new GUdev.Client ({"tty"});
-        udev_client.uevent.connect ((action, device) => {
-            if (row_device_path != null) {
-                row_device_path.model = get_serial_devices ();
-            }
-        });
-#endif
         row_callsign = builder.get_object ("row_callsign") as Adw.EntryRow;
         row_location = builder.get_object ("row_location") as Adw.EntryRow;
         row_spot_message = builder.get_object ("row_spot_message") as Adw.EntryRow;
@@ -523,17 +505,20 @@ public sealed class PreferencesDialog : Object {
 #if ARTEMIS_WINDOWS
     Gtk.StringList get_serial_devices () {
         var model = new Gtk.StringList ({});
+        var devices = RadioControl.get_serial_devices ();
+        foreach (var device in devices) {
+            model.append (device);
+        }
 
         return model;
     }
 #else
     Gtk.StringList get_serial_devices () {
-        var devices = udev_client.query_by_subsystem ("tty");
         var model = new Gtk.StringList ({});
-
-        devices.foreach ((device) => {
-            model.append (device.get_device_file ());
-        });
+        var devices = RadioControl.get_serial_devices ();
+        foreach (var device in devices) {
+            model.append (device);
+        }
 
         return model;
     }

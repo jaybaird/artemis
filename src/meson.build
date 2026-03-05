@@ -32,15 +32,25 @@ libdex_dep = dependency('libdex-1')
 hamlib_dep = dependency('hamlib')
 
 src_inc = include_directories('.')
+cc = meson.get_compiler('c')
+
+radio_control_sources = ['radio_control.c']
+radio_control_deps = [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
+
+if is_windows
+  radio_control_sources += 'windows_serial.c'
+  radio_control_deps += cc.find_library('setupapi', required: true)
+else
+  radio_control_deps += dependency('gudev-1.0')
+endif
 
 libradiocontrol = static_library(
   'radiocontrol',
-  ['radio_control.c'],
+  radio_control_sources,
   include_directories: src_inc,
-  dependencies: [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
+  dependencies: radio_control_deps
 )
 
-cc = meson.get_compiler('c')
 mathlib = cc.find_library('m', required: true)
 
 artemis_vala_deps = [
@@ -57,7 +67,6 @@ artemis_vala_deps = [
 ]
 
 if not is_windows
-  artemis_vala_deps += dependency('gudev-1.0')
   artemis_vala_deps += dependency('webkitgtk-6.0')
 endif
 
@@ -66,4 +75,3 @@ artemis_vala_sources += configure_file(
   output: 'build.vala',
   configuration: config
 )
-

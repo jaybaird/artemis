@@ -9,9 +9,50 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef ARTEMIS_UNIX
+#include <gudev/gudev.h>
+#endif
+
 static RadioModel *radio_models_cache = NULL;
 static gint radio_models_count = 0;
 static gsize radio_models_once = 0;
+
+#ifdef ARTEMIS_UNIX
+static GPtrArray *serial_devices_unix_cache = NULL;
+
+const gchar * const *
+radio_control_get_serial_devices_unix(gint *count)
+{
+  if (serial_devices_unix_cache == NULL) {
+    serial_devices_unix_cache = g_ptr_array_new_with_free_func(g_free);
+  } else {
+    g_ptr_array_set_size(serial_devices_unix_cache, 0);
+  }
+
+  const gchar *subsystems[] = { "tty", NULL };
+  GUdevClient *client = g_udev_client_new(subsystems);
+  GList *devices = g_udev_client_query_by_subsystem(client, "tty");
+
+  for (GList *iter = devices; iter != NULL; iter = iter->next) {
+    GUdevDevice *device = G_UDEV_DEVICE(iter->data);
+    const gchar *path = g_udev_device_get_device_file(device);
+    if (path != NULL && *path != '\0') {
+      g_ptr_array_add(serial_devices_unix_cache, g_strdup(path));
+    }
+  }
+
+  g_list_free_full(devices, g_object_unref);
+  g_object_unref(client);
+
+  g_ptr_array_sort(serial_devices_unix_cache, (GCompareFunc)g_strcmp0);
+
+  if (count != NULL) {
+    *count = (gint)serial_devices_unix_cache->len;
+  }
+
+  return (const gchar * const *)serial_devices_unix_cache->pdata;
+}
+#endif
 
 static int 
 collect_radio(rig_model_t rig_model, rig_ptr_t data) {
@@ -47,6 +88,16 @@ collect_radio(rig_model_t rig_model, rig_ptr_t data) {
 
   g_array_append_val(rigs, m);
   return 1;
+}
+
+const gchar * const *
+radio_control_get_serial_devices(gint *count)
+{
+#ifdef ARTEMIS_WINDOWS
+  return radio_control_get_serial_devices_windows(count);
+#else
+  return radio_control_get_serial_devices_unix(count);
+#endif
 }
 
 static gint

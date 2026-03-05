@@ -73,25 +73,28 @@ if is_windows
   windows_exe_link_args = ['-mwindows']
 endif
 
-if devel 
-  executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
-    dependencies: artemis_vala_deps,
-    vala_args: ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir],
-    link_with: [libradiocontrol],
-    link_args: windows_exe_link_args,
-    win_subsystem: 'console',
-    install: true,
-  )
-else
-  executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
-    dependencies: artemis_vala_deps,
-    vala_args: ['--pkg=RadioControl', '--vapidir='+srcdir],
-    link_with: [libradiocontrol],
-    link_args: windows_exe_link_args,
-    win_subsystem: 'console',
-    install: true,
-  )
+link_deps = [
+  libradiocontrol
+]
+
+if is_windows
+  # Windows serial enumeration is compiled into libradiocontrol.
 endif
+
+if devel
+  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir]
+else
+  vala_args = ['--pkg=RadioControl', '--vapidir='+srcdir]
+endif
+
+executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
+  dependencies: artemis_vala_deps,
+  vala_args: vala_args,
+  link_with: link_deps,
+  link_args: windows_exe_link_args,
+  win_subsystem: is_windows ? 'windows' : 'console',
+  install: true,
+)
 
 if not is_windows
   gnome.post_install(
