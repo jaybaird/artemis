@@ -8,8 +8,7 @@
     UpgradeCode="2C7EBB09-4A3C-4DB2-9D9F-95A4EB77960B"
     Scope="perMachine"
     InstallerVersion="500"
-    Compressed="yes"
-    Platform="x86">
+    Compressed="yes">
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" />
@@ -26,7 +25,23 @@
       <Directory Id="ApplicationProgramsFolder" Name="$(var.StartMenuDir)" />
     </StandardDirectory>
 
-    <StandardDirectory Id="DesktopFolder" />
+    <StandardDirectory Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*">
+        <Shortcut
+          Id="ApplicationDesktopShortcut"
+          Name="$(var.AppName)"
+          Description="$(var.AppName)"
+          Target="[INSTALLFOLDER]bin\com.k0vcz.Artemis.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue
+          Root="HKLM"
+          Key="Software\K0VCZ\$(var.AppName)"
+          Name="desktop-shortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
 
     <Feature Id="MainFeature" Title="$(var.AppName)" Level="1">
       <ComponentGroupRef Id="ArtemisFiles" />
@@ -62,23 +77,4 @@
     </DirectoryRef>
   </Fragment>
 
-  <Fragment>
-    <DirectoryRef Id="DesktopFolder">
-      <Component Id="DesktopShortcut" Guid="*">
-        <Shortcut
-          Id="ApplicationDesktopShortcut"
-          Name="$(var.AppName)"
-          Description="$(var.AppName)"
-          Target="[INSTALLFOLDER]bin\com.k0vcz.Artemis.exe"
-          WorkingDirectory="INSTALLFOLDER" />
-        <RegistryValue
-          Root="HKLM"
-          Key="Software\K0VCZ\$(var.AppName)"
-          Name="desktop-shortcut"
-          Type="integer"
-          Value="1"
-          KeyPath="yes" />
-      </Component>
-    </DirectoryRef>
-  </Fragment>
 </Wix>

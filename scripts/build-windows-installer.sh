@@ -21,6 +21,7 @@ APP_NAME="${APP_NAME:-Artemis}"
 APP_VERSION="${APP_VERSION:-$(sed -n "s/^[[:space:]]*version:[[:space:]]*'\\([^']*\\)'.*/\\1/p" "$ROOT_DIR/meson.build" | head -n1)}"
 START_MENU_DIR="${START_MENU_DIR:-Artemis}"
 APP_ICON="${APP_ICON:-$BUNDLE_DIR/com.k0vcz.Artemis.ico}"
+WIX_ARCH="${WIX_ARCH:-x86}"
 
 WIX_TEMPLATE="${WIX_TEMPLATE:-$ROOT_DIR/scripts/artemis.wxs}"
 OUTPUT_MSI="${OUTPUT_MSI:-$ROOT_DIR/dist/windows/${APP_NAME}-Setup-${APP_VERSION}.msi}"
@@ -72,6 +73,7 @@ APP_ICON_WIN="$(to_win_path "$APP_ICON")"
 echo "==> Building MSI (wix build)"
 "${WIX_CMD[@]}" build \
   -nologo \
+  -arch "$WIX_ARCH" \
   -d BundleDir="$BUNDLE_DIR_WIN" \
   -d AppName="$APP_NAME" \
   -d AppVersion="$APP_VERSION" \
