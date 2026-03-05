@@ -36,6 +36,12 @@
   </Package>
 
   <Fragment>
+    <ComponentGroup Id="ArtemisFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.BundleDir)\**" />
+    </ComponentGroup>
+  </Fragment>
+
+  <Fragment>
     <DirectoryRef Id="ApplicationProgramsFolder">
       <Component Id="ApplicationShortcuts" Guid="*">
         <Shortcut

@@ -23,7 +23,6 @@ START_MENU_DIR="${START_MENU_DIR:-Artemis}"
 APP_ICON="${APP_ICON:-$BUNDLE_DIR/com.k0vcz.Artemis.ico}"
 
 WIX_TEMPLATE="${WIX_TEMPLATE:-$ROOT_DIR/scripts/artemis.wxs}"
-WIX_FILES="${WIX_FILES:-$ROOT_DIR/scripts/wix-files.wxs}"
 OUTPUT_MSI="${OUTPUT_MSI:-$ROOT_DIR/dist/windows/${APP_NAME}-Setup-${APP_VERSION}.msi}"
 
 if command -v wix >/dev/null 2>&1; then
@@ -67,29 +66,8 @@ to_win_path() {
 
 BUNDLE_DIR_WIN="$(to_win_path "$BUNDLE_DIR")"
 WIX_TEMPLATE_WIN="$(to_win_path "$WIX_TEMPLATE")"
-WIX_FILES_WIN="$(to_win_path "$WIX_FILES")"
 OUTPUT_MSI_WIN="$(to_win_path "$OUTPUT_MSI")"
 APP_ICON_WIN="$(to_win_path "$APP_ICON")"
-
-echo "==> Harvesting bundle files (wix harvest)"
-if ! "${WIX_CMD[@]}" harvest directory "$BUNDLE_DIR_WIN" \
-  -nologo \
-  -gg \
-  -srd \
-  -dr INSTALLFOLDER \
-  -cg ArtemisFiles \
-  -var var.BundleDir \
-  -out "$WIX_FILES_WIN"; then
-  echo "info: retrying with 'harvest dir' syntax" >&2
-  "${WIX_CMD[@]}" harvest dir "$BUNDLE_DIR_WIN" \
-    -nologo \
-    -gg \
-    -srd \
-    -dr INSTALLFOLDER \
-    -cg ArtemisFiles \
-    -var var.BundleDir \
-    -out "$WIX_FILES_WIN"
-fi
 
 echo "==> Building MSI (wix build)"
 "${WIX_CMD[@]}" build \
@@ -100,8 +78,7 @@ echo "==> Building MSI (wix build)"
   -d StartMenuDir="$START_MENU_DIR" \
   -d AppIcon="$APP_ICON_WIN" \
   -o "$OUTPUT_MSI_WIN" \
-  "$WIX_TEMPLATE_WIN" \
-  "$WIX_FILES_WIN"
+  "$WIX_TEMPLATE_WIN"
 
 echo
 echo "MSI created:"
