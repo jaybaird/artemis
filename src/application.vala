@@ -255,6 +255,8 @@ public sealed class Application : Adw.Application {
 #if ARTEMIS_WINDOWS
         configure_windows_runtime_environment (args);
 #endif
+        Environment.set_prgname ("Artemis");
+        Environment.set_application_name ("Artemis");
         Intl.setlocale (LocaleCategory.ALL, "");
         Intl.bindtextdomain (Build.GETTEXT_PACKAGE, Build.LOCALEDIR);
         Intl.bind_textdomain_codeset (Build.GETTEXT_PACKAGE, "UTF-8");
