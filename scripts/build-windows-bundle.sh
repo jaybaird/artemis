@@ -219,8 +219,8 @@ if [[ -d "$MINGW_PREFIX/share/glib-2.0/schemas" ]]; then
   cp -af "$MINGW_PREFIX/share/glib-2.0/schemas/." "$SCHEMA_DIR/"
 fi
 
-if [[ ! -f "$SCHEMA_DIR/com.k0vcz.Artemis.gschema.xml" ]] && [[ -f "$ROOT_DIR/data/com.k0vcz.Artemis.gschema.xml" ]]; then
-  echo "==> Restoring missing app schema into bundle"
+if [[ -f "$ROOT_DIR/data/com.k0vcz.Artemis.gschema.xml" ]]; then
+  echo "==> Refreshing app schema in bundle"
   cp -f "$ROOT_DIR/data/com.k0vcz.Artemis.gschema.xml" "$SCHEMA_DIR/"
 fi
 
