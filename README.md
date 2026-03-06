@@ -50,6 +50,9 @@ flatpak install flathub com.k0vcz.Artemis
 flatpak run com.k0vcz.Artemis
 ```
 
+### Windows
+Run Artemis-Setup-<version>.msi
+
 ## Usage
 
 1. Configure your callsign, location, and radio settings via Preferences.
@@ -96,6 +99,14 @@ bash scripts/release-flatpak.sh
 
 Artifact output:
 - `dist/flatpak/com.k0vcz.Artemis.flatpak`
+
+### Windows
+Requires the Msys32 UCRT64 toolchain to be installed in your Windows environment with the above dependencies. To build the installer you will need to have the Wix v6 tool chain installed as well.
+
+```bash
+bash scripts/build-windows-bundle.sh
+base scripts/build-windows-installer.sh
+```
 
 ## License
 
