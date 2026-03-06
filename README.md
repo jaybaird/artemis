@@ -51,7 +51,7 @@ flatpak run com.k0vcz.Artemis
 ```
 
 ### Windows
-Run Artemis-Setup-<version>.msi
+Run `Artemis-Setup-<version>.msi`
 
 ## Usage
 
