@@ -71,6 +71,16 @@ public sealed class AddSpot : Adw.Dialog {
         Object ();
     }
 
+    private void present_qrz_error (string message) {
+        var alert = new Adw.AlertDialog (_("Unable to Upload to QRZ"), null);
+        alert.format_body (_("The spot was submitted, but QRZ logging failed: %s"),
+            message);
+        alert.add_response ("ok", _("OK"));
+        alert.set_default_response ("ok");
+        alert.set_close_response ("ok");
+        alert.present (Application.win);
+    }
+
     public AddSpot.from_spot (Spot spot) {
         Object ();
 
@@ -114,6 +124,8 @@ public sealed class AddSpot : Adw.Dialog {
 
         submit_button = builder.get_object ("submit_button") as Gtk.Button;
         submit_button.clicked.connect (() => {
+            bool enable_logging = Application.settings.get_boolean ("enable-logging");
+            string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
             var spot = new Spot.from_add_spot (
                 activator_callsign.text,
                 park_ref.text,
@@ -133,6 +145,22 @@ public sealed class AddSpot : Adw.Dialog {
                     if (err != null) {
                         warning ("Unable to save qso: %s".printf (err.message));
                     }
+
+                    if (enable_logging && (qrz_api_key != "")) {
+                        Application.qrz_client.upload_spot_qso.begin (spot, (
+                            qrz_obj,
+                            qrz_res
+                        ) => {
+                            try {
+                                Application.qrz_client.upload_spot_qso.end (qrz_res);
+                            } catch (Error qrz_err) {
+                                warning ("Unable to upload QSO to QRZ: %s",
+                                    qrz_err.message);
+                                present_qrz_error (qrz_err.message);
+                            }
+                        });
+                    }
+
                     Application.spot_repo.update_spots.begin ();
                 } catch (Error err) {
                     var errmsg = err.message;
