@@ -80,6 +80,13 @@
   </screenshots>
 
   <releases>
+    <release version="1.2" date="2026-03-19">
+      <url type="details">https://github.com/jaybaird/artemis/releases/tag/v1.2</url>
+      <description>
+        <p>Fixed a bug where logging to QRZ was not working</p>
+        <p>Fixed a bug in hamlib where stop and parity bits were not being passed correctly</p>
+      </description>
+    </release>
     <release version="1.1" date="2026-02-25">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.1</url>
       <description>
