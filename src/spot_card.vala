@@ -501,10 +501,6 @@ public sealed class SpotCard : Gtk.Box {
     }
 } /* class SpotCard */
 
-private Gtk.Widget create_qso_row (QsoRow row) {
-    return new Gtk.Label ("");
-}
-
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/park_log_dialog.ui")]
 public class ParkLogDialog : Adw.Dialog {
     [GtkChild]
