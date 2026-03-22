@@ -1,0 +1,108 @@
+/* blueprints/status_bar.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+
+template $StatusBar : Box {
+  hexpand: true;
+  halign: fill;
+  margin-bottom: 15;
+  margin-top: 15;
+
+  styles ["view", "card"]
+
+  CenterBox {
+    hexpand: true;
+
+    [start]
+    Box {
+      margin-start: 15;
+      orientation: horizontal;
+      valign: center;
+
+      ToggleButton radio_power_button {
+        styles ["radio-power-button"]
+      }
+
+      Box {
+        margin-top: 5;
+        margin-bottom: 5;
+
+        Label radio_vfo {
+          margin-top: 5;
+          margin-bottom: 5;
+          margin-start: 10;
+          margin-end: 10;
+          label: _("14.074.000");
+          styles ["monospace"]
+        }
+      }
+
+      Box {
+        margin-top: 5;
+        margin-bottom: 5;
+        styles ["card"]
+
+        Label radio_mode {
+          margin-top: 5;
+          margin-bottom: 5;
+          margin-start: 10;
+          margin-end: 10;
+          label: _("USB-D");
+          styles ["monospace"]
+        }
+      }
+    }
+
+    [center]
+    Label status_bar_text {
+      halign: center;
+      justify: center;
+      xalign: 0.5;
+      label: _("64 spots. (4 filtered)");
+    }
+
+    [end]
+    Box {
+      spacing: 15;
+      orientation: horizontal;
+      valign: center;
+      halign: end;
+      margin-end: 15;
+
+      ProgressBar refresh_progress {
+        valign: center;
+      }
+
+      Label current_time {
+        tooltip-text: _("Current Time (UTC)");
+        styles ["utc-time", "monospace"]
+        label: "18:51:27 UTC";
+      }
+
+      ToggleButton refresh_button {
+        width-request: 30;
+        height-request: 30;
+        icon-name: "media-playback-pause-symbolic";
+        styles ["circular"]
+      }
+    }
+  }
+}

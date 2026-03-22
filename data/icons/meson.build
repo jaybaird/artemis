@@ -27,7 +27,8 @@ install_data(
     'hicolor/symbolic/actions/distance-symbolic.svg',
     'hicolor/symbolic/actions/map-marker-symbolic.svg',
     'hicolor/symbolic/actions/map-symbolic.svg',
-    'hicolor/symbolic/actions/mode-symbolic.svg'
+    'hicolor/symbolic/actions/mode-symbolic.svg',
+    'hicolor/symbolic/actions/filter-symbolic.svg'
   ],
   install_dir: get_option('datadir') / application_id / 'icons/hicolor/scalable/actions'
 )

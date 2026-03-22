@@ -42,6 +42,7 @@ public sealed class BandView : Gtk.Box {
     public unowned Adw.StatusPage status_page;
 
     public unowned Adw.ViewStackPage ? page;
+    public signal void count_changed (uint count);
 
     private Gtk.Filter filter;
     private Gtk.CustomSorter sorter;
@@ -166,6 +167,7 @@ public sealed class BandView : Gtk.Box {
 
             if (page != null)
                 page.badge_number = sorted.get_n_items ();
+            count_changed (items);
         });
 
         var items = sorted.get_n_items ();

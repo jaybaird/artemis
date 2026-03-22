@@ -476,7 +476,7 @@ hamlib_debug_callback(enum rig_debug_level_e level, rig_ptr_t arg, const char* f
   g_autofree gchar *msg = g_strdup_vprintf(format, ap);
   switch (level)
   {
-    case RIG_DEBUG_BUG: 
+    case RIG_DEBUG_BUG:
     case RIG_DEBUG_ERR:
     case RIG_DEBUG_WARN:
     case RIG_DEBUG_VERBOSE:
@@ -493,7 +493,11 @@ static void
 radio_control_init(RadioControl *self)
 {
   rig_set_debug_callback(hamlib_debug_callback, NULL);
+#ifdef ARTEMIS_DEBUG
+  rig_set_debug_level(RIG_DEBUG_VERBOSE);
+#else
   rig_set_debug_level(RIG_DEBUG_NONE);
+#endif
 
   self->poll_interval_ms = 500;
   self->canceled = dex_cancellable_new();
@@ -652,7 +656,7 @@ connect_worker(gpointer user_data)
   
   int result = rig_open(self->rig);
 
-  if (result != RIG_OK) 
+  if (result != RIG_OK)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_CONNECTION_REFUSED,
                 "Failed to connect to radio: %s", rigerror(result));

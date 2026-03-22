@@ -350,16 +350,16 @@ public sealed class PreferencesDialog : Object {
             return;
 
         var current_data_bits = Application.settings.get_int ("radio-data-bits");
-        row_data_bits.selected = data_bits_actual_to_selected (current_data_bits);
+        row_data_bits.selected = data_bits_actual_to_selected ((uint)current_data_bits);
 
         row_data_bits.notify["selected"].connect (() => {
             var data_bits = data_bits_selected_to_actual (row_data_bits.selected);
-            Application.settings.set_uint ("radio-data-bits", data_bits);
+            Application.settings.set_int ("radio-data-bits", (int)data_bits);
         });
 
         Application.settings.changed["radio-data-bits"].connect (() => {
-            var data_bits = Application.settings.get_uint ("radio-data-bits");
-            row_data_bits.selected = data_bits_actual_to_selected (data_bits);
+            var data_bits = Application.settings.get_int ("radio-data-bits");
+            row_data_bits.selected = data_bits_actual_to_selected ((uint)data_bits);
         });
     }
 
@@ -369,16 +369,17 @@ public sealed class PreferencesDialog : Object {
         if (model == null)
             return;
 
-        var current_handshake = Application.settings.get_uint ("radio-hardware-handshake");
-        row_handshake.selected = current_handshake;
+        var current_handshake = Application.settings.get_int ("radio-hardware-handshake");
+        row_handshake.selected = (uint)current_handshake;
 
         row_handshake.notify["selected"].connect (() => {
-            Application.settings.set_uint ("radio-hardware-handshake", row_handshake.selected);
+            Application.settings.set_int ("radio-hardware-handshake",
+                (int)row_handshake.selected);
         });
 
         Application.settings.changed["radio-hardware-handshake"].connect (() => {
-            var handshake = Application.settings.get_uint ("radio-hardware-handshake");
-            row_handshake.selected = handshake;
+            var handshake = Application.settings.get_int ("radio-hardware-handshake");
+            row_handshake.selected = (uint)handshake;
         });
     }
 
@@ -388,16 +389,17 @@ public sealed class PreferencesDialog : Object {
         if (model == null)
             return;
 
-        var current_stop_bits = Application.settings.get_uint ("radio-stop-bits");
-        row_stop_bits.selected = stop_bits_actual_to_selected (current_stop_bits);
+        var current_stop_bits = Application.settings.get_int ("radio-stop-bits");
+        row_stop_bits.selected = stop_bits_actual_to_selected ((uint)current_stop_bits);
 
         row_stop_bits.notify["selected"].connect (() => {
-            Application.settings.set_uint ("radio-stop-bits", stop_bits_selected_to_actual (row_stop_bits.selected));
+            Application.settings.set_int ("radio-stop-bits",
+                (int)stop_bits_selected_to_actual (row_stop_bits.selected));
         });
 
         Application.settings.changed["radio-stop-bits"].connect (() => {
-            var stop_bits = Application.settings.get_uint ("radio-stop-bits");
-            row_stop_bits.selected = stop_bits_actual_to_selected (stop_bits);
+            var stop_bits = Application.settings.get_int ("radio-stop-bits");
+            row_stop_bits.selected = stop_bits_actual_to_selected ((uint)stop_bits);
         });
     }
 

@@ -43,10 +43,81 @@ template $AppWindow : Window {
     [end]
     Box {
       orientation: horizontal;
+      spacing: 4;
 
-      Button search_button {
-        icon-name: "system-search-symbolic";
-        tooltip-text: _("Toggle Search");
+      SearchEntry search_entry {
+        width-request: 250;
+        input-hints: no_spellcheck;
+        placeholder-text: _("Search for Park or Callsign");
+      }
+
+      MenuButton filter_button {
+        icon-name: "view-filter-symbolic";
+        tooltip-text: _("Filter Spots");
+        popover: Popover {
+          child: Box {
+            orientation: vertical;
+            spacing: 10;
+            margin-top: 12;
+            margin-bottom: 12;
+            margin-start: 12;
+            margin-end: 12;
+
+            Box {
+              orientation: horizontal;
+              spacing: 8;
+              valign: center;
+
+              Label {
+                label: _("Mode");
+                hexpand: true;
+                xalign: 0;
+              }
+
+              DropDown search_select {
+                tooltip-text: _("Mode Selector");
+                model: StringList {
+                  strings [
+                    _("All"),
+                    _("SSB"),
+                    _("CW"),
+                    _("FT8"),
+                    _("FT4"),
+                    _("FM"),
+                    _("AM"),
+                    _("RTTY"),
+                    _("JT65"),
+                  ]
+                };
+              }
+            }
+
+            Box {
+              orientation: horizontal;
+              spacing: 8;
+              valign: center;
+
+              Label {
+                label: _("Program");
+                hexpand: true;
+                xalign: 0;
+              }
+
+              DropDown program_select {
+                tooltip-text: _("Program Selection");
+                model: StringList {
+                  strings [
+                    _("All"),
+                    _("US"),
+                    _("CA"),
+                    _("NZ"),
+                    _("JP")
+                  ]
+                };
+              }
+            }
+          };
+        };
       }
 
       MenuButton button_menu {
@@ -61,74 +132,6 @@ template $AppWindow : Window {
     margin-start: 25;
     margin-end: 25;
 
-    Revealer search_revealer {
-      transition-type: slide_down;
-      transition-duration: 250;
-
-      child: Box {
-        margin-top: 15;
-        halign: fill;
-        hexpand: true;
-        orientation: horizontal;
-
-        SearchEntry search_entry {
-          hexpand: true;
-          halign: fill;
-          width-request: 500;
-          input-hints: no_spellcheck;
-          placeholder-text: _("Search for Park or Callsign");
-        }
-
-        Separator {
-          styles ["spacer"]
-        }
-
-        Label {
-          label: _("Mode");
-          margin-end: 5;
-        }
-
-        DropDown search_select {
-          tooltip-text: _("Mode Selector");
-          model: StringList {
-            strings [
-              _("All"),
-              _("SSB"),
-              _("CW"),
-              _("FT8"),
-              _("FT4"),
-              _("FM"),
-              _("AM"),
-              _("RTTY"),
-              _("JT65"),
-            ]
-          };
-        }
-
-        Separator {
-          styles ["spacer"]
-        }
-
-        Label {
-          label: _("Program");
-          margin-end: 5;
-        }
-
-        DropDown program_select {
-          tooltip-text: _("Program Selection");
-          model: StringList {
-            strings [
-              _("All"),
-              _("US"),
-              _("CA"),
-              _("NZ"),
-              _("JP")
-            ]
-          };
-        }
-      };
-    }
-
     Adw.InlineViewSwitcher switcher {
       margin-top: 20;
       margin-bottom: 20;
@@ -139,138 +142,60 @@ template $AppWindow : Window {
       styles ["round", "flat"]
     }
 
-  Adw.ToastOverlay toast_overlay {
-    Adw.ViewStack views {
-      Adw.ViewStackPage {
-        title: _("Spots");
-        icon-name: "bullseye-symbolic";
+    Adw.ToastOverlay toast_overlay {
+      vexpand: true;
 
-        child: Box {
-        orientation: vertical;
-          Overlay {
-            hexpand: true;
-            vexpand: true;
+      Adw.ViewStack views {
+        Adw.ViewStackPage {
+          title: _("Spots");
+          icon-name: "bullseye-symbolic";
 
-            child:
-              Box root {
-                orientation: vertical;
+          child: Box {
+            orientation: vertical;
 
-                Adw.ViewStack band_stack {
-                  enable-transitions: true;
-                  hexpand: true;
-                  vexpand: true;
+            Overlay {
+              hexpand: true;
+              vexpand: true;
+
+              child:
+                Box root {
+                  orientation: vertical;
+
+                  Adw.ViewStack band_stack {
+                    enable-transitions: true;
+                    hexpand: true;
+                    vexpand: true;
+                  }
+                };
+
+                [overlay]
+                Box loading_spinner {
+                  halign: center;
+                  valign: center;
+                  visible: false;
+
+                  Adw.Spinner {
+                    width-request: 64;
+                    height-request: 64;
+                  }
                 }
-              };
-
-              [overlay]
-              Box loading_spinner {
-                halign: center;
-                valign: center;
-                visible: false;
-
-                Adw.Spinner {
-                  width-request: 64;
-                  height-request: 64;
-                }
-              }
             }
-        };
-      }
-
-      Adw.ViewStackPage {
-        title: _("Map");
-        icon-name: "map-symbolic";
-
-        child: Box map_container {
-          orientation: vertical;
-          styles ["card"]
-        };
-      }
-    }
-  }
-
-    CenterBox {
-      hexpand: true;
-      halign: fill;
-      margin-bottom: 15;
-      margin-top: 15;
-
-      styles ["view", "card"]
-
-      [start]
-      Box {
-        margin-start: 15;
-        orientation: horizontal;
-        valign: center;
-
-       ToggleButton radio_power_button {
-          styles ["radio-power-button"]
+          };
         }
 
-        Box {
-          margin-top: 5;
-          margin-bottom: 5;
+        Adw.ViewStackPage {
+          title: _("Map");
+          icon-name: "map-symbolic";
 
-          Label radio_vfo {
-            margin-top: 5;
-            margin-bottom: 5;
-            margin-start: 10;
-            margin-end: 10;
-            label: _("14.074.000");
-            styles ["monospace"]
-          }
-        }
-
-        Box {
-          margin-top: 5;
-          margin-bottom: 5;
-          styles ["card"]
-
-          Label radio_mode {
-            margin-top: 5;
-            margin-bottom: 5;
-            margin-start: 10;
-            margin-end: 10;
-            label: _("USB-D");
-            styles ["monospace"]
-          }
-        }
-      }
-
-      [center]
-      Label status_bar_text {
-        halign: center;
-        justify: center;
-        xalign: 0.5;
-        label: _("64 spots. (4 filtered)");
-      }
-
-      [end]
-      Box {
-        spacing: 15;
-        orientation: horizontal;
-        valign: center;
-        halign: end;
-        margin-end: 15;
-
-        ProgressBar refresh_progress {
-          valign: center;
-        }
-
-        Label current_time {
-          tooltip-text: _("Current Time (UTC)");
-          styles ["utc-time", "monospace"]
-          label: "18:51:27 UTC";
-        }
-
-        ToggleButton refresh_button {
-          width-request: 30;
-          height-request: 30;
-          icon-name: "media-playback-pause-symbolic";
-          styles ["circular"]
+          child: Box map_container {
+            orientation: vertical;
+            styles ["card"]
+          };
         }
       }
     }
+
+    $StatusBar status_bar {}
   }
 }
 

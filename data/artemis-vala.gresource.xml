@@ -8,6 +8,7 @@
     <file preprocess="xml-stripblanks">ui/add_spot_page.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_history_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/band_view.ui</file>
+    <file preprocess="xml-stripblanks">ui/status_bar.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_dialog.ui</file>
 
     <file compressed="true" alias="style.css">css/style.css</file>
