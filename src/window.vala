@@ -49,6 +49,12 @@ public sealed class AppWindow : Gtk.Window {
     [GtkChild]
     private unowned StatusBar status_bar;
 
+    [GtkChild]
+    public unowned Gtk.Box left_pane;
+
+    [GtkChild]
+    public unowned Gtk.Box right_pane;
+
     private uint timer_id = 0;
     private uint progress_timer_id = 0;
     private int64 last_refresh_time = 0;

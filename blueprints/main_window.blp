@@ -129,73 +129,115 @@ template $AppWindow : Window {
 
   Box {
     orientation: vertical;
-    margin-start: 25;
-    margin-end: 25;
-
-    Adw.InlineViewSwitcher switcher {
-      margin-top: 20;
-      margin-bottom: 20;
-      stack: band_stack;
-      display-mode: both;
-      can-shrink: false;
-
-      styles ["round", "flat"]
-    }
 
     Adw.ToastOverlay toast_overlay {
       vexpand: true;
 
-      Adw.ViewStack views {
-        Adw.ViewStackPage {
-          title: _("Spots");
-          icon-name: "bullseye-symbolic";
+      Paned {
+        orientation: horizontal;
+        hexpand: true;
+        vexpand: true;
+        resize-start-child: false;
+        resize-end-child: true;
 
-          child: Box {
-            orientation: vertical;
+        start-child: Box left_pane {
+          orientation: vertical;
+          width-request: 200;
+        };
 
-            Overlay {
+        end-child: Paned {
+          orientation: horizontal;
+          resize-start-child: true;
+          resize-end-child: false;
+
+          start-child: Overlay {
+            hexpand: true;
+            vexpand: true;
+
+            child: Box {
+              orientation: vertical;
               hexpand: true;
-              vexpand: true;
+              margin-start: 25;
+              margin-end: 25;
 
-              child:
-                Box root {
-                  orientation: vertical;
+              Adw.InlineViewSwitcher switcher {
+                margin-top: 20;
+                margin-bottom: 20;
+                stack: band_stack;
+                display-mode: both;
+                can-shrink: false;
 
-                  Adw.ViewStack band_stack {
-                    enable-transitions: true;
-                    hexpand: true;
-                    vexpand: true;
-                  }
-                };
+                styles ["round", "flat"]
+              }
 
-                [overlay]
-                Box loading_spinner {
-                  halign: center;
-                  valign: center;
-                  visible: false;
+              Adw.ViewStack views {
+                vexpand: true;
 
-                  Adw.Spinner {
-                    width-request: 64;
-                    height-request: 64;
-                  }
+                Adw.ViewStackPage {
+                  title: _("Spots");
+                  icon-name: "bullseye-symbolic";
+
+                  child: Box {
+                    orientation: vertical;
+
+                    Overlay {
+                      hexpand: true;
+                      vexpand: true;
+
+                      child:
+                        Box root {
+                          orientation: vertical;
+
+                          Adw.ViewStack band_stack {
+                            enable-transitions: true;
+                            hexpand: true;
+                            vexpand: true;
+                          }
+                        };
+
+                        [overlay]
+                        Box loading_spinner {
+                          halign: center;
+                          valign: center;
+                          visible: false;
+
+                          Adw.Spinner {
+                            width-request: 64;
+                            height-request: 64;
+                          }
+                        }
+                    }
+                  };
                 }
+
+                Adw.ViewStackPage {
+                  title: _("Map");
+                  icon-name: "map-symbolic";
+
+                  child: Box map_container {
+                    orientation: vertical;
+                    styles ["card"]
+                  };
+                }
+              }
+            };
+
+            [overlay]
+            $StatusBar status_bar {
+              valign: end;
+              margin-start: 12;
+              margin-end: 12;
+              margin-bottom: 12;
             }
           };
-        }
 
-        Adw.ViewStackPage {
-          title: _("Map");
-          icon-name: "map-symbolic";
-
-          child: Box map_container {
+          end-child: Box right_pane {
             orientation: vertical;
-            styles ["card"]
+            width-request: 300;
           };
-        }
+        };
       }
     }
-
-    $StatusBar status_bar {}
   }
 }
 
