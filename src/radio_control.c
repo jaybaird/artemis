@@ -608,14 +608,14 @@ connect_worker(gpointer user_data)
       try_set_rig_conf(self->rig, "serial_speed", baudstr, FALSE, NULL);
     }
 
-    if (config->data_bits != 0) {
-      char datastr[1];
-      g_snprintf(datastr, 1, "%d", config->data_bits);
+    if (config->data_bits == 7 || config->data_bits == 8) {
+      char datastr[16];
+      g_snprintf(datastr, sizeof datastr, "%u", config->data_bits);
       try_set_rig_conf(self->rig, "data_bits", datastr, FALSE, NULL);
     }
-    if (config->stop_bits != 0) {
-      char stopstr[1];
-      g_snprintf(stopstr, 1, "%d", config->stop_bits);
+    if (config->stop_bits == 1 || config->stop_bits == 2) {
+      char stopstr[16];
+      g_snprintf(stopstr, sizeof stopstr, "%u", config->stop_bits);
       try_set_rig_conf(self->rig, "stop_bits", stopstr, FALSE, NULL);
     }
     

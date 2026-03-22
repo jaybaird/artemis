@@ -2,6 +2,7 @@ artemis_vala_sources = [
   'src/application.vala',
   'src/window.vala',
   'src/pota_client.vala',
+  'src/qrz_client.vala',
   'src/preferences.vala',
   'src/spot_card.vala',
   'src/spot.vala',

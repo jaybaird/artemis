@@ -37,6 +37,7 @@ public sealed class Application : Adw.Application {
     public static SpotRepo spot_repo { get; private set; }
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
+    public static QrzClient qrz_client { get; private set; }
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -84,6 +85,7 @@ public sealed class Application : Adw.Application {
         settings = new Settings (Build.DOMAIN);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
+        qrz_client = new QrzClient ();
 
         spot_database = new SpotDb ();
         Error err;
