@@ -51,75 +51,6 @@ template $AppWindow : Window {
         placeholder-text: _("Search for Park or Callsign");
       }
 
-      MenuButton filter_button {
-        icon-name: "view-filter-symbolic";
-        tooltip-text: _("Filter Spots");
-        popover: Popover {
-          child: Box {
-            orientation: vertical;
-            spacing: 10;
-            margin-top: 12;
-            margin-bottom: 12;
-            margin-start: 12;
-            margin-end: 12;
-
-            Box {
-              orientation: horizontal;
-              spacing: 8;
-              valign: center;
-
-              Label {
-                label: _("Mode");
-                hexpand: true;
-                xalign: 0;
-              }
-
-              DropDown search_select {
-                tooltip-text: _("Mode Selector");
-                model: StringList {
-                  strings [
-                    _("All"),
-                    _("SSB"),
-                    _("CW"),
-                    _("FT8"),
-                    _("FT4"),
-                    _("FM"),
-                    _("AM"),
-                    _("RTTY"),
-                    _("JT65"),
-                  ]
-                };
-              }
-            }
-
-            Box {
-              orientation: horizontal;
-              spacing: 8;
-              valign: center;
-
-              Label {
-                label: _("Program");
-                hexpand: true;
-                xalign: 0;
-              }
-
-              DropDown program_select {
-                tooltip-text: _("Program Selection");
-                model: StringList {
-                  strings [
-                    _("All"),
-                    _("US"),
-                    _("CA"),
-                    _("NZ"),
-                    _("JP")
-                  ]
-                };
-              }
-            }
-          };
-        };
-      }
-
       MenuButton button_menu {
         menu-model: menu_app;
         icon-name: "open-menu-symbolic";
@@ -130,45 +61,36 @@ template $AppWindow : Window {
   Box {
     orientation: vertical;
 
-    Adw.ToastOverlay toast_overlay {
+    Paned {
+      orientation: horizontal;
+      hexpand: true;
       vexpand: true;
+      resize-start-child: false;
+      resize-end-child: true;
 
-      Paned {
+      start-child: $LeftSidebar left_sidebar {
+        width-request: 220;
+      };
+
+      end-child: Paned {
         orientation: horizontal;
-        hexpand: true;
-        vexpand: true;
-        resize-start-child: false;
-        resize-end-child: true;
+        resize-start-child: true;
+        resize-end-child: false;
 
-        start-child: Box left_pane {
-          orientation: vertical;
-          width-request: 200;
-        };
+        start-child: Adw.ToastOverlay toast_overlay {
+          hexpand: true;
+          vexpand: true;
 
-        end-child: Paned {
-          orientation: horizontal;
-          resize-start-child: true;
-          resize-end-child: false;
-
-          start-child: Overlay {
+          Overlay {
             hexpand: true;
             vexpand: true;
 
             child: Box {
               orientation: vertical;
               hexpand: true;
-              margin-start: 25;
-              margin-end: 25;
-
-              Adw.InlineViewSwitcher switcher {
-                margin-top: 20;
-                margin-bottom: 20;
-                stack: band_stack;
-                display-mode: both;
-                can-shrink: false;
-
-                styles ["round", "flat"]
-              }
+              margin-top: 12;
+              margin-start: 12;
+              margin-end: 12;
 
               Adw.ViewStack views {
                 vexpand: true;
@@ -229,14 +151,13 @@ template $AppWindow : Window {
               margin-end: 12;
               margin-bottom: 12;
             }
-          };
-
-          end-child: Box right_pane {
-            orientation: vertical;
-            width-request: 300;
-          };
+          }
         };
-      }
+
+        end-child: $SpotDetail spot_detail {
+          width-request: 300;
+        };
+      };
     }
   }
 }

@@ -13,6 +13,8 @@ artemis_vala_sources = [
   'src/utils.vala',
   'src/status_bar.vala',
   'src/map_view.vala',
+  'src/left_sidebar.vala',
+  'src/spot_detail.vala',
 ]
 
 if is_windows

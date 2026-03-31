@@ -1,0 +1,146 @@
+/* blueprints/left_sidebar.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+
+template $LeftSidebar : Box {
+  orientation: vertical;
+  margin-top: 12;
+  margin-bottom: 12;
+  margin-start: 12;
+  margin-end: 6;
+
+  styles ["card"]
+
+  ScrolledWindow {
+    vexpand: true;
+    hscrollbar-policy: never;
+
+    Box {
+      orientation: vertical;
+      margin-top: 8;
+      margin-bottom: 8;
+      margin-start: 8;
+      margin-end: 8;
+      spacing: 2;
+
+      Label {
+        label: _("Band");
+        xalign: 0;
+        margin-start: 8;
+        margin-bottom: 4;
+        styles ["heading", "dim-label"]
+      }
+
+      Box band_buttons_box {
+        orientation: vertical;
+        spacing: 2;
+      }
+    }
+  }
+
+  Separator {}
+
+  Box {
+    orientation: vertical;
+    margin-top: 8;
+    margin-bottom: 8;
+    margin-start: 8;
+    margin-end: 8;
+    spacing: 8;
+
+    Label {
+      label: _("Mode");
+      xalign: 0;
+      margin-start: 8;
+      styles ["heading", "dim-label"]
+    }
+
+    DropDown mode_select {
+      model: StringList {
+        strings [
+          _("All"),
+          _("SSB"),
+          _("CW"),
+          _("FT8"),
+          _("FT4"),
+          _("FM"),
+          _("AM"),
+          _("RTTY"),
+          _("JT65"),
+        ]
+      };
+    }
+
+    Label {
+      label: _("Program");
+      xalign: 0;
+      margin-start: 8;
+      styles ["heading", "dim-label"]
+    }
+
+    DropDown program_select {}
+  }
+
+  Separator {}
+
+  Box {
+    orientation: vertical;
+    margin-top: 8;
+    margin-bottom: 8;
+    margin-start: 8;
+    margin-end: 8;
+    spacing: 8;
+
+    Label {
+      label: _("Radio");
+      xalign: 0;
+      margin-start: 8;
+      styles ["heading", "dim-label"]
+    }
+
+    Box {
+      orientation: horizontal;
+      spacing: 6;
+      margin-start: 8;
+      margin-end: 8;
+
+      Label radio_vfo {
+        hexpand: true;
+        xalign: 0;
+        label: "14.074.000";
+        styles ["numeric"]
+      }
+
+      Label radio_mode {
+        xalign: 0;
+        label: "USB-D";
+        styles ["pill", "monospace", "caption"]
+        visible: false;
+      }
+    }
+
+    ToggleButton radio_power_button {
+      label: _("Connect");
+      hexpand: true;
+      styles ["radio-power-button"]
+    }
+  }
+}

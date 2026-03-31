@@ -1,0 +1,234 @@
+/* blueprints/spot_detail.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $SpotDetail : Box {
+  orientation: vertical;
+
+  Stack detail_stack {
+    vexpand: true;
+    hexpand: true;
+
+    StackPage {
+      name: "empty";
+      child: Adw.StatusPage {
+        vexpand: true;
+        icon-name: "bullseye-symbolic";
+        title: _("No Spot Selected");
+        description: _("Select a spot from the list to view its details.");
+      };
+    }
+
+    StackPage {
+      name: "detail";
+      child: ScrolledWindow {
+        vexpand: true;
+        hscrollbar-policy: never;
+
+          Adw.Clamp {
+            maximum-size: 400;
+            tightening-threshold: 300;
+
+            Box {
+              orientation: vertical;
+              spacing: 24;
+              margin-top: 24;
+              margin-bottom: 24;
+              margin-start: 12;
+              margin-end: 12;
+
+            Box {
+              orientation: vertical;
+              spacing: 8;
+
+              Adw.Avatar detail_avatar {
+                size: 72;
+                halign: center;
+                text: "?";
+              }
+
+              Label detail_callsign {
+                halign: center;
+                styles ["title-1"]
+              }
+
+              Label detail_operator_name {
+                halign: center;
+                styles ["body"]
+              }
+
+              Label detail_park_name {
+                halign: center;
+                wrap: true;
+                justify: center;
+              }
+
+              Box detail_badges {
+                  halign: center;
+                  spacing: 8;
+                  margin-top: 4;
+                  margin-bottom: 4;
+              }
+            }
+          
+            Box {
+              orientation: vertical;
+              spacing: 4;
+
+              Button detail_tune_button {
+                label: _("Tune");
+                tooltip-text: _("Tune your radio to this frequency");
+                hexpand: true;
+                visible: false;
+              }
+
+              Button detail_spot_button {
+                label: _("Re-Spot");
+                tooltip-text: _("Add your spot for this park");
+                hexpand: true;
+                visible: false;
+                styles ["suggested-action"]
+              }
+
+              Button detail_history_button {
+                label: _("History");
+                tooltip-text: _("See this activations spot history");
+                hexpand: true;
+              }
+
+              Button detail_park_button {
+                label: _("Park Details");
+                tooltip-text: _("See this park's details, map, and more");
+                hexpand: true;
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Last Spot");
+
+              Adw.ActionRow {
+                title: _("Spotter");
+                [suffix]
+                Label detail_spotter {
+                  valign: center;
+                }
+              }
+
+              Adw.ActionRow {
+                title: _("Time");
+                [suffix]
+                Label detail_spot_time {
+                  valign: center;
+                }
+              }
+
+              Adw.ActionRow detail_spotter_comment_row {
+                title: _("Comment");
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Signal");
+
+              Adw.ActionRow {
+                title: _("Frequency");
+                [suffix]
+                Label detail_frequency {
+                  valign: center;
+                  styles ["numeric"]
+                }
+              }
+
+              Adw.ActionRow {
+                title: _("Mode");
+                [suffix]
+                Label detail_mode {
+                  valign: center;
+                  styles ["pill", "monospace", "caption"]
+                }
+              }
+
+              Adw.ActionRow {
+                title: _("Spots");
+                [suffix]
+                Label detail_spot_count {
+                  valign: center;
+                }
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Location");
+
+              Adw.ActionRow {
+                title: _("Region");
+                [suffix]
+                Label detail_location {
+                  valign: center;
+                  halign: end;
+                  wrap: true;
+                  max-width-chars: 18;
+                  justify: right;
+                }
+              }
+
+              Adw.ActionRow detail_grid_row {
+                title: _("Grid");
+                [suffix]
+                Label detail_grid {
+                  valign: center;
+                  styles ["numeric"]
+                }
+              }
+
+              Adw.ActionRow detail_distance_row {
+                title: _("Distance");
+                [suffix]
+                Label detail_distance {
+                  styles ["numeric"]
+                  valign: center;
+                }
+              }
+
+              Adw.ActionRow detail_bearing_row {
+                title: _("Bearing");
+                [suffix]
+                Label detail_bearing {
+                  styles ["numeric"]
+                  valign: center;
+                }
+              }
+            }
+
+            Adw.PreferencesGroup detail_activator_group {
+              title: _("Activator Notes");
+
+              Adw.ActionRow detail_activator_comment_row {
+                title: _("Comment");
+              }
+            }
+          }
+        }
+      };
+    }
+  }
+}

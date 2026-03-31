@@ -27,7 +27,6 @@ template $SpotCard : Box {
   valign: start;
 
   Box card_view {
-    height-request: 180;
     halign: fill;
     hexpand: true;
     orientation: vertical;
@@ -118,45 +117,6 @@ template $SpotCard : Box {
         }
       }
 
-      Box distance_bearing {
-        orientation: horizontal;
-        spacing: 10;
-        tooltip-text: _("Distance & Bearing");
-
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-
-          Image {
-            pixel-size: 20;
-            icon-name: "compass2-symbolic";
-            valign: baseline;
-          }
-
-          Label bearing_label {
-            halign: start;
-            valign: baseline;
-            label: "360°";
-          }
-        }
-
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-          Image {
-            pixel-size: 20;
-            icon-name: "distance-symbolic";
-            valign: baseline;
-          }
-
-          Label distance_label {
-            halign: start;
-            valign: baseline;
-            label: "1660km";
-          }
-        }
-      }
-
       Box {
         orientation: horizontal;
         spacing: 10;
@@ -176,6 +136,7 @@ template $SpotCard : Box {
             halign: start;
             valign: baseline;
             label: "14074 kHz";
+            styles ["numeric"]
           }
         }
         
@@ -192,25 +153,7 @@ template $SpotCard : Box {
           Label mode {
             valign: baseline;
             label: "FT8";
-            styles ["caption monospace pill"]
           }
-        }
-      }
-
-      Box {
-        orientation: horizontal;
-        spacing: 10;
-        tooltip-text: _("Hunter callsign");
-
-        Adw.Avatar hunter_avatar {
-          size: 20;
-          valign: baseline;
-        }
-
-        Label hunter_callsign {
-          halign: start;
-          valign: baseline;
-          label: "K0VCZ";
         }
       }
 
@@ -232,83 +175,34 @@ template $SpotCard : Box {
         }
       }
 
-      Box {
-        orientation: horizontal;
-        spacing: 10;
-        tooltip-text: _("Spots");
-
-        Image {
-          pixel-size: 20;
-          icon-name: "history-undo-symbolic";
-          valign: baseline;
-        }
-
-        Label spots {
-          halign: start;
-          valign: baseline;
-          label: "16";
-          margin-bottom: 20;
-        }
-      }
     }
 
     Separator {
       styles ["horizontal"]
     }
-    
+
     Box {
-      halign: fill;
-      hexpand: true;
-      margin-top: 10;
-      margin-bottom: 10;
-      margin-start: 10;
-      margin-end: 10;
+      orientation: horizontal;
+      margin-start: 6;
+      margin-end: 6;
+      margin-top: 4;
+      margin-bottom: 4;
+      spacing: 6;
+      homogeneous: true;
 
-      Box {
-        halign: start;
+      Button tune_button {
+        label: _("Tune");
+        tooltip-text: _("Tune your radio to this frequency");
         hexpand: true;
-        orientation: horizontal;
-
-        Box {
-          halign: start;
-          spacing: 6;
-          
-          Button history_button {
-            clicked => $on_history_button_clicked();
-            Image {
-              tooltip-text: _("Spot History");
-              icon-name: "history-undo-symbolic";
-              icon-size: normal;
-            }
-          }
-
-          Button park_details_button {
-            clicked => $on_park_details_button_clicked();
-            Image {
-              tooltip-text: _("Park details");
-              icon-name: "maps-symbolic";
-              icon-size: normal;
-            }
-          }
-        }
+        visible: false;
+        styles ["raised"]
       }
 
-      Box {
-        spacing: 6;
-        halign: end;
-        
-        Button tune_button {
-          tooltip-text: _("Tune your radio to this frequency");
-          label: _("Tune");
-          clicked => $on_tune_button_clicked();
-        }
-
-        Button spot_button {
-          tooltip-text: _("Re-spot this park");
-          label: _("Re-Spot");
-          styles ["suggested-action"]
-          clicked => $on_spot_button_clicked();
-        }
+      Button spot_button {
+        label: _("Re-Spot");
+        tooltip-text: _("Add your spot for this park");
+        hexpand: true;
+        styles ["raised", "suggested-action"]
       }
     }
   }

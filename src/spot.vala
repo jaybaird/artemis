@@ -87,6 +87,8 @@ public sealed class Spot : Object {
     public Quark hash { get; construct; default = BLANK_HASH; }
     public bool is_new_park { get; construct; }
     public bool was_hunted_today { get; construct; }
+    public string? rst_sent { get; construct; }
+    public string? rst_rcvd { get; construct; }
 
     public Spot (string callsign,
                  string park_ref,
@@ -126,7 +128,9 @@ public sealed class Spot : Object {
         string frequency_khz,
         string mode,
         string spotter,
-        string spotter_comment) {
+        string spotter_comment,
+        string rst_sent,
+        string rst_rcvd) {
         Object (
             callsign: callsign,
             park_ref: park_ref,
@@ -134,7 +138,9 @@ public sealed class Spot : Object {
             frequency_khz: int.parse (frequency_khz),
             mode: mode,
             spotter: spotter,
-            spotter_comment: spotter_comment
+            spotter_comment: spotter_comment,
+            rst_sent: rst_sent,
+            rst_rcvd: rst_rcvd
         );
     }
 

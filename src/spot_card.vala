@@ -22,7 +22,7 @@
 using WebKit;
 #endif
 
-private static string humanize_ago (GLib.DateTime dt) {
+public string humanize_ago (GLib.DateTime dt) {
     var now = new GLib.DateTime.now_utc ();
     int64 span_us = now.difference (dt);
 
@@ -43,7 +43,7 @@ private static string humanize_ago (GLib.DateTime dt) {
     return _("more than an hour ago");
 }
 
-private static string bearing_to_compass (double bearing) {
+public string bearing_to_compass (double bearing) {
     bearing = Math.fmod (bearing, 360.0);
     if (bearing < 0)
         bearing += 360.0;
@@ -133,7 +133,9 @@ public sealed class AddSpot : Adw.Dialog {
                 frequency.text,
                 ((Gtk.StringList)mode.get_model ()).get_string (mode.selected),
                 spotter_callsign.text,
-                spotter_comments.text);
+                spotter_comments.text,
+                rst_sent.text,
+                rst_received.text);
 
             this.close ();
 
@@ -174,65 +176,35 @@ public sealed class AddSpot : Adw.Dialog {
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_card.ui")]
 public sealed class SpotCard : Gtk.Box {
     [GtkChild]
-    public unowned Gtk.Box card_view;
+    private unowned Adw.Avatar activator_avatar;
 
     [GtkChild]
-    public unowned Adw.Avatar activator_avatar;
+    private unowned Gtk.Label title;
 
     [GtkChild]
-    public unowned Gtk.Label title;
+    private unowned Gtk.Label park_label;
 
     [GtkChild]
-    public unowned Gtk.Label park_label;
+    private unowned Gtk.Image corner_image;
 
     [GtkChild]
-    public unowned Gtk.Box distance_bearing;
+    private unowned Gtk.Label location_desc;
 
     [GtkChild]
-    public unowned Gtk.Label distance_label;
+    private unowned Gtk.Label frequency;
 
     [GtkChild]
-    public unowned Gtk.Label bearing_label;
+    private unowned Gtk.Label mode;
 
     [GtkChild]
-    public unowned Gtk.Image corner_image;
+    private unowned Gtk.Label time;
 
     [GtkChild]
-    public unowned Gtk.Label location_desc;
+    private unowned Gtk.Button tune_button;
 
     [GtkChild]
-    public unowned Gtk.Label frequency;
+    private unowned Gtk.Button spot_button;
 
-    [GtkChild]
-    public unowned Gtk.Label mode;
-
-    [GtkChild]
-    public unowned Adw.Avatar hunter_avatar;
-
-    [GtkChild]
-    public unowned Gtk.Label hunter_callsign;
-
-    [GtkChild]
-    public unowned Gtk.Label time;
-
-    [GtkChild]
-    public unowned Gtk.Label spots;
-
-    [GtkChild]
-    public unowned Gtk.Button history_button;
-
-    [GtkChild]
-    public unowned Gtk.Button park_details_button;
-
-    [GtkChild]
-    public unowned Gtk.Button tune_button;
-
-    [GtkChild]
-    public unowned Gtk.Button spot_button;
-
-    public string park_url { get; construct; }
-    public string callsign { get; construct; }
-    public string park_ref { get; construct; }
     public Spot spot { get; construct; }
     private ulong callsign_cache_updated_handler = 0;
 
@@ -240,13 +212,6 @@ public sealed class SpotCard : Gtk.Box {
         set {
             if (value != null)
                 activator_avatar.set_custom_image (value);
-        }
-    }
-
-    private Gdk.Texture? spotter_avatar_texture {
-        set {
-            if (value != null)
-                hunter_avatar.set_custom_image (value);
         }
     }
 
@@ -273,16 +238,7 @@ public sealed class SpotCard : Gtk.Box {
     }
 
     public SpotCard.from_spot (Spot spot) {
-        var escaped_park_ref = GLib.Uri.escape_string (
-            spot.park_ref, null, false
-        );
-        var url = @"http://pota.app/#/park/$escaped_park_ref";
-        Object (
-            spot: spot,
-            park_url: url,
-            callsign: spot.callsign,
-            park_ref: spot.park_ref
-        );
+        Object (spot: spot);
 
         title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
         park_label.label = spot.park_name;
@@ -300,17 +256,9 @@ public sealed class SpotCard : Gtk.Box {
         }
 
         location_desc.label = locations_str;
-        location_desc.tooltip_text = spot.location_desc;
 
         frequency.label = "%d kHz".printf (spot.frequency_khz);
         mode.label = spot.mode;
-        hunter_callsign.label = spot.spotter;
-        spots.label = ngettext (
-            "%d spot",
-            "%d spots",
-            spot.spot_count
-            ).printf (spot.spot_count);
-
         time.label = humanize_ago (spot.spot_time);
 
         fetch_avatars.begin ((obj, res) => {
@@ -320,39 +268,27 @@ public sealed class SpotCard : Gtk.Box {
             update_avatars_from_cache (updated_callsign);
         });
 
-        // Keep the Tune button visible whenever radio support is configured.
-        // Connection state should change sensitivity, not visibility.
+        refresh_highlight ();
+
         tune_button.visible = Application.is_radio_configured;
         tune_button.sensitive = Application.radio_control.is_rig_connected;
-        Application.radio_control.radio_connected.connect (() => {
-            tune_button.sensitive = true;
-        });
-        Application.radio_control.radio_disconnected.connect (() => {
-            tune_button.sensitive = false;
-        });
-        Application.radio_control.radio_error.connect ((error) => {
-            tune_button.sensitive = false;
-        });
-        Application.radio_control.radio_status.connect ((frequency, mode) => {
-            tune_button.sensitive = Application.radio_control.is_rig_connected;
-        });
+        tune_button.clicked.connect (on_tune_clicked);
+        spot_button.clicked.connect (on_spot_clicked);
+    }
 
-        refresh_highlight ();
+    private void on_tune_clicked () {
+        Application.radio_control.tune_to_spot (spot);
+    }
+
+    private void on_spot_clicked () {
+        new AddSpot.from_spot (spot).present (get_root ());
     }
 
     private async void fetch_avatars () {
-        var ava_activator = yield Application.callsign_cache.get_avatar_for (spot
-            .callsign);
-
-        var ava_spotter = yield Application.callsign_cache.get_avatar_for (spot.
-            spotter);
-
+        var ava_activator = yield Application.callsign_cache.get_avatar_for (spot.callsign);
         activator_avatar_texture = ava_activator;
-        spotter_avatar_texture = ava_spotter;
 
-        var activator = yield Application.callsign_cache.get_callsign (spot.
-            callsign);
-
+        var activator = yield Application.callsign_cache.get_callsign (spot.callsign);
         activator_info = activator;
     } /* fetch_avatars */
 
@@ -363,11 +299,6 @@ public sealed class SpotCard : Gtk.Box {
 
             var activator = Application.callsign_cache.peek_callsign (spot.callsign);
             activator_info = activator;
-        }
-
-        if (updated_callsign == spot.spotter) {
-            var spotter_image = Application.callsign_cache.peek_avatar (spot.spotter);
-            spotter_avatar_texture = spotter_image;
         }
     }
 
@@ -400,105 +331,7 @@ public sealed class SpotCard : Gtk.Box {
             this.add_css_class ("dimmed");
         }
 
-        if ((Application.settings.get_string ("location") == "") || (spot.
-                                                                     distance <
-                                                                     0)) {
-            distance_bearing.visible = false;
-        } else {
-            distance_bearing.visible = true;
-            var use_metric = Application.settings.get_boolean ("use-metric");
-            var unit = _("km");
-            var distance = spot.distance;
-
-            if (!use_metric) {
-                unit = _("mi");
-                distance = spot.distance * 0.6213712;
-            }
-            bearing_label.label = "%d° %s".printf ((int)spot.bearing,
-                bearing_to_compass (spot.bearing));
-            distance_label.label = "%'d %s".printf ((int)distance, unit);
-        }
     } /* refresh_highlight */
-
-    [GtkCallback]
-    private void on_history_button_clicked () {
-        var spot_history = new SpotHistoryDialog (callsign, park_ref);
-
-        spot_history.show_loading (true);
-        spot_history.present (this.get_root ());
-
-        Application.pota_client.fetch_spot_history.begin (callsign, park_ref, (
-                obj, res) => {
-            try {
-                var history = Application.pota_client.fetch_spot_history.end (
-                    res);
-                spot_history.show_history (history);
-            } catch (Error err) {
-                spot_history.show_error (err.message);
-            }
-        });
-    }
-
-    [GtkCallback]
-    private void on_park_details_button_clicked () {
-#if ARTEMIS_UNIX
-        var park_details = new ParkDetailsView (park_url);
-        park_details.present (this.get_root ());
-#else
-        GLib.AppInfo.launch_default_for_uri (park_url, null);
-#endif
-    }
-
-    [GtkCallback]
-    private void on_tune_button_clicked () {
-        if ((spot == null) || !Application.radio_control.is_rig_connected)
-            return;
-
-        var text_mode = spot.mode.down ();
-        RadioMode mode = RadioMode.UNKNOWN;
-        if (text_mode == "ft8" || text_mode == "ft4")
-            mode = RadioMode.DIGITAL_U;
-        if (text_mode == "ssb")
-            mode = (spot.frequency_khz >= 14000) ? RadioMode.USB : RadioMode.LSB;
-        if (text_mode == "fm")
-            mode = RadioMode.FM;
-        if (text_mode == "am")
-            mode = RadioMode.AM;
-        if (text_mode == "cw")
-            mode = RadioMode.CW;
-
-        var set_vfo_future = Application.radio_control.set_vfo (spot.frequency_khz);
-        new Dex.Future.finally (set_vfo_future, (result) => {
-            try {
-                result.await_boolean ();
-            } catch (Error err) {
-                warning ("Unable to tune VFO to %d kHz: %s", spot.frequency_khz, err.message);
-                return null;
-            }
-
-            if (mode == RadioMode.UNKNOWN)
-                return null;
-
-            var set_mode_future = Application.radio_control.set_mode (mode);
-            new Dex.Future.finally (set_mode_future, (mode_result) => {
-                try {
-                    mode_result.await_boolean ();
-                } catch (Error err) {
-                    warning ("Unable to set mode %s: %s", text_mode, err.message);
-                }
-                return null;
-            }).disown ();
-            return null;
-        }).disown ();
-    }
-
-    [GtkCallback]
-    private void on_spot_button_clicked () {
-        if (spot != null) {
-            AddSpot add_spot = new AddSpot.from_spot (spot);
-            add_spot.present (this.get_root ());
-        }
-    }
 } /* class SpotCard */
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/park_log_dialog.ui")]

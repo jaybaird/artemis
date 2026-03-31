@@ -148,6 +148,11 @@ public sealed class QrzClient : Object {
             adif.append (adif_field ("notes", "POTA - %s".printf (park_ref)));
         }
 
+        if ((spot.rst_sent ?? "").strip () != "")
+            adif.append (adif_field ("rst_sent", spot.rst_sent.strip ()));
+        if ((spot.rst_rcvd ?? "").strip () != "")
+            adif.append (adif_field ("rst_rcvd", spot.rst_rcvd.strip ()));
+
         var comment = (spot.spotter_comment ?? "").strip ();
         if (comment != "")
             adif.append (adif_field ("comment", comment));

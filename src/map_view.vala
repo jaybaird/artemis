@@ -167,9 +167,6 @@ public class MapView : Gtk.Box {
     private Coordinate qth_coordinate;
 
     private Gtk.Overlay overlay;
-    private Adw.OverlaySplitView split_view;
-
-    private bool marker_clicked = false;
 
     Gtk.Filter filter;
     Gtk.FilterListModel filtered;
@@ -215,23 +212,7 @@ public class MapView : Gtk.Box {
             hexpand = true
         };
         overlay.set_child (box);
-
-        split_view = new Adw.OverlaySplitView () {
-            sidebar = new Gtk.Box (Gtk.Orientation.VERTICAL, 10) {
-                width_request = 350,
-                hexpand = true,
-                vexpand = true,
-                margin_start = 10,
-                margin_end = 10,
-                margin_top = 10,
-                margin_bottom = 10,
-            },
-            content = overlay,
-            show_sidebar = false,
-            min_sidebar_width = 250.0
-        };
-        split_view.add_css_class ("card");
-        this.append (split_view);
+        this.append (overlay);
 
         viewport = map_widget.get_viewport ();
         viewport.set_reference_map_source (map_source);
@@ -391,19 +372,7 @@ public class MapView : Gtk.Box {
 
         var click = new Gtk.GestureClick ();
         click.pressed.connect (() => {
-            marker_clicked = true;
             Application.current_spot_hash = spot.hash;
-
-            var sidebar_box = split_view.sidebar as Gtk.Box;
-            var spot_card = new SpotCard.from_spot (spot);
-
-            for (var child = sidebar_box.get_first_child (); child != null;) {
-                sidebar_box.remove (child);
-                child = child.get_next_sibling ();
-            }
-            sidebar_box.append (spot_card);
-            map_widget.go_to (coordinate.latitude, coordinate.longitude);
-            split_view.show_sidebar = true;
         });
         marker.add_controller (click);
 
@@ -421,12 +390,23 @@ public class MapView : Gtk.Box {
         marker_layer.add_marker (marker);
     } /* _create_marker */
 
+    public void go_to_spot (Spot? spot) {
+        if (spot == null)
+            return;
+        var coordinate = spot.coordinate;
+        if (coordinate == null)
+            return;
+        const double TARGET_ZOOM = 10.0;
+        var zoom = double.max (viewport.zoom_level, TARGET_ZOOM);
+        map_widget.go_to_full (coordinate.latitude, coordinate.longitude, zoom);
+    }
+
     public void bounce_filter () {
         filter.changed (Gtk.FilterChange.DIFFERENT);
         load_spots ();
     }
 
-    public void load_spots () {
+    private void load_spots () {
         bbox.clear ();
 
         if (marker_layer != null) {
@@ -457,11 +437,6 @@ public class MapView : Gtk.Box {
 
         if (Application.current_spot_hash == BLANK_HASH ||
             !valid_hashes.contains (Application.current_spot_hash)) {
-            if (split_view.show_sidebar) {
-                split_view.show_sidebar = false;
-                Application.current_spot_hash = BLANK_HASH;
-            }
-
             if ((spot_count > 0) && bbox.is_valid ()) {
                 var center = bbox.center ();
                 var zoom_level = get_zoom_level_fitting_bounds (bbox);

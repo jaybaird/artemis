@@ -27,49 +27,13 @@ template $StatusBar : Box {
   styles ["view", "card"]
 
   CenterBox {
+    margin-bottom: 8;
+    margin-top: 8;
+    margin-start: 15;
+    margin-end: 15;
     hexpand: true;
 
     [start]
-    Box {
-      margin-start: 15;
-      orientation: horizontal;
-      valign: center;
-
-      ToggleButton radio_power_button {
-        styles ["radio-power-button"]
-      }
-
-      Box {
-        margin-top: 5;
-        margin-bottom: 5;
-
-        Label radio_vfo {
-          margin-top: 5;
-          margin-bottom: 5;
-          margin-start: 10;
-          margin-end: 10;
-          label: _("14.074.000");
-          styles ["monospace"]
-        }
-      }
-
-      Box {
-        margin-top: 5;
-        margin-bottom: 5;
-        styles ["card"]
-
-        Label radio_mode {
-          margin-top: 5;
-          margin-bottom: 5;
-          margin-start: 10;
-          margin-end: 10;
-          label: _("USB-D");
-          styles ["monospace"]
-        }
-      }
-    }
-
-    [center]
     Label status_bar_text {
       halign: center;
       justify: center;
@@ -83,7 +47,6 @@ template $StatusBar : Box {
       orientation: horizontal;
       valign: center;
       halign: end;
-      margin-end: 15;
 
       ProgressBar refresh_progress {
         valign: center;
