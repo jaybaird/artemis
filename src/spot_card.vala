@@ -162,8 +162,6 @@ public sealed class AddSpot : Adw.Dialog {
                             }
                         });
                     }
-
-                    Application.spot_repo.update_spots.begin ();
                 } catch (Error err) {
                     var errmsg = err.message;
                     warning (@"Unable to post spot: $errmsg");
@@ -277,6 +275,7 @@ public sealed class SpotCard : Gtk.Box {
     }
 
     private void on_tune_clicked () {
+        Application.current_spot_hash = spot.hash;
         Application.radio_control.tune_to_spot (spot);
     }
 
