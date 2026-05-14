@@ -87,6 +87,7 @@ public sealed class Spot : Object {
     public Quark hash { get; construct; default = BLANK_HASH; }
     public bool is_new_park { get; construct; }
     public bool was_hunted_today { get; construct; }
+    public bool is_new_band { get; construct; }
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
 
@@ -177,6 +178,8 @@ public sealed class Spot : Object {
             park_ref, new DateTime.now_utc (), out error);
         is_new_park = !Application.spot_database.is_park_hunted (park_ref, out
             error);
+        is_new_band = !is_new_park && !Application.spot_database.had_qso_with_park_on_band (
+            park_ref, band, out error);
 
         coordinate = null;
         distance = -1.0;

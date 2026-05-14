@@ -1,4 +1,4 @@
-/* blueprints/status_bar.blp
+/* src/band_strip.vala
  *
  * Copyright 2026 Jay Baird (K0VCZ)
  *
@@ -18,44 +18,34 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Gtk 4.0;
+public sealed class BandStrip : Gtk.Box {
+    private string _band = "All";
 
-template $StatusBar : Box {
-  halign: center;
-
-  styles ["view", "status-bar-overlay"]
-
-  CenterBox {
-    margin-bottom: 8;
-    margin-top: 8;
-    margin-start: 15;
-    margin-end: 15;
-    hexpand: true;
-
-    [start]
-    Label status_bar_text {
-      halign: center;
-      justify: center;
-      xalign: 0.5;
-      label: _("64 spots. (4 filtered)");
+    public string band {
+        get {
+            return _band;
+        }
+        set {
+            _band = value;
+            sync_band_css ();
+        }
     }
 
-    [end]
-    Box {
-      spacing: 15;
-      orientation: horizontal;
-      valign: center;
-      halign: end;
-
-      ProgressBar refresh_progress {
-        valign: center;
-      }
-
-      Label current_time {
-        tooltip-text: _("Current Time (UTC)");
-        styles ["utc-time", "monospace"]
-        label: "18:51:27 UTC";
-      }
+    public BandStrip (string band = "All") {
+        Object ();
+        this.band = band;
     }
-  }
+
+    construct {
+        add_css_class ("band-strip");
+        sync_band_css ();
+    }
+
+    private void sync_band_css () {
+        foreach (var known_band in RadioConstants.BANDS) {
+            remove_css_class ("band-strip-%s".printf (known_band.down ()));
+        }
+
+        add_css_class ("band-strip-%s".printf (_band.down ()));
+    }
 }

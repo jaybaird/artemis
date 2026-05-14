@@ -29,11 +29,6 @@ public sealed class StatusBar : Gtk.Box {
     [GtkChild]
     private unowned Gtk.Label current_time;
 
-    [GtkChild]
-    private unowned Gtk.ToggleButton refresh_button;
-
-    public signal void refresh_clicked ();
-
     public StatusBar () {
         Object ();
     }
@@ -41,7 +36,6 @@ public sealed class StatusBar : Gtk.Box {
     construct {
         refresh_progress.fraction = 0;
         refresh_progress.tooltip_text = "";
-        refresh_button.clicked.connect (() => refresh_clicked ());
     }
 
     public void set_time (string time) {
@@ -68,13 +62,10 @@ public sealed class StatusBar : Gtk.Box {
 
     public void set_paused (bool paused) {
         if (paused) {
-            refresh_button.icon_name = "view-refresh-symbolic";
-            refresh_button.tooltip_text = _("Refresh");
             refresh_progress.tooltip_text = _("Updates Paused");
             refresh_progress.fraction = 0;
         } else {
-            refresh_button.icon_name = "media-playback-pause-symbolic";
-            refresh_button.tooltip_text = _("Pause");
+            refresh_progress.tooltip_text = "";
         }
     }
 

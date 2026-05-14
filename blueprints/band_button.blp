@@ -26,8 +26,11 @@ template $BandButton : Box {
   margin-start: 4;
   margin-end: 4;
   
-  Image band_icon {
-    pixel-size: 20;
+  $BandStrip band_strip {
+    width-request: 4;
+    height-request: 24;
+    valign: center;
+    band: "All";
   }
 
   Label band_name {

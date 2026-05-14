@@ -9,12 +9,15 @@ artemis_vala_sources = [
   'src/repo.vala',
   'src/activator.vala',
   'src/band_view.vala',
+  'src/band_strip.vala',
   'src/database.vala',
   'src/utils.vala',
   'src/status_bar.vala',
   'src/map_view.vala',
   'src/left_sidebar.vala',
   'src/spot_detail.vala',
+  'src/spot_list_view.vala',
+  'src/weather_cache.vala',
 ]
 
 if is_windows

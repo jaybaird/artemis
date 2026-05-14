@@ -87,6 +87,10 @@ template $LeftSidebar : Box {
           _("JT65"),
         ]
       };
+      accessibility {
+        label: _("Mode");
+        role-description: _("combo box");
+      }
     }
 
     Label {
@@ -96,7 +100,12 @@ template $LeftSidebar : Box {
       styles ["heading", "dim-label"]
     }
 
-    DropDown program_select {}
+    DropDown program_select {
+      accessibility {
+        label: _("Program");
+        role-description: _("combo box");
+      }
+    }
   }
 
   Separator {}
@@ -117,22 +126,27 @@ template $LeftSidebar : Box {
     }
 
     Box {
-      orientation: horizontal;
+      orientation: vertical;
       spacing: 6;
       margin-start: 8;
       margin-end: 8;
 
       Label radio_vfo {
         hexpand: true;
-        xalign: 0;
+        halign: center;
+        justify: center;
+        xalign: 0.5;
         label: "14.074.000";
-        styles ["numeric"]
+        ellipsize: end;
+        styles ["numeric", "title-1", "frequency-display"]
       }
 
       Label radio_mode {
-        xalign: 0;
+        xalign: 0.5;
         label: "USB-D";
-        styles ["pill", "monospace", "caption"]
+        halign: center;
+        justify: center;
+        styles ["card", "pill", "caption", "mode-display"]
         visible: false;
       }
     }
@@ -141,6 +155,10 @@ template $LeftSidebar : Box {
       label: _("Connect");
       hexpand: true;
       styles ["radio-power-button"]
+      accessibility {
+        label: _("Connect");
+        role-description: _("toggle button");
+      }
     }
   }
 }

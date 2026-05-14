@@ -29,13 +29,22 @@ public sealed class AppWindow : Gtk.Window {
     public unowned Gtk.Box loading_spinner;
 
     [GtkChild]
-    public unowned Adw.ToastOverlay toast_overlay;
-
-    [GtkChild]
     public unowned Gtk.SearchEntry search_entry;
 
     [GtkChild]
     public unowned Gtk.Box map_container;
+
+    [GtkChild]
+    public unowned Gtk.Box list_container;
+
+    [GtkChild]
+    private unowned Gtk.ToggleButton refresh_toggle;
+
+    [GtkChild]
+    private unowned Gtk.Paned content_paned;
+
+    [GtkChild]
+    private unowned Gtk.ToggleButton inspector_toggle;
 
     [GtkChild]
     private unowned StatusBar status_bar;
@@ -46,9 +55,6 @@ public sealed class AppWindow : Gtk.Window {
     [GtkChild]
     private unowned SpotDetail spot_detail;
 
-    [GtkChild]
-    private unowned Adw.ViewStack views;
-
     private uint timer_id = 0;
     private uint progress_timer_id = 0;
     private int64 last_refresh_time = 0;
@@ -57,10 +63,12 @@ public sealed class AppWindow : Gtk.Window {
     private bool update_paused = false;
     private ArrayList<Adw.ViewStackPage> band_pages;
     private MapView map_view;
+    private SpotListView list_view;
     private bool radio_connect_inflight = false;
 
     private ulong radio_status_handler = 0;
     private ulong radio_error_handler = 0;
+    private bool syncing_inspector_toggle = false;
 
     private static Gee.HashSet<string> active_error_keys;
 
@@ -83,7 +91,7 @@ public sealed class AppWindow : Gtk.Window {
                 start_radio ();
             }
         });
-        status_bar.refresh_clicked.connect (on_refresh_button_clicked);
+        refresh_toggle.clicked.connect (on_refresh_button_clicked);
 
         search_entry.set_key_capture_widget (this);
 
@@ -95,14 +103,12 @@ public sealed class AppWindow : Gtk.Window {
 
         search_entry.search_changed.connect (() => {
             Application.current_search_text = search_entry.text;
+            refresh_spot_views ();
+        });
 
-            bounce_map_filter_if_ready ();
-            foreach (var page in band_pages) {
-                var band_view = page.get_child () as BandView;
-                band_view.bounce_filter ();
-            }
-
-            update_status_bar ();
+        inspector_toggle.toggled.connect (() => {
+            if (!syncing_inspector_toggle)
+                set_inspector_visible (inspector_toggle.active);
         });
 
         Application.spot_repo.busy_changed.connect ((busy) => {
@@ -110,16 +116,6 @@ public sealed class AppWindow : Gtk.Window {
         });
 
         Application.spot_repo.refreshed.connect ((spots_updated) => {
-            string toast_title = ngettext (
-                "%u spot refreshed",
-                "%u spots refreshed",
-                spots_updated
-                ).printf (spots_updated);
-
-            var toast = new Adw.Toast (toast_title);
-            toast.timeout = 5;
-            toast_overlay.add_toast (toast);
-
             left_sidebar.update_bands (
                 Application.spot_repo.band_counts,
                 Application.current_band_filter ?? "All"
@@ -130,7 +126,7 @@ public sealed class AppWindow : Gtk.Window {
             );
 
             if (Application.current_spot_hash != BLANK_HASH &&
-                Application.spot_repo.get_spot (Application.current_spot_hash) == null) {
+                !current_spot_matches_filters ()) {
                 Application.current_spot_hash = BLANK_HASH;
             }
 
@@ -190,8 +186,7 @@ public sealed class AppWindow : Gtk.Window {
         band_stack.notify["visible-child-name"].connect (() => {
             Application.current_band_filter = band_stack.visible_child_name;
             left_sidebar.set_selected_band (band_stack.visible_child_name);
-            update_status_bar ();
-            bounce_map_filter_if_ready ();
+            refresh_spot_views ();
         });
 
         left_sidebar.band_selected.connect ((band) => {
@@ -200,22 +195,12 @@ public sealed class AppWindow : Gtk.Window {
 
         left_sidebar.mode_changed.connect ((mode) => {
             Application.current_mode_filter = mode;
-            bounce_map_filter_if_ready ();
-            foreach (var page in band_pages) {
-                var band_view = page.get_child () as BandView;
-                band_view.bounce_filter ();
-            }
-            update_status_bar ();
+            refresh_spot_views ();
         });
 
         left_sidebar.program_changed.connect ((program) => {
             Application.current_program_filter = program;
-            bounce_map_filter_if_ready ();
-            foreach (var page in band_pages) {
-                var band_view = page.get_child () as BandView;
-                band_view.bounce_filter ();
-            }
-            update_status_bar ();
+            refresh_spot_views ();
         });
 
         left_sidebar.update_bands (
@@ -227,21 +212,24 @@ public sealed class AppWindow : Gtk.Window {
             Application.current_program_filter
         );
 
-        views.notify["visible-child-name"].connect (() => {
-            var on_map = views.visible_child == map_container;
-            spot_detail.set_action_buttons_visible (on_map);
-            if (!on_map && Application.current_spot_hash != BLANK_HASH) {
-                var spot = Application.spot_repo.get_spot (Application.current_spot_hash);
-                if (spot != null)
-                    sync_band_view_to_spot (Application.current_spot_hash, spot);
-            }
-        });
-
         map_view = new MapView () {
             hexpand = true,
             vexpand = true
         };
         map_container.append (map_view);
+
+        list_view = new SpotListView () {
+            hexpand = true,
+            vexpand = true
+        };
+        list_container.append (list_view);
+
+        spot_detail.set_action_buttons_visible (true);
+        set_inspector_visible (true);
+
+        Application.settings.changed["hide-qrt"].connect (refresh_spot_views);
+        Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
+        Application.settings.changed["hide-older-than"].connect (refresh_spot_views);
 
     }
 
@@ -249,41 +237,60 @@ public sealed class AppWindow : Gtk.Window {
         var spot = Application.spot_repo.get_spot (spot_hash);
         spot_detail.set_spot (spot);
 
-        if (spot == null)
+        if (spot == null) {
+            foreach (var page in band_pages) {
+                var band_view = page.get_child () as BandView;
+                band_view.set_current_spot (BLANK_HASH);
+            }
+            if (list_view != null)
+                list_view.set_current_spot (BLANK_HASH);
             return;
+        }
+
+        if (content_paned.get_end_child () == null)
+            set_inspector_visible (true);
 
         if (map_view != null)
             map_view.go_to_spot (spot);
 
-        if (views.visible_child == map_container)
-            return;
-
         sync_band_view_to_spot (spot_hash, spot);
+        if (list_view != null)
+            list_view.set_current_spot (spot_hash);
+    }
+
+    private void set_inspector_visible (bool visible) {
+        if (visible) {
+            if (content_paned.get_end_child () == null)
+                content_paned.set_end_child (spot_detail);
+        } else if (content_paned.get_end_child () != null) {
+            content_paned.set_end_child (null);
+        }
+
+        syncing_inspector_toggle = true;
+        inspector_toggle.active = visible;
+        syncing_inspector_toggle = false;
+        inspector_toggle.tooltip_text = visible ? _("Hide Inspector") : _("Show Inspector");
     }
 
     private void sync_band_view_to_spot (Quark spot_hash, Spot spot) {
-        if (band_stack.get_visible_child_name () != "All")
-            band_stack.set_visible_child_name (spot.band);
-
         var band_view = band_stack.get_visible_child () as BandView;
         if (band_view != null)
             band_view.set_current_spot (spot_hash);
     }
 
     private void update_status_bar () {
-        var visible_page = band_stack.visible_child;
-        var band_view = visible_page as BandView;
-        if (band_view == null)
+        if (list_view == null)
             return;
 
+        var current_band = Application.current_band_filter ?? "All";
         int total_available = 0;
-        if (band_view.band_label == "All") {
+        if (current_band == "All") {
             total_available = (int)Application.spot_repo.store.get_n_items ();
         } else {
-            total_available = Application.spot_repo.get_band_count (band_view.band_label);
+            total_available = Application.spot_repo.get_band_count (current_band);
         }
 
-        int total_visible = (int)band_view.get_n_items ();
+        int total_visible = (int)list_view.get_n_items ();
         int filtered_count = total_available - total_visible;
         if (filtered_count < 0)
             filtered_count = 0;
@@ -294,6 +301,38 @@ public sealed class AppWindow : Gtk.Window {
     private void bounce_map_filter_if_ready () {
         if (map_view != null)
             map_view.bounce_filter ();
+    }
+
+    private bool current_spot_matches_filters () {
+        if (Application.current_spot_hash == BLANK_HASH)
+            return false;
+
+        var spot = Application.spot_repo.get_spot (Application.current_spot_hash);
+        if (spot == null)
+            return false;
+
+        return spot_matches_current_filters (
+            spot,
+            Application.current_band_filter ?? "All"
+        );
+    }
+
+    private void refresh_spot_views () {
+        bounce_map_filter_if_ready ();
+        if (list_view != null)
+            list_view.bounce_filter ();
+
+        foreach (var page in band_pages) {
+            var band_view = page.get_child () as BandView;
+            band_view.bounce_filter ();
+        }
+
+        if (Application.current_spot_hash != BLANK_HASH &&
+            !current_spot_matches_filters ()) {
+            Application.current_spot_hash = BLANK_HASH;
+        }
+
+        update_status_bar ();
     }
 
     private void initial_update () {
@@ -468,9 +507,7 @@ public sealed class AppWindow : Gtk.Window {
                 yield Application.spot_repo.update_spots ();
 
                 Idle.add (() => {
-                    var band_view = band_stack.get_visible_child () as BandView;
-                    if (band_view != null)
-                        band_view.set_current_spot (Application.current_spot_hash);
+                    on_spot_selected (Application.current_spot_hash);
                     return Source.REMOVE;
                 });
             }
@@ -506,6 +543,11 @@ public sealed class AppWindow : Gtk.Window {
             last_refresh_time = get_monotonic_time ();
             Application.spot_repo.update_spots.begin ();
         }
+        refresh_toggle.active = update_paused;
+        refresh_toggle.icon_name = update_paused
+            ? "arrow-circular-bottom-right-symbolic"
+            : "media-playback-pause-symbolic";
+        refresh_toggle.tooltip_text = update_paused ? _("Resume") : _("Pause");
         status_bar.set_paused (update_paused);
     }
 

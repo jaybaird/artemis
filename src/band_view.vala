@@ -67,40 +67,7 @@ public sealed class BandView : Gtk.Box {
             var spot = item as Spot;
             if (spot == null)
                 return false;
-
-            if ((band_label != "All") && (spot.band != band_label))
-                return false;
-
-            if (settings.get_boolean ("hide-qrt") &&
-                spot.activator_comment.down ().contains ("qrt"))
-                return false;
-
-            if (settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
-                return false;
-
-            var stale_minutes = settings.get_int ("hide-older-than");
-            var now = new DateTime.now_utc ();
-            var expires = spot.spot_time.add_minutes (stale_minutes);
-            if (now.compare (expires) > 0)
-                return false;
-
-            if ((Application.current_program_filter != null) &&
-                !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
-                return false;
-
-            if ((Application.current_mode_filter != null) &&
-                !spot.mode.down ().contains (Application.current_mode_filter.down ()))
-                return false;
-
-            if (Application.current_search_text != null) {
-                var needle = Application.current_search_text.down ();
-                if (!(spot.callsign.down ().contains (needle) ||
-                      spot.park_ref.down ().contains (needle) ||
-                      spot.park_name.down ().contains (needle)))
-                    return false;
-            }
-
-            return true;
+            return spot_matches_current_filters (spot, band_label);
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
@@ -196,6 +163,11 @@ public sealed class BandView : Gtk.Box {
 
     public void set_current_spot (Quark spot_hash) {
         Idle.add (() => {
+            if (spot_hash == BLANK_HASH) {
+                band_spot_cards.unselect_all ();
+                return Source.REMOVE;
+            }
+
             for (var child = band_spot_cards.get_first_child () ; child != null
                  ;
                  child = child.get_next_sibling ()) {
@@ -207,10 +179,11 @@ public sealed class BandView : Gtk.Box {
                 if ((spot_card != null) && (spot_card.spot.hash == spot_hash)) {
                     band_spot_cards.select_child (fbchild);
                     scroll_to_child (fbchild);
-                    break;
+                    return Source.REMOVE;
                 }
             }
 
+            band_spot_cards.unselect_all ();
             return Source.REMOVE;
         });
     }

@@ -23,7 +23,7 @@ using Gee;
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/band_button.ui")]
 public sealed class BandButton : Gtk.Box {
     [GtkChild]
-    private unowned Gtk.Image band_icon;
+    private unowned BandStrip band_strip;
 
     [GtkChild]
     private unowned Gtk.Label band_name;
@@ -34,7 +34,7 @@ public sealed class BandButton : Gtk.Box {
     public BandButton (string band, int count) {
         Object ();
 
-        band_icon.icon_name = @"band-$band";
+        band_strip.band = band;
         band_name.label = band;
         count_label.label = count.to_string ();
     }

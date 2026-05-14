@@ -43,6 +43,24 @@ public string humanize_ago (GLib.DateTime dt) {
     return _("more than an hour ago");
 }
 
+public string humanize_ago_compact (GLib.DateTime dt) {
+    var now = new GLib.DateTime.now_utc ();
+    int64 span_us = now.difference (dt);
+
+    if (span_us < 0)
+        return _("now");
+
+    int64 sec = span_us / GLib.TimeSpan.SECOND;
+    int64 min = span_us / GLib.TimeSpan.MINUTE;
+    int64 hr = span_us / GLib.TimeSpan.HOUR;
+
+    if (sec < 60)
+        return _("%lds").printf ((long)sec);
+    if (min < 60)
+        return _("%ldm ago").printf ((long)min);
+    return _("%ldh ago").printf ((long)hr);
+}
+
 public string bearing_to_compass (double bearing) {
     bearing = Math.fmod (bearing, 360.0);
     if (bearing < 0)
@@ -183,10 +201,16 @@ public sealed class SpotCard : Gtk.Box {
     private unowned Gtk.Label park_label;
 
     [GtkChild]
-    private unowned Gtk.Image corner_image;
+    private unowned Gtk.Box badge_box;
 
     [GtkChild]
     private unowned Gtk.Label location_desc;
+
+    [GtkChild]
+    private unowned Gtk.Label grid_square;
+
+    [GtkChild]
+    private unowned BandStrip band_strip;
 
     [GtkChild]
     private unowned Gtk.Label frequency;
@@ -198,6 +222,9 @@ public sealed class SpotCard : Gtk.Box {
     private unowned Gtk.Label time;
 
     [GtkChild]
+    private unowned Gtk.Label spot_count;
+
+    [GtkChild]
     private unowned Gtk.Button tune_button;
 
     [GtkChild]
@@ -205,6 +232,9 @@ public sealed class SpotCard : Gtk.Box {
 
     public Spot spot { get; construct; }
     private ulong callsign_cache_updated_handler = 0;
+    private ulong radio_connected_handler = 0;
+    private ulong radio_disconnected_handler = 0;
+    private ulong radio_error_handler = 0;
 
     private Gdk.Texture? activator_avatar_texture {
         set {
@@ -240,24 +270,16 @@ public sealed class SpotCard : Gtk.Box {
 
         title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
         park_label.label = spot.park_name;
+        location_desc.label = spot.location_desc;
+        var grid = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
+        grid_square.label = grid;
+        grid_square.visible = grid != "";
 
-        Error err = null;
-        var locations = spot.location_desc.split (",", -1);
-        var locations_str = "";
-        if (locations.length <= 2) {
-            for (int i = 0; i < locations.length; i++) {
-                var country = Application.spot_database.country_string_for_location (locations[i], out err);
-                locations_str = locations_str + ((i > 0) ? "\n" : "") + ((country == null) ? spot.location_desc : country);
-            }
-        } else {
-            locations_str = spot.location_desc;
-        }
-
-        location_desc.label = locations_str;
-
+        band_strip.band = spot.band;
         frequency.label = "%d kHz".printf (spot.frequency_khz);
         mode.label = spot.mode;
         time.label = humanize_ago (spot.spot_time);
+        spot_count.label = spot.spot_count.to_string ();
 
         fetch_avatars.begin ((obj, res) => {
             fetch_avatars.end (res);
@@ -268,10 +290,24 @@ public sealed class SpotCard : Gtk.Box {
 
         refresh_highlight ();
 
-        tune_button.visible = Application.is_radio_configured;
-        tune_button.sensitive = Application.radio_control.is_rig_connected;
+        update_tune_button_state ();
         tune_button.clicked.connect (on_tune_clicked);
         spot_button.clicked.connect (on_spot_clicked);
+
+        radio_connected_handler = Application.radio_control.radio_connected.connect (() => {
+            update_tune_button_state ();
+        });
+        radio_disconnected_handler = Application.radio_control.radio_disconnected.connect (() => {
+            update_tune_button_state ();
+        });
+        radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
+            update_tune_button_state ();
+        });
+    }
+
+    private void update_tune_button_state () {
+        tune_button.visible = Application.is_radio_configured;
+        tune_button.sensitive = Application.radio_control.is_rig_connected;
     }
 
     private void on_tune_clicked () {
@@ -307,26 +343,28 @@ public sealed class SpotCard : Gtk.Box {
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_updated_handler);
             callsign_cache_updated_handler = 0;
         }
+        if (radio_connected_handler != 0) {
+            if (SignalHandler.is_connected (Application.radio_control, radio_connected_handler))
+                SignalHandler.disconnect (Application.radio_control, radio_connected_handler);
+            radio_connected_handler = 0;
+        }
+        if (radio_disconnected_handler != 0) {
+            if (SignalHandler.is_connected (Application.radio_control, radio_disconnected_handler))
+                SignalHandler.disconnect (Application.radio_control, radio_disconnected_handler);
+            radio_disconnected_handler = 0;
+        }
+        if (radio_error_handler != 0) {
+            if (SignalHandler.is_connected (Application.radio_control, radio_error_handler))
+                SignalHandler.disconnect (Application.radio_control, radio_error_handler);
+            radio_error_handler = 0;
+        }
     }
 
     public void refresh_highlight () {
-        corner_image.visible = false;
+        populate_spot_badges (badge_box, spot);
 
-        if (spot.is_new_park && Application.settings.get_boolean (
-            "highlight-unhunted-parks")) {
-            corner_image.icon_name = "starred-symbolic";
-            corner_image.tooltip_text = _("New park!");
-            corner_image.visible = true;
-            corner_image.add_css_class ("unhunted");
-            corner_image.remove_css_class ("hunted");
-        }
-
+        this.remove_css_class ("dimmed");
         if (spot.was_hunted_today) {
-            corner_image.tooltip_text = _("Hunted today");
-            corner_image.icon_name = "bullseye-symbolic";
-            corner_image.visible = true;
-            corner_image.remove_css_class ("unhunted");
-            corner_image.add_css_class ("hunted");
             this.add_css_class ("dimmed");
         }
 
@@ -484,7 +522,7 @@ public class ParkDetailsView : Adw.Dialog {
     private WebKit.WebView webview;
     private Adw.WindowTitle title_widget;
 
-    public ParkDetailsView (string url) {
+    public ParkDetailsView (string title, string url) {
         Object (
             content_width: 800,
             content_height: 600
@@ -493,7 +531,7 @@ public class ParkDetailsView : Adw.Dialog {
         var toolbar_view = new Adw.ToolbarView ();
 
         var headerbar = new Adw.HeaderBar ();
-        title_widget = new Adw.WindowTitle (_("Park Details"), "");
+        title_widget = new Adw.WindowTitle (title, "");
         headerbar.set_title_widget (title_widget);
 
         toolbar_view.add_top_bar (headerbar);

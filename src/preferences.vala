@@ -44,7 +44,7 @@ public sealed class PreferencesDialog : Object {
     private Adw.ComboRow row_handshake;
 
     private Adw.EntryRow row_network_host;
-    private Adw.SpinRow row_network_port;
+    private Adw.EntryRow row_network_port;
     private Adw.PreferencesGroup serial_settings_group;
     private Adw.PreferencesGroup network_settings_group;
     private Adw.PreferencesGroup radio_test_group;
@@ -103,7 +103,7 @@ public sealed class PreferencesDialog : Object {
         row_handshake = builder.get_object ("row_handshake") as Adw.ComboRow;
 
         row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
-        row_network_port = builder.get_object ("row_network_port") as Adw.SpinRow;
+        row_network_port = builder.get_object ("row_network_port") as Adw.EntryRow;
         serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
         network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
         radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
@@ -225,9 +225,7 @@ public sealed class PreferencesDialog : Object {
         Application.settings.bind ("radio-network-host", row_network_host,
             "text",
             SettingsBindFlags.DEFAULT);
-        Application.settings.bind ("radio-network-port", row_network_port,
-            "value",
-            SettingsBindFlags.DEFAULT);
+        bind_network_port_entry ();
 
         Application.settings.bind ("enable-logging", row_enable_logging,
             "active",
@@ -251,6 +249,46 @@ public sealed class PreferencesDialog : Object {
             "active", SettingsBindFlags.DEFAULT);
 
     } /* setup_bindings */
+
+    void bind_network_port_entry () {
+        sync_network_port_entry ();
+
+        row_network_port.changed.connect (() => {
+            int parsed_port;
+            if (!try_parse_network_port (row_network_port.text, out parsed_port))
+                return;
+
+            if (Application.settings.get_int ("radio-network-port") != parsed_port)
+                Application.settings.set_int ("radio-network-port", parsed_port);
+        });
+
+        Application.settings.changed["radio-network-port"].connect (() => {
+            sync_network_port_entry ();
+        });
+    }
+
+    void sync_network_port_entry () {
+        var current_port = Application.settings.get_int ("radio-network-port").to_string ();
+        if (row_network_port.text != current_port)
+            row_network_port.text = current_port;
+    }
+
+    bool try_parse_network_port (string text, out int port) {
+        port = 0;
+        var stripped = text.strip ();
+        if (stripped.length == 0)
+            return false;
+
+        int64 parsed_port64 = 0;
+        if (!int64.try_parse (stripped, out parsed_port64))
+            return false;
+
+        if (parsed_port64 < 1 || parsed_port64 > 65535)
+            return false;
+
+        port = (int)parsed_port64;
+        return true;
+    }
 
     void bind_combo_to_string_setting (string setting_key, Adw.ComboRow combo_row) {
         var model = combo_row.model as Gtk.StringList;
@@ -508,7 +546,7 @@ public sealed class PreferencesDialog : Object {
             connection_type = connection_type_text,
             device_path = device_path.get_string (),
             network_host = row_network_host.text,
-            network_port = int.parse (row_network_port.text),
+            network_port = get_network_port (),
             baud_rate = int.parse (baud_rate.get_string ()),
             data_bits = data_bits_selected_to_actual (row_data_bits.selected),
             stop_bits = row_stop_bits.selected,
@@ -567,6 +605,14 @@ public sealed class PreferencesDialog : Object {
 
             return null;
         }).disown ();
+    }
+
+    int get_network_port () {
+        int parsed_port;
+        if (try_parse_network_port (row_network_port.text, out parsed_port))
+            return parsed_port;
+
+        return Application.settings.get_int ("radio-network-port");
     }
 
     void do_import_file () {

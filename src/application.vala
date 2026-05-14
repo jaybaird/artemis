@@ -38,6 +38,7 @@ public sealed class Application : Adw.Application {
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
     public static QrzClient qrz_client { get; private set; }
+    public static WeatherCache weather_cache { get; private set; }
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -94,6 +95,7 @@ public sealed class Application : Adw.Application {
         }
 
         callsign_cache = new CallsignCache (3600);
+        weather_cache = new WeatherCache ();
         radio_control = new RadioControl ();
     }
 
@@ -144,6 +146,10 @@ public sealed class Application : Adw.Application {
             "Jay Baird (K0VCZ)"
         };
 
+        const string[] CONTRIBUTORS = {
+            "Henry Cisneros (KG5VFJ)"
+        };
+
         const string COPYRIGHT = "© 2026 Jay Baird (K0VCZ)";
 
         var dialog = new Adw.AboutDialog.from_appdata ("/com/k0vcz/artemis/metainfo.xml", Build.PROFILE == "development" ? null : Build.VERSION) {
@@ -154,6 +160,8 @@ public sealed class Application : Adw.Application {
             designers = DESIGNERS,
             translator_credits = _("translator-credits")
         };
+
+        dialog.add_acknowledgement_section (_("Contributors"), CONTRIBUTORS);
 
         //dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
         //dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);

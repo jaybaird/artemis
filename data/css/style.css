@@ -49,16 +49,8 @@ banner {
 }
 
 
-.unhunted {
-    color: var(--green-1);
-}
-
 .view-bg {
     background-color: var(--view-bg-color);
-}
-
-.hunted {
-    color: @accent-color;
 }
 
 .map-marker-all {
@@ -117,15 +109,98 @@ banner {
     color: #999900;
 }
 
+.band-strip {
+    border-radius: 9999px;
+    min-width: 4px;
+}
+
+.band-strip-all {
+    background-color: @accent_bg_color;
+}
+
+.band-strip-160m {
+    background-color: #7cfc00;
+}
+
+.band-strip-80m {
+    background-color: #e550e5;
+}
+
+.band-strip-60m {
+    background-color: #00008b;
+}
+
+.band-strip-40m {
+    background-color: #5959ff;
+}
+
+.band-strip-30m {
+    background-color: #62d962;
+}
+
+.band-strip-20m {
+    background-color: #f2c40c;
+}
+
+.band-strip-17m {
+    background-color: #f2f261;
+}
+
+.band-strip-15m {
+    background-color: #cca166;
+}
+
+.band-strip-12m {
+    background-color: #b22222;
+}
+
+.band-strip-10m {
+    background-color: #ff69b4;
+}
+
+.band-strip-6m {
+    background-color: #ff0000;
+}
+
+.band-strip-2m {
+    background-color: #4ADE80;
+}
+
+.band-strip-70cm {
+    background-color: #999900;
+}
+
+.spot-badge {
+    min-width: 16px;
+    min-height: 16px;
+}
+
+.badge-new-park {
+    color: #f2c40c;
+}
+
+.badge-hunted-today {
+    color: #4ADE80;
+}
+
+.badge-previously-hunted {
+    color: @insensitive_fg_color;
+}
+
+.badge-new-band {
+    color: #20b2aa;
+}
+
 .frequency-display {
-  font-size: 72px;
-  font-weight: bold;
-  font-family: monospace;
+    font-weight: 700;
+    font-family: "Adwaita Mono", "Consolas", monospace;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
 }
 
 .mode-display {
-  font-size: 24px;
-  font-weight: 600;
+    font-weight: 700;
+    padding: 4px 12px;
 }
 
 .online-button {
@@ -158,4 +233,23 @@ banner {
 
 .radio-power-button:hover {
     filter: brightness(1.1);
+}
+
+.status-bar-overlay {
+    background-color: color-mix(in srgb, @headerbar_bg_color 82%, transparent);
+    border: 1px solid color-mix(in srgb, @window_fg_color 12%, transparent);
+    border-radius: 18px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.status-bar-overlay progressbar trough {
+    background-color: color-mix(in srgb, @window_fg_color 8%, transparent);
+}
+
+.status-bar-overlay progressbar progress {
+    background-color: color-mix(in srgb, @accent_bg_color 82%, white 18%);
+}
+
+.weather-summary-card {
+    padding: 8px 12px;
 }

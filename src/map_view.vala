@@ -162,6 +162,8 @@ public class MapView : Gtk.Box {
     private Scale map_scale;
     private Layer map_layer;
     private MarkerLayer marker_layer;
+    private HashMap<Quark, Marker> markers;
+    private Marker? selected_marker = null;
 
     private BoundingBox bbox;
     private Coordinate qth_coordinate;
@@ -253,6 +255,7 @@ public class MapView : Gtk.Box {
             }
         }
         bbox = new BoundingBox ();
+        markers = new HashMap<Quark, Marker> ();
 
         var layer = new MapLayer (map_source, viewport);
         if (layer != null) {
@@ -273,47 +276,17 @@ public class MapView : Gtk.Box {
             var spot = item as Spot;
             if (spot == null)
                 return false;
-
-            var band_filter = Application.current_band_filter ?? "All";
-            if ((band_filter != "All") && (spot.band != band_filter))
-                return false;
-
-            if (Application.settings.get_boolean ("hide-qrt") && spot.activator_comment.down ().contains ("qrt"))
-                return false;
-
-            if (Application.settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
-                return false;
-
-            var stale_minutes = Application.settings.get_int ("hide-older-than")
-            ;
-            var now = new DateTime.now_utc ();
-            var expires = spot.spot_time.add_minutes (stale_minutes);
-            if (now.compare (expires) > 0)
-                return false;
-
-            if ((Application.current_program_filter != null) &&
-                !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
-                return false;
-
-            if ((Application.current_mode_filter != null) &&
-                !spot.mode.down ().contains (Application.current_mode_filter.down ()))
-                return false;
-
-            if (Application.current_search_text != null) {
-                var needle = Application.current_search_text.down ();
-                if (!(spot.callsign.down ().contains (needle) ||
-                      spot.park_ref.down ().contains (needle) ||
-                      spot.park_name.down ().contains (needle)))
-                    return false;
-            }
-
-            return true;
+            return spot_matches_current_filters (
+                spot,
+                Application.current_band_filter ?? "All"
+            );
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store,
             filter);
 
         Application.spot_repo.refreshed.connect (load_spots);
+        Application.spot_repo.current_spot_changed.connect (sync_marker_selection);
 
         load_spots ();
     }
@@ -353,7 +326,7 @@ public class MapView : Gtk.Box {
     } /* get_zoom_level_fitting_bounds */
 
     private void _create_marker (Spot spot) {
-        var image = new Gtk.Image.from_icon_name ("map-marker-symbolic") {
+        var image = new Gtk.Image.from_icon_name ("big-dot-symbolic") {
             pixel_size = 32
         };
 
@@ -369,6 +342,10 @@ public class MapView : Gtk.Box {
             longitude = coordinate.longitude
         };
         marker.add_css_class ("marker");
+        if (spot.hash == Application.current_spot_hash) {
+            marker.add_css_class ("selected");
+            selected_marker = marker;
+        }
 
         var click = new Gtk.GestureClick ();
         click.pressed.connect (() => {
@@ -388,7 +365,25 @@ public class MapView : Gtk.Box {
         marker.add_controller (motion);
 
         marker_layer.add_marker (marker);
+        markers.set (spot.hash, marker);
     } /* _create_marker */
+
+    private void sync_marker_selection (Quark spot_hash) {
+        if (selected_marker != null) {
+            selected_marker.remove_css_class ("selected");
+            selected_marker = null;
+        }
+
+        if (spot_hash == BLANK_HASH)
+            return;
+
+        var marker = markers.get (spot_hash);
+        if (marker == null)
+            return;
+
+        marker.add_css_class ("selected");
+        selected_marker = marker;
+    }
 
     public void go_to_spot (Spot? spot) {
         if (spot == null)
@@ -415,6 +410,8 @@ public class MapView : Gtk.Box {
         }
 
         marker_layer = new MarkerLayer (viewport);
+        markers.clear ();
+        selected_marker = null;
 
         uint spot_count = 0;
         var valid_hashes = new HashSet<GLib.Quark> ();
@@ -434,6 +431,7 @@ public class MapView : Gtk.Box {
         bbox.expand ();
 
         map_widget.insert_layer_above (marker_layer, map_layer);
+        sync_marker_selection (Application.current_spot_hash);
 
         if (Application.current_spot_hash == BLANK_HASH ||
             !valid_hashes.contains (Application.current_spot_hash)) {

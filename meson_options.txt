@@ -1,0 +1,6 @@
+option(
+  'openweather_api_key',
+  type: 'string',
+  value: '',
+  description: 'OpenWeather API key compiled into release builds'
+)

@@ -71,27 +71,68 @@ template $SpotDetail : Box {
                 styles ["title-1"]
               }
 
-              Label detail_operator_name {
-                halign: center;
-                styles ["body"]
-              }
-
               Label detail_park_name {
                 halign: center;
                 wrap: true;
                 justify: center;
+                styles ["title-2"]
               }
 
-              Box detail_badges {
-                  halign: center;
-                  spacing: 8;
-                  margin-top: 4;
-                  margin-bottom: 4;
+              Box {
+                halign: center;
+                orientation: horizontal;
+                spacing: 4;
+                styles ["card", "weather-summary-card"]
+
+                Image wx_conditions {
+                  icon-name: "storm-outline-symbolic";
+                  pixel-size: 20;
+                  valign: baseline;
+                  accessibility {
+                    label: _("Weather Conditions");
+                    role-description: _("icon");
+                  }
+                }
+
+                Label wx_conditions_txt {
+                  label: _("Thunderstorms");
+                }
+
+                Image {
+                  icon-name: "thermometer-symbolic";
+                  pixel-size: 20;
+                  valign: baseline;
+                  accessibility {
+                    label: _("Temperature");
+                    role-description: _("icon");
+                  }
+                }
+
+                Label wx_temp {
+                  label: _("48");
+                  styles ["numeric"]
+                }
+
+                Image {
+                  icon-name: "drop-hollow-symbolic";
+                  pixel-size: 20;
+                  valign: baseline;
+                  accessibility {
+                    label: _("Relative Humidity");
+                    role-description: _("icon");
+                  }
+                }
+
+                Label wx_humidity {
+                  label: _("60%");
+                  tooltip-text: _("Relative humidity");
+                  styles ["numeric"]
+                }
               }
             }
           
             Box {
-              orientation: vertical;
+              orientation: horizontal;
               spacing: 4;
 
               Button detail_tune_button {
@@ -99,6 +140,10 @@ template $SpotDetail : Box {
                 tooltip-text: _("Tune your radio to this frequency");
                 hexpand: true;
                 visible: false;
+                accessibility {
+                  label: _("Tune");
+                  role-description: _("button");
+                }
               }
 
               Button detail_spot_button {
@@ -107,124 +152,50 @@ template $SpotDetail : Box {
                 hexpand: true;
                 visible: false;
                 styles ["suggested-action"]
-              }
-
-              Button detail_history_button {
-                label: _("History");
-                tooltip-text: _("See this activations spot history");
-                hexpand: true;
-              }
-
-              Button detail_park_button {
-                label: _("Park Details");
-                tooltip-text: _("See this park's details, map, and more");
-                hexpand: true;
-              }
-            }
-
-            Adw.PreferencesGroup {
-              title: _("Last Spot");
-
-              Adw.ActionRow {
-                title: _("Spotter");
-                [suffix]
-                Label detail_spotter {
-                  valign: center;
-                }
-              }
-
-              Adw.ActionRow {
-                title: _("Time");
-                [suffix]
-                Label detail_spot_time {
-                  valign: center;
-                }
-              }
-
-              Adw.ActionRow detail_spotter_comment_row {
-                title: _("Comment");
-              }
-            }
-
-            Adw.PreferencesGroup {
-              title: _("Signal");
-
-              Adw.ActionRow {
-                title: _("Frequency");
-                [suffix]
-                Label detail_frequency {
-                  valign: center;
-                  styles ["numeric"]
-                }
-              }
-
-              Adw.ActionRow {
-                title: _("Mode");
-                [suffix]
-                Label detail_mode {
-                  valign: center;
-                  styles ["pill", "monospace", "caption"]
-                }
-              }
-
-              Adw.ActionRow {
-                title: _("Spots");
-                [suffix]
-                Label detail_spot_count {
-                  valign: center;
-                }
-              }
-            }
-
-            Adw.PreferencesGroup {
-              title: _("Location");
-
-              Adw.ActionRow {
-                title: _("Region");
-                [suffix]
-                Label detail_location {
-                  valign: center;
-                  halign: end;
-                  wrap: true;
-                  max-width-chars: 18;
-                  justify: right;
-                }
-              }
-
-              Adw.ActionRow detail_grid_row {
-                title: _("Grid");
-                [suffix]
-                Label detail_grid {
-                  valign: center;
-                  styles ["numeric"]
-                }
-              }
-
-              Adw.ActionRow detail_distance_row {
-                title: _("Distance");
-                [suffix]
-                Label detail_distance {
-                  styles ["numeric"]
-                  valign: center;
-                }
-              }
-
-              Adw.ActionRow detail_bearing_row {
-                title: _("Bearing");
-                [suffix]
-                Label detail_bearing {
-                  styles ["numeric"]
-                  valign: center;
+                accessibility {
+                  label: _("Re-Spot");
+                  role-description: _("button");
                 }
               }
             }
 
             Adw.PreferencesGroup detail_activator_group {
-              title: _("Activator Notes");
-
-              Adw.ActionRow detail_activator_comment_row {
-                title: _("Comment");
+              title: _("Activator Profile");
+              Gtk.ListBox detail_activator_list {
+                selection-mode: none;
+                styles ["boxed-list"]
               }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Operating Details");
+              Gtk.ListBox detail_operating_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Location");
+              Gtk.ListBox detail_location_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Last Spot");
+              Gtk.ListBox detail_last_spot_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Label {
+              halign: center;
+              justify: center;
+              label: _("Weather data © OpenWeather");
+              styles ["caption"]
             }
           }
         }

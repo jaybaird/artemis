@@ -42,6 +42,7 @@ config.set('NAME', 'Artemis')
 config.set('WEBSITE', '')
 config.set('DONATE_WEBSITE', '')
 config.set('TRANSLATE_WEBSITE', '')
+config.set('OPENWEATHER_API_KEY', get_option('openweather_api_key'))
 config.set('PROFILE', devel ? 'development' : 'release')
 
 if devel

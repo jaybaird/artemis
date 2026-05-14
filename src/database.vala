@@ -43,6 +43,68 @@ static string? iso8601_from_borrowed_utc (DateTime? dt) {
     return utc.format ("%Y-%m-%dT%H:%M:%SZ");
 }
 
+static bool band_frequency_range_khz (string band, out int min_khz, out int max_khz) {
+    min_khz = 0;
+    max_khz = 0;
+
+    switch (band) {
+        case "160m":
+            min_khz = 1800;
+            max_khz = 2000;
+            return true;
+        case "80m":
+            min_khz = 3500;
+            max_khz = 4100;
+            return true;
+        case "60m":
+            min_khz = 5250;
+            max_khz = 5450;
+            return true;
+        case "40m":
+            min_khz = 7000;
+            max_khz = 7300;
+            return true;
+        case "30m":
+            min_khz = 10100;
+            max_khz = 10150;
+            return true;
+        case "20m":
+            min_khz = 14000;
+            max_khz = 14350;
+            return true;
+        case "17m":
+            min_khz = 18068;
+            max_khz = 18168;
+            return true;
+        case "15m":
+            min_khz = 21000;
+            max_khz = 21450;
+            return true;
+        case "12m":
+            min_khz = 24890;
+            max_khz = 24990;
+            return true;
+        case "10m":
+            min_khz = 28000;
+            max_khz = 29700;
+            return true;
+        case "6m":
+            min_khz = 50000;
+            max_khz = 54000;
+            return true;
+        case "2m":
+            min_khz = 144000;
+            max_khz = 148000;
+            return true;
+        case "70cm":
+            min_khz = 420000;
+            max_khz = 450000;
+            return true;
+        default:
+            return false;
+    }
+}
+
 public sealed class QsoRow : Object {
     public int64 id { get; construct; }
     public string? park_ref { get; construct; }
@@ -598,6 +660,55 @@ public class SpotDb : Object {
             exists = st.column_int (0) != 0;
         return exists;
     } /* had_qso_with_park_on_utc_day */
+
+    public bool had_qso_with_park_on_band (string park_ref, string band, out Error? error) {
+        error = null;
+        if (db == null) {
+            error = new Error (spot_db_error_quark (), DatabaseError.DB_NOT_INITIALIZED,
+                "DB not initialized");
+            return false;
+        }
+
+        if ((park_ref == null) || (park_ref.strip () == "")) {
+            error = new Error (spot_db_error_quark (), DatabaseError.INVALID_ARGUMENT,
+                "Park reference cannot be empty");
+            return false;
+        }
+
+        int min_khz = 0;
+        int max_khz = 0;
+        if (!band_frequency_range_khz (band, out min_khz, out max_khz)) {
+            error = new Error (spot_db_error_quark (), DatabaseError.INVALID_ARGUMENT,
+                "Band %s does not map to a known frequency range".printf (band));
+            return false;
+        }
+
+        const string SQL =
+            """
+          SELECT EXISTS (
+            SELECT 1
+            FROM qsos
+            WHERE park_ref = ? AND frequency_khz >= ? AND frequency_khz < ?
+          );
+          """;
+
+        Statement st;
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+            error = new Error (spot_db_error_quark (), DatabaseError.SQLITE_FAILED,
+                "Failed to prepare had_qso_with_park_on_band query: %s".printf (
+                    db.errmsg ()));
+            return false;
+        }
+
+        st.bind_text (1, park_ref);
+        st.bind_int (2, min_khz);
+        st.bind_int (3, max_khz);
+
+        bool exists = false;
+        if (st.step () == Sqlite.ROW)
+            exists = st.column_int (0) != 0;
+        return exists;
+    }
 
     public string? country_string_for_location (string location, out Error? error) {
         error = null;
