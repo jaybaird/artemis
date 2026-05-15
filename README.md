@@ -103,7 +103,7 @@ meson install -C build
 ## Release Packaging
 
 ### Flatpak bundle
-Requires `flatpak-builder` and the GNOME 48 runtime/sdk installed on your build host.
+Requires `flatpak-builder` and the GNOME 50 runtime/sdk installed on your build host.
 
 ```bash
 bash scripts/release-flatpak.sh
