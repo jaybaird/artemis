@@ -19,6 +19,8 @@
  */
 
 public sealed class Application : Adw.Application {
+    public signal void radio_connection_state_changed ();
+
     private static Quark _current_spot_hash = 0;
     public static Quark current_spot_hash {
         get {
@@ -38,6 +40,7 @@ public sealed class Application : Adw.Application {
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
     public static QrzClient qrz_client { get; private set; }
+    public static WeatherCache weather_cache { get; private set; }
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -94,7 +97,20 @@ public sealed class Application : Adw.Application {
         }
 
         callsign_cache = new CallsignCache (3600);
+        weather_cache = new WeatherCache ();
         radio_control = new RadioControl ();
+        radio_control.radio_connected.connect (() => {
+            is_radio_connected = true;
+            radio_connection_state_changed ();
+        });
+        radio_control.radio_disconnected.connect (() => {
+            is_radio_connected = false;
+            radio_connection_state_changed ();
+        });
+        radio_control.radio_error.connect ((err) => {
+            is_radio_connected = false;
+            radio_connection_state_changed ();
+        });
     }
 
     public override void activate () {
@@ -110,6 +126,7 @@ public sealed class Application : Adw.Application {
 #endif
         var icon_dir = File.new_for_path (Path.build_filename (data_dir, Build.DOMAIN)).get_child ("icons");
         debug (icon_dir.get_path ());
+        icon_theme.add_resource_path ("/com/k0vcz/artemis/icons");
         if (icon_dir.query_exists ()) {
             icon_theme.add_search_path (icon_dir.get_path ());
         }
@@ -144,6 +161,10 @@ public sealed class Application : Adw.Application {
             "Jay Baird (K0VCZ)"
         };
 
+        const string[] CONTRIBUTORS = {
+            "Henry Cisneros (KG5VFJ)"
+        };
+
         const string COPYRIGHT = "© 2026 Jay Baird (K0VCZ)";
 
         var dialog = new Adw.AboutDialog.from_appdata ("/com/k0vcz/artemis/metainfo.xml", Build.PROFILE == "development" ? null : Build.VERSION) {
@@ -154,6 +175,8 @@ public sealed class Application : Adw.Application {
             designers = DESIGNERS,
             translator_credits = _("translator-credits")
         };
+
+        dialog.add_acknowledgement_section (_("Contributors"), CONTRIBUTORS);
 
         //dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
         //dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);

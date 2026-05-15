@@ -44,7 +44,7 @@ public sealed class PreferencesDialog : Object {
     private Adw.ComboRow row_handshake;
 
     private Adw.EntryRow row_network_host;
-    private Adw.SpinRow row_network_port;
+    private Adw.EntryRow row_network_port;
     private Adw.PreferencesGroup serial_settings_group;
     private Adw.PreferencesGroup network_settings_group;
     private Adw.PreferencesGroup radio_test_group;
@@ -103,7 +103,7 @@ public sealed class PreferencesDialog : Object {
         row_handshake = builder.get_object ("row_handshake") as Adw.ComboRow;
 
         row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
-        row_network_port = builder.get_object ("row_network_port") as Adw.SpinRow;
+        row_network_port = builder.get_object ("row_network_port") as Adw.EntryRow;
         serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
         network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
         radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
@@ -225,9 +225,7 @@ public sealed class PreferencesDialog : Object {
         Application.settings.bind ("radio-network-host", row_network_host,
             "text",
             SettingsBindFlags.DEFAULT);
-        Application.settings.bind ("radio-network-port", row_network_port,
-            "value",
-            SettingsBindFlags.DEFAULT);
+        bind_network_port_entry ();
 
         Application.settings.bind ("enable-logging", row_enable_logging,
             "active",
@@ -251,6 +249,46 @@ public sealed class PreferencesDialog : Object {
             "active", SettingsBindFlags.DEFAULT);
 
     } /* setup_bindings */
+
+    void bind_network_port_entry () {
+        sync_network_port_entry ();
+
+        row_network_port.changed.connect (() => {
+            int parsed_port;
+            if (!try_parse_network_port (row_network_port.text, out parsed_port))
+                return;
+
+            if (Application.settings.get_int ("radio-network-port") != parsed_port)
+                Application.settings.set_int ("radio-network-port", parsed_port);
+        });
+
+        Application.settings.changed["radio-network-port"].connect (() => {
+            sync_network_port_entry ();
+        });
+    }
+
+    void sync_network_port_entry () {
+        var current_port = Application.settings.get_int ("radio-network-port").to_string ();
+        if (row_network_port.text != current_port)
+            row_network_port.text = current_port;
+    }
+
+    bool try_parse_network_port (string text, out int port) {
+        port = 0;
+        var stripped = text.strip ();
+        if (stripped.length == 0)
+            return false;
+
+        int64 parsed_port64 = 0;
+        if (!int64.try_parse (stripped, out parsed_port64))
+            return false;
+
+        if (parsed_port64 < 1 || parsed_port64 > 65535)
+            return false;
+
+        port = (int)parsed_port64;
+        return true;
+    }
 
     void bind_combo_to_string_setting (string setting_key, Adw.ComboRow combo_row) {
         var model = combo_row.model as Gtk.StringList;
@@ -350,16 +388,16 @@ public sealed class PreferencesDialog : Object {
             return;
 
         var current_data_bits = Application.settings.get_int ("radio-data-bits");
-        row_data_bits.selected = data_bits_actual_to_selected (current_data_bits);
+        row_data_bits.selected = data_bits_actual_to_selected ((uint)current_data_bits);
 
         row_data_bits.notify["selected"].connect (() => {
             var data_bits = data_bits_selected_to_actual (row_data_bits.selected);
-            Application.settings.set_uint ("radio-data-bits", data_bits);
+            Application.settings.set_int ("radio-data-bits", (int)data_bits);
         });
 
         Application.settings.changed["radio-data-bits"].connect (() => {
-            var data_bits = Application.settings.get_uint ("radio-data-bits");
-            row_data_bits.selected = data_bits_actual_to_selected (data_bits);
+            var data_bits = Application.settings.get_int ("radio-data-bits");
+            row_data_bits.selected = data_bits_actual_to_selected ((uint)data_bits);
         });
     }
 
@@ -369,16 +407,17 @@ public sealed class PreferencesDialog : Object {
         if (model == null)
             return;
 
-        var current_handshake = Application.settings.get_uint ("radio-hardware-handshake");
-        row_handshake.selected = current_handshake;
+        var current_handshake = Application.settings.get_int ("radio-hardware-handshake");
+        row_handshake.selected = (uint)current_handshake;
 
         row_handshake.notify["selected"].connect (() => {
-            Application.settings.set_uint ("radio-hardware-handshake", row_handshake.selected);
+            Application.settings.set_int ("radio-hardware-handshake",
+                (int)row_handshake.selected);
         });
 
         Application.settings.changed["radio-hardware-handshake"].connect (() => {
-            var handshake = Application.settings.get_uint ("radio-hardware-handshake");
-            row_handshake.selected = handshake;
+            var handshake = Application.settings.get_int ("radio-hardware-handshake");
+            row_handshake.selected = (uint)handshake;
         });
     }
 
@@ -388,16 +427,17 @@ public sealed class PreferencesDialog : Object {
         if (model == null)
             return;
 
-        var current_stop_bits = Application.settings.get_uint ("radio-stop-bits");
-        row_stop_bits.selected = stop_bits_actual_to_selected (current_stop_bits);
+        var current_stop_bits = Application.settings.get_int ("radio-stop-bits");
+        row_stop_bits.selected = stop_bits_actual_to_selected ((uint)current_stop_bits);
 
         row_stop_bits.notify["selected"].connect (() => {
-            Application.settings.set_uint ("radio-stop-bits", stop_bits_selected_to_actual (row_stop_bits.selected));
+            Application.settings.set_int ("radio-stop-bits",
+                (int)stop_bits_selected_to_actual (row_stop_bits.selected));
         });
 
         Application.settings.changed["radio-stop-bits"].connect (() => {
-            var stop_bits = Application.settings.get_uint ("radio-stop-bits");
-            row_stop_bits.selected = stop_bits_actual_to_selected (stop_bits);
+            var stop_bits = Application.settings.get_int ("radio-stop-bits");
+            row_stop_bits.selected = stop_bits_actual_to_selected ((uint)stop_bits);
         });
     }
 
@@ -462,7 +502,7 @@ public sealed class PreferencesDialog : Object {
                 break;
             case "NETWORK":
                 row_radio_model.visible = true;
-                row_radio_model.selected = 1;
+                select_radio_model (RadioControl.netrigctl_model_id ());
                 row_radio_model.selectable = false;
 
                 serial_settings_group.visible = false;
@@ -488,7 +528,6 @@ public sealed class PreferencesDialog : Object {
 
     void test_radio_connection () {
         if (Application.radio_control == null || row_radio_model.selected == 0) return;
-        var radio_model = Application.settings.get_int ("radio-model");
 
         var connection_type = row_connection_type.model.get_item (row_connection_type.selected) as Gtk.StringObject;
         var device_path = row_device_path.model.get_item (row_device_path.selected) as Gtk.StringObject;
@@ -501,12 +540,16 @@ public sealed class PreferencesDialog : Object {
         else
             connection_type_text = "network";
 
+        var radio_model = connection_type_text == "network" ?
+            RadioControl.netrigctl_model_id () :
+            Application.settings.get_int ("radio-model");
+
         var config = RadioConfiguration () {
             model_id = radio_model,
             connection_type = connection_type_text,
             device_path = device_path.get_string (),
             network_host = row_network_host.text,
-            network_port = int.parse (row_network_port.text),
+            network_port = get_network_port (),
             baud_rate = int.parse (baud_rate.get_string ()),
             data_bits = data_bits_selected_to_actual (row_data_bits.selected),
             stop_bits = row_stop_bits.selected,
@@ -565,6 +608,25 @@ public sealed class PreferencesDialog : Object {
 
             return null;
         }).disown ();
+    }
+
+    void select_radio_model (int model_id) {
+        var models = RadioControl.get_radio_models ();
+
+        for (uint i = 0 ; i < models.length ; i++) {
+            if (models[i].model_id == model_id) {
+                row_radio_model.selected = i;
+                return;
+            }
+        }
+    }
+
+    int get_network_port () {
+        int parsed_port;
+        if (try_parse_network_port (row_network_port.text, out parsed_port))
+            return parsed_port;
+
+        return Application.settings.get_int ("radio-network-port");
     }
 
     void do_import_file () {

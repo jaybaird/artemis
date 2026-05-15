@@ -8,7 +8,33 @@
     <file preprocess="xml-stripblanks">ui/add_spot_page.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_history_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/band_view.ui</file>
+    <file preprocess="xml-stripblanks">ui/status_bar.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_dialog.ui</file>
+    <file preprocess="xml-stripblanks">ui/left_sidebar.ui</file>
+    <file preprocess="xml-stripblanks">ui/spot_detail.ui</file>
+    <file preprocess="xml-stripblanks">ui/band_button.ui</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/arrow-circular-bottom-right-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/big-dot-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/clouds-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/dock-right-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/few-clouds-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/fog-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/grid-filled-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/media-playback-pause-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/moon-clouds-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/moon-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/rain-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/rain-scattered-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/snow-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/snow-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/sound-wave-add-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/storm-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/sun-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/windy-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/thermometer-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/drop-hollow-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/encoder-knob-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/verified-checkmark-symbolic.svg</file>
 
     <file compressed="true" alias="style.css">css/style.css</file>
 
@@ -17,4 +43,3 @@
     <file preprocess="xml-stripblanks" alias="metainfo.xml">com.k0vcz.Artemis.metainfo.xml.in</file>
   </gresource>
 </gresources>
-

@@ -54,6 +54,143 @@ public static string format_vfo (float freq_khz) {
     return "%u.%03u.%02u".printf (mhz, khz, hz / 10);
 }
 
+public static string format_frequency_khz (double frequency_khz) {
+    if (Math.fabs (frequency_khz - Math.round (frequency_khz)) < 0.0005)
+        return "%.0f".printf (frequency_khz);
+
+    var formatted = "%.3f".printf (frequency_khz);
+    while (formatted.has_suffix ("0")) {
+        formatted = formatted.substring (0, formatted.length - 1);
+    }
+    if (formatted.has_suffix ("."))
+        formatted = formatted.substring (0, formatted.length - 1);
+
+    return formatted;
+}
+
+public static string pota_profile_callsign (string callsign) {
+    var stripped_callsign = callsign.strip ();
+    var profile_callsign = "";
+
+    foreach (var part in stripped_callsign.split ("/")) {
+        var candidate = part.strip ();
+        if (candidate.length > profile_callsign.length)
+            profile_callsign = candidate;
+    }
+
+    return (profile_callsign != "") ? profile_callsign : stripped_callsign;
+}
+
+public sealed class SpotBadgeInfo : Object {
+    public string icon_name { get; construct; }
+    public string tooltip { get; construct; }
+    public string css_class { get; construct; }
+
+    public SpotBadgeInfo (string icon_name, string tooltip, string css_class) {
+        Object (
+            icon_name: icon_name,
+            tooltip: tooltip,
+            css_class: css_class
+        );
+    }
+}
+
+public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
+    var badges = new Gee.ArrayList<SpotBadgeInfo> ();
+
+    if (spot.is_new_park && Application.settings.get_boolean ("highlight-unhunted-parks")) {
+        badges.add (new SpotBadgeInfo (
+            "starred-symbolic",
+            _("New park"),
+            "badge-new-park"
+        ));
+    }
+
+    if (spot.was_hunted_today) {
+        badges.add (new SpotBadgeInfo (
+            "verified-checkmark-symbolic",
+            _("Hunted today"),
+            "badge-hunted-today"
+        ));
+    } else if (!spot.is_new_park) {
+        badges.add (new SpotBadgeInfo (
+            "clock-alt-symbolic",
+            _("Previously hunted"),
+            "badge-previously-hunted"
+        ));
+    }
+
+    if (spot.is_new_band) {
+        badges.add (new SpotBadgeInfo (
+            "sound-wave-add-symbolic",
+            _("New band"),
+            "badge-new-band"
+        ));
+    }
+
+    return badges;
+}
+
+public static Gtk.Image create_spot_badge_image (SpotBadgeInfo badge) {
+    var image = new Gtk.Image.from_icon_name (badge.icon_name);
+    image.tooltip_text = badge.tooltip;
+    image.add_css_class ("spot-badge");
+    image.add_css_class (badge.css_class);
+    return image;
+}
+
+public static void populate_spot_badges (Gtk.Box box, Spot spot) {
+    var child = box.get_first_child ();
+    while (child != null) {
+        var next = child.get_next_sibling ();
+        box.remove (child);
+        child = next;
+    }
+
+    foreach (var badge in collect_spot_badges (spot))
+        box.append (create_spot_badge_image (badge));
+}
+
+public static bool spot_matches_current_filters (Spot spot, string band_filter) {
+    if (spot == null)
+        return false;
+
+    if ((band_filter != "All") && (spot.band != band_filter))
+        return false;
+
+    if (Application.settings.get_boolean ("hide-qrt") &&
+        spot.activator_comment.down ().contains ("qrt"))
+        return false;
+
+    if (Application.settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
+        return false;
+
+    var stale_minutes = Application.settings.get_int ("hide-older-than");
+    var now = new DateTime.now_utc ();
+    var expires = spot.spot_time.add_minutes (stale_minutes);
+    if (now.compare (expires) > 0)
+        return false;
+
+    if ((Application.current_program_filter != null) &&
+        !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
+        return false;
+
+    if ((Application.current_mode_filter != null) &&
+        !spot.mode.down ().contains (Application.current_mode_filter.down ()))
+        return false;
+
+    if (Application.current_search_text != null) {
+        var needle = Application.current_search_text.down ();
+        if (!(spot.callsign.down ().contains (needle) ||
+              spot.park_ref.down ().contains (needle) ||
+              spot.park_name.down ().contains (needle))) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 namespace Distance {
     public enum MaidenheadError {
         TOO_SHORT,

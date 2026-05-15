@@ -78,14 +78,26 @@ Adw.PreferencesDialog prefs_dialog {
 
       Adw.EntryRow row_callsign {
         title: _("Callsign");
+        accessibility {
+          label: _("Callsign");
+          role-description: _("text entry");
+        }
       }
 
       Adw.EntryRow row_location {
         title: _("Location");
+        accessibility {
+          label: _("Location");
+          role-description: _("text entry");
+        }
       }
 
       Adw.EntryRow row_spot_message {
         title: _("Default Spot Message");
+        accessibility {
+          label: _("Default Spot Message");
+          role-description: _("text entry");
+        }
       }
     }
 
@@ -97,6 +109,10 @@ Adw.PreferencesDialog prefs_dialog {
         title: _("Update Interval (in seconds)");
         digits: 0;
         climb-rate: 5.0;
+        accessibility {
+          label: _("Update Interval");
+          role-description: _("spin button");
+        }
         adjustment: Adjustment {
             step-increment: 10;
             lower: 60;
@@ -108,11 +124,19 @@ Adw.PreferencesDialog prefs_dialog {
       Adw.ComboRow row_default_band {
         title: _("Default Band");
         model: bands_model;
+        accessibility {
+          label: _("Default Band");
+          role-description: _("combo box");
+        }
       }
 
       Adw.ComboRow row_default_mode {
         title: _("Default Mode");
         model: modes_model;
+        accessibility {
+          label: _("Default Mode");
+          role-description: _("combo box");
+        }
       }
     }
 
@@ -122,31 +146,55 @@ Adw.PreferencesDialog prefs_dialog {
       Adw.SwitchRow row_use_metric {
         title: _("Metric Units");
         subtitle: _("Use metric units for distance calculations and in the map window");
+        accessibility {
+          label: _("Metric Units");
+          role-description: _("switch");
+        }
       }
 
       Adw.SwitchRow row_show_scale {
         title: _("Map Scale");
         subtitle: _("Show unit scale on map window");
+        accessibility {
+          label: _("Map Scale");
+          role-description: _("switch");
+        }
       }
 
       Adw.SwitchRow row_highlight_unhunted {
         title: _("Highlight Unhunted Parks");
         subtitle: _("Show visual highlighting for parks you haven't hunted before");
+        accessibility {
+          label: _("Highlight Unhunted Parks");
+          role-description: _("switch");
+        }
       }
 
       Adw.SwitchRow row_hide_qrt {
         title: _("Hide QRT");
         subtitle: _("Hide stations that have marked themselves QRT");
+        accessibility {
+          label: _("Hide QRT");
+          role-description: _("switch");
+        }
       }
 
       Adw.SwitchRow row_hide_hunted {
         title: _("Hide Hunted");
         subtitle: _("Hide parks you've hunted today");
+        accessibility {
+          label: _("Hide Hunted");
+          role-description: _("switch");
+        }
       }
 
       Adw.SpinRow row_hide_older_than {
         title: _("Hide Stale");
         subtitle: _("Hide parks that haven't been updated in a while (in minutes)");
+        accessibility {
+          label: _("Hide Stale");
+          role-description: _("spin button");
+        }
         
         digits: 0;
         climb-rate: 5.0;
@@ -170,6 +218,10 @@ Adw.PreferencesDialog prefs_dialog {
       Adw.ComboRow row_connection_type {
         title: _("Connection Type");
         model: connection_types_model;
+        accessibility {
+          label: _("Connection Type");
+          role-description: _("combo box");
+        }
       }
 
       Adw.ComboRow row_radio_model {
@@ -177,6 +229,10 @@ Adw.PreferencesDialog prefs_dialog {
         subtitle: _("Select your radio model");
         model: radio_models_model;
         enable-search: true;
+        accessibility {
+          label: _("Radio Model");
+          role-description: _("combo box");
+        }
       }
 
       /* Serial/USB settings group */
@@ -186,26 +242,46 @@ Adw.PreferencesDialog prefs_dialog {
         Adw.ComboRow row_device_path {
           title: _("Serial Port");
           subtitle: _("The path to your rig");
+          accessibility {
+            label: _("Serial Port");
+            role-description: _("combo box");
+          }
         }
 
         Adw.ComboRow row_baud_rate {
           title: _("Baud Rate");
           model: baud_rates_model;
+          accessibility {
+            label: _("Baud Rate");
+            role-description: _("combo box");
+          }
         }
 
         Adw.ComboRow row_data_bits {
           title: _("Data Bits");
           model: data_bits_model;
+          accessibility {
+            label: _("Data Bits");
+            role-description: _("combo box");
+          }
         }
 
         Adw.ComboRow row_stop_bits {
           title: _("Stop Bits");
           model: stop_bits_model;
+          accessibility {
+            label: _("Stop Bits");
+            role-description: _("combo box");
+          }
         }
 
         Adw.ComboRow row_handshake {
           title: _("Handshake");
           model: handshake_model;
+          accessibility {
+            label: _("Handshake");
+            role-description: _("combo box");
+          }
         }
       }
 
@@ -216,17 +292,19 @@ Adw.PreferencesDialog prefs_dialog {
         Adw.EntryRow row_network_host {
           title: _("Host");
           text: "localhost";
+          accessibility {
+            label: _("Host");
+            role-description: _("text entry");
+          }
         }
 
-        Adw.SpinRow row_network_port {
+        Adw.EntryRow row_network_port {
           title: _("Port");
-          digits: 0;
-          adjustment: Adjustment {
-            step-increment: 1;
-            lower: 1;
-            upper: 65535;
-            value: 4532;
-          };
+          input-purpose: digits;
+          accessibility {
+            label: _("Port");
+            role-description: _("text entry");
+          }
         }
       }
     }
@@ -246,6 +324,10 @@ Adw.PreferencesDialog prefs_dialog {
           Image connection_status_icon {
             icon-name: "network-offline-symbolic";
             pixel-size: 16;
+            accessibility {
+              label: _("Connection Status");
+              role-description: _("status icon");
+            }
           }
 
           Label connection_status_label {
@@ -255,6 +337,10 @@ Adw.PreferencesDialog prefs_dialog {
           Button test_connection_button {
             label: _("Test Connection");
             styles ["suggested-action"]
+            accessibility {
+              label: _("Test Connection");
+              role-description: _("button");
+            }
           }
         }
       }
@@ -277,10 +363,18 @@ Adw.PreferencesDialog prefs_dialog {
         title: _("Import file");
         activatable: true;
         subtitle: _("Click to select a CSV file to import");
+        accessibility {
+          label: _("Import file");
+          role-description: _("action row");
+        }
 
         Image {
           icon-name: "document-open-symbolic";
           styles ["dim-label"]
+          accessibility {
+            label: _("Open File");
+            role-description: _("icon");
+          }
         }
       }
 
@@ -288,6 +382,10 @@ Adw.PreferencesDialog prefs_dialog {
         title: _("Import");
         tooltip-text: _("Import hunted parks to logbook");
         end-icon-name: "list-add-symbolic";
+        accessibility {
+          label: _("Import");
+          role-description: _("button");
+        }
       }
       
     }
@@ -299,11 +397,19 @@ Adw.PreferencesDialog prefs_dialog {
       Adw.SwitchRow row_enable_logging {
         title: _("Enable Logging");
         subtitle: _("Automatically log QSOs when spotting");
+        accessibility {
+          label: _("Enable Logging");
+          role-description: _("switch");
+        }
       }
 
       /* Mask input but still bind to a plain string setting */
       Adw.PasswordEntryRow row_qrz_api_key {
         title: _("QRZ API Key");
+        accessibility {
+          label: _("QRZ API Key");
+          role-description: _("password entry");
+        }
       }
     }
   }

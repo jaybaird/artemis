@@ -38,238 +38,166 @@ template $AppWindow : Window {
       icon-name: "list-add-symbolic";
       tooltip-text: _("Add Spot");
       clicked => $on_add_button_clicked();
+      accessibility {
+        label: _("Add Spot");
+        role-description: _("button");
+      }
+    }
+
+    ToggleButton refresh_toggle {
+      icon-name: "media-playback-pause-symbolic";
+      tooltip-text: _("Pause");
+      accessibility {
+        label: _("Pause Updates");
+        role-description: _("toggle button");
+      }
     }
 
     [end]
     Box {
       orientation: horizontal;
+      spacing: 4;
 
-      Button search_button {
-        icon-name: "system-search-symbolic";
-        tooltip-text: _("Toggle Search");
+      SearchEntry search_entry {
+        width-request: 250;
+        input-hints: no_spellcheck;
+        placeholder-text: _("Search for Park or Callsign");
+        accessibility {
+          label: _("Search for Park or Callsign");
+          role-description: _("search entry");
+        }
+      }
+
+      ToggleButton inspector_toggle {
+        icon-name: "dock-right-symbolic";
+        tooltip-text: _("Show Inspector");
+        active: true;
+        accessibility {
+          label: _("Show Inspector");
+          role-description: _("toggle button");
+        }
       }
 
       MenuButton button_menu {
         menu-model: menu_app;
         icon-name: "open-menu-symbolic";
+        accessibility {
+          label: _("Application Menu");
+          role-description: _("menu button");
+        }
       }
     }
   }
 
   Box {
     orientation: vertical;
-    margin-start: 25;
-    margin-end: 25;
 
-    Revealer search_revealer {
-      transition-type: slide_down;
-      transition-duration: 250;
+    Paned {
+      orientation: horizontal;
+      hexpand: true;
+      vexpand: true;
+      resize-start-child: false;
+      resize-end-child: true;
 
-      child: Box {
-        margin-top: 15;
-        halign: fill;
-        hexpand: true;
-        orientation: horizontal;
-
-        SearchEntry search_entry {
-          hexpand: true;
-          halign: fill;
-          width-request: 500;
-          input-hints: no_spellcheck;
-          placeholder-text: _("Search for Park or Callsign");
-        }
-
-        Separator {
-          styles ["spacer"]
-        }
-
-        Label {
-          label: _("Mode");
-          margin-end: 5;
-        }
-
-        DropDown search_select {
-          tooltip-text: _("Mode Selector");
-          model: StringList {
-            strings [
-              _("All"),
-              _("SSB"),
-              _("CW"),
-              _("FT8"),
-              _("FT4"),
-              _("FM"),
-              _("AM"),
-              _("RTTY"),
-              _("JT65"),
-            ]
-          };
-        }
-
-        Separator {
-          styles ["spacer"]
-        }
-
-        Label {
-          label: _("Program");
-          margin-end: 5;
-        }
-
-        DropDown program_select {
-          tooltip-text: _("Program Selection");
-          model: StringList {
-            strings [
-              _("All"),
-              _("US"),
-              _("CA"),
-              _("NZ"),
-              _("JP")
-            ]
-          };
-        }
+      start-child: $LeftSidebar left_sidebar {
+        width-request: 220;
       };
-    }
 
-    Adw.InlineViewSwitcher switcher {
-      margin-top: 20;
-      margin-bottom: 20;
-      stack: band_stack;
-      display-mode: both;
-      can-shrink: false;
+      end-child: Paned content_paned {
+        orientation: horizontal;
+        resize-start-child: true;
+        resize-end-child: false;
+        shrink-end-child: false;
 
-      styles ["round", "flat"]
-    }
+        start-child: Overlay {
+          hexpand: true;
+          vexpand: true;
 
-  Adw.ToastOverlay toast_overlay {
-    Adw.ViewStack views {
-      Adw.ViewStackPage {
-        title: _("Spots");
-        icon-name: "bullseye-symbolic";
-
-        child: Box {
-        orientation: vertical;
-          Overlay {
+          child: Box {
+            orientation: vertical;
             hexpand: true;
-            vexpand: true;
+            margin-top: 12;
+            margin-start: 12;
+            margin-end: 12;
 
-            child:
-              Box root {
-                orientation: vertical;
+              Adw.ViewStack views {
+              vexpand: true;
 
-                Adw.ViewStack band_stack {
-                  enable-transitions: true;
-                  hexpand: true;
-                  vexpand: true;
-                }
-              };
+              Adw.ViewStackPage {
+                title: _("Cards");
+                icon-name: "grid-filled-symbolic";
 
-              [overlay]
-              Box loading_spinner {
-                halign: center;
-                valign: center;
-                visible: false;
+                child: Box {
+                  orientation: vertical;
 
-                Adw.Spinner {
-                  width-request: 64;
-                  height-request: 64;
-                }
+                  Overlay {
+                    hexpand: true;
+                    vexpand: true;
+
+                    child:
+                      Box root {
+                        orientation: vertical;
+
+                        Adw.ViewStack band_stack {
+                          enable-transitions: true;
+                          hexpand: true;
+                          vexpand: true;
+                        }
+                      };
+
+                      [overlay]
+                      Box loading_spinner {
+                        halign: center;
+                        valign: center;
+                        visible: false;
+
+                        Adw.Spinner {
+                          width-request: 64;
+                          height-request: 64;
+                        }
+                      }
+                  }
+                };
+              }
+
+              Adw.ViewStackPage {
+                title: _("List");
+                icon-name: "view-list-symbolic";
+
+                child: Box list_container {
+                  orientation: vertical;
+                  styles ["card"]
+                };
+              }
+
+              Adw.ViewStackPage {
+                title: _("Map");
+                icon-name: "map-symbolic";
+
+                child: Box map_container {
+                  orientation: vertical;
+                  styles ["card"]
+                };
               }
             }
-        };
-      }
+          };
 
-      Adw.ViewStackPage {
-        title: _("Map");
-        icon-name: "map-symbolic";
-
-        child: Box map_container {
-          orientation: vertical;
-          styles ["card"]
-        };
-      }
-    }
-  }
-
-    CenterBox {
-      hexpand: true;
-      halign: fill;
-      margin-bottom: 15;
-      margin-top: 15;
-
-      styles ["view", "card"]
-
-      [start]
-      Box {
-        margin-start: 15;
-        orientation: horizontal;
-        valign: center;
-
-       ToggleButton radio_power_button {
-          styles ["radio-power-button"]
-        }
-
-        Box {
-          margin-top: 5;
-          margin-bottom: 5;
-
-          Label radio_vfo {
-            margin-top: 5;
-            margin-bottom: 5;
-            margin-start: 10;
-            margin-end: 10;
-            label: _("14.074.000");
-            styles ["monospace"]
+          [overlay]
+          $StatusBar status_bar {
+            valign: end;
+            halign: fill;
+            hexpand: true;
+            margin-start: 28;
+            margin-end: 28;
+            margin-bottom: 12;
           }
-        }
+        };
 
-        Box {
-          margin-top: 5;
-          margin-bottom: 5;
-          styles ["card"]
-
-          Label radio_mode {
-            margin-top: 5;
-            margin-bottom: 5;
-            margin-start: 10;
-            margin-end: 10;
-            label: _("USB-D");
-            styles ["monospace"]
-          }
-        }
-      }
-
-      [center]
-      Label status_bar_text {
-        halign: center;
-        justify: center;
-        xalign: 0.5;
-        label: _("64 spots. (4 filtered)");
-      }
-
-      [end]
-      Box {
-        spacing: 15;
-        orientation: horizontal;
-        valign: center;
-        halign: end;
-        margin-end: 15;
-
-        ProgressBar refresh_progress {
-          valign: center;
-        }
-
-        Label current_time {
-          tooltip-text: _("Current Time (UTC)");
-          styles ["utc-time", "monospace"]
-          label: "18:51:27 UTC";
-        }
-
-        ToggleButton refresh_button {
-          width-request: 30;
-          height-request: 30;
-          icon-name: "media-playback-pause-symbolic";
-          styles ["circular"]
-        }
-      }
+        end-child: $SpotDetail spot_detail {
+          width-request: 360;
+          hexpand: false;
+        };
+      };
     }
   }
 }

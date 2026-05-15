@@ -43,12 +43,74 @@ static string? iso8601_from_borrowed_utc (DateTime? dt) {
     return utc.format ("%Y-%m-%dT%H:%M:%SZ");
 }
 
+static bool band_frequency_range_khz (string band, out int min_khz, out int max_khz) {
+    min_khz = 0;
+    max_khz = 0;
+
+    switch (band) {
+        case "160m":
+            min_khz = 1800;
+            max_khz = 2000;
+            return true;
+        case "80m":
+            min_khz = 3500;
+            max_khz = 4100;
+            return true;
+        case "60m":
+            min_khz = 5250;
+            max_khz = 5450;
+            return true;
+        case "40m":
+            min_khz = 7000;
+            max_khz = 7300;
+            return true;
+        case "30m":
+            min_khz = 10100;
+            max_khz = 10150;
+            return true;
+        case "20m":
+            min_khz = 14000;
+            max_khz = 14350;
+            return true;
+        case "17m":
+            min_khz = 18068;
+            max_khz = 18168;
+            return true;
+        case "15m":
+            min_khz = 21000;
+            max_khz = 21450;
+            return true;
+        case "12m":
+            min_khz = 24890;
+            max_khz = 24990;
+            return true;
+        case "10m":
+            min_khz = 28000;
+            max_khz = 29700;
+            return true;
+        case "6m":
+            min_khz = 50000;
+            max_khz = 54000;
+            return true;
+        case "2m":
+            min_khz = 144000;
+            max_khz = 148000;
+            return true;
+        case "70cm":
+            min_khz = 420000;
+            max_khz = 450000;
+            return true;
+        default:
+            return false;
+    }
+}
+
 public sealed class QsoRow : Object {
     public int64 id { get; construct; }
     public string? park_ref { get; construct; }
     public string? callsign { get; construct; }
     public string? mode { get; construct; }
-    public int frequency_khz { get; construct; }
+    public double frequency_khz { get; construct; }
     public string? created_utc { get; construct; }
     public string? spotter { get; construct; }
     public string? spotter_comment { get; construct; }
@@ -60,7 +122,7 @@ public sealed class QsoRow : Object {
             park_ref: st.column_text (1),
             callsign: st.column_text (2),
             mode: (st.column_type (3) == Sqlite.NULL) ? null : st.column_text (3),
-            frequency_khz: (st.column_type (4) == Sqlite.NULL) ? 0 : st.column_int (4),
+            frequency_khz: (st.column_type (4) == Sqlite.NULL) ? 0 : st.column_double (4),
             created_utc: st.column_text (5),
             spotter: (st.column_type (6) == Sqlite.NULL) ? null : st.column_text (6),
             spotter_comment: (st.column_type (7) == Sqlite.NULL) ? null : st.column_text (7),
@@ -104,6 +166,9 @@ public static GLib.Quark spot_db_error_quark () {
 
 public class SpotDb : Object {
     private Sqlite.Database? db = null;
+    private Statement? is_park_hunted_stmt = null;
+    private Statement? had_qso_on_utc_day_stmt = null;
+    private Statement? had_qso_on_band_stmt = null;
 
     public SpotDb () {}
 
@@ -252,7 +317,7 @@ public class SpotDb : Object {
         st.bind_text (1, spot.park_ref);
         st.bind_text (2, spot.callsign);
         st.bind_text (3, spot.mode);
-        st.bind_int (4, spot.frequency_khz);
+        st.bind_double (4, spot.frequency_khz);
         st.bind_text (5, iso8601_from_borrowed_utc (spot.spot_time));
         st.bind_text (6, spot.spotter);
         st.bind_text (7, spot.spotter_comment);
@@ -344,8 +409,8 @@ public class SpotDb : Object {
 
         const string SQL =
             "SELECT qso_count FROM parks WHERE reference = ? AND qso_count > 0;";
-        Statement st;
-        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+        if (is_park_hunted_stmt == null &&
+            db.prepare_v2 (SQL, -1, out is_park_hunted_stmt) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare park hunted query: %s".printf (db.errmsg ()
@@ -353,6 +418,9 @@ public class SpotDb : Object {
             ;
             return false;
         }
+        unowned Statement st = is_park_hunted_stmt;
+        st.reset ();
+        st.clear_bindings ();
         st.bind_text (1, park_reference);
         var rc = st.step ();
         bool hunted = (rc == Sqlite.ROW);
@@ -582,14 +650,17 @@ public class SpotDb : Object {
           );
           """;
 
-        Statement st;
-        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+        if (had_qso_on_utc_day_stmt == null &&
+            db.prepare_v2 (SQL, -1, out had_qso_on_utc_day_stmt) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare had_qso_with_park_on_utc_day query: %s".
                 printf (db.errmsg ()));
             return false;
         }
+        unowned Statement st = had_qso_on_utc_day_stmt;
+        st.reset ();
+        st.clear_bindings ();
         st.bind_text (1, park_ref);
         st.bind_text (2, start_iso);
         st.bind_text (3, next_iso);
@@ -598,6 +669,58 @@ public class SpotDb : Object {
             exists = st.column_int (0) != 0;
         return exists;
     } /* had_qso_with_park_on_utc_day */
+
+    public bool had_qso_with_park_on_band (string park_ref, string band, out Error? error) {
+        error = null;
+        if (db == null) {
+            error = new Error (spot_db_error_quark (), DatabaseError.DB_NOT_INITIALIZED,
+                "DB not initialized");
+            return false;
+        }
+
+        if ((park_ref == null) || (park_ref.strip () == "")) {
+            error = new Error (spot_db_error_quark (), DatabaseError.INVALID_ARGUMENT,
+                "Park reference cannot be empty");
+            return false;
+        }
+
+        int min_khz = 0;
+        int max_khz = 0;
+        if (!band_frequency_range_khz (band, out min_khz, out max_khz)) {
+            error = new Error (spot_db_error_quark (), DatabaseError.INVALID_ARGUMENT,
+                "Band %s does not map to a known frequency range".printf (band));
+            return false;
+        }
+
+        const string SQL =
+            """
+          SELECT EXISTS (
+            SELECT 1
+            FROM qsos
+            WHERE park_ref = ? AND frequency_khz >= ? AND frequency_khz < ?
+          );
+          """;
+
+        if (had_qso_on_band_stmt == null &&
+            db.prepare_v2 (SQL, -1, out had_qso_on_band_stmt) != Sqlite.OK) {
+            error = new Error (spot_db_error_quark (), DatabaseError.SQLITE_FAILED,
+                "Failed to prepare had_qso_with_park_on_band query: %s".printf (
+                    db.errmsg ()));
+            return false;
+        }
+
+        unowned Statement st = had_qso_on_band_stmt;
+        st.reset ();
+        st.clear_bindings ();
+        st.bind_text (1, park_ref);
+        st.bind_int (2, min_khz);
+        st.bind_int (3, max_khz);
+
+        bool exists = false;
+        if (st.step () == Sqlite.ROW)
+            exists = st.column_int (0) != 0;
+        return exists;
+    }
 
     public string? country_string_for_location (string location, out Error? error) {
         error = null;

@@ -27,7 +27,6 @@ template $SpotCard : Box {
   valign: start;
 
   Box card_view {
-    height-request: 180;
     halign: fill;
     hexpand: true;
     orientation: vertical;
@@ -36,51 +35,41 @@ template $SpotCard : Box {
 
     styles ["card", "frame"]
 
-    Overlay {
-      child: Box {
-        margin-start: 10;
-        margin-top: 10;
-        margin-bottom: 6;
-        margin-end: 10;
-        orientation: horizontal;
+    Box {
+      margin-start: 10;
+      margin-top: 10;
+      margin-bottom: 6;
+      margin-end: 10;
+      orientation: horizontal;
 
-        Adw.Avatar activator_avatar {
-          valign: center;
-          size: 32;
-          margin-end: 6;
+      Adw.Avatar activator_avatar {
+        valign: center;
+        size: 32;
+        margin-end: 6;
+      }
+
+      Box {
+        orientation: vertical;
+        valign: center;
+        hexpand: true;
+
+        Label title {
+          halign: start;
+          justify: left;
+          label: "K0VCZ @ K-1234";
+          xalign: 0.0;
+          ellipsize: end;
+          max-width-chars: 22;
+          styles ["title-2"]
         }
 
-        Box {
-          orientation: vertical;
-          valign: center;
-
-          Label title {
-            halign: start;
-            justify: left;
-            label: "K0VCZ @ K-1234";
-            wrap-mode: word_char;
-            styles ["title-2"]
-          }
-
-          Label park_label {
-            halign: start;
-            wrap: true;
-            justify: left;
-            wrap-mode: word_char;
-          }
+        Label park_label {
+          halign: start;
+          justify: left;
+          xalign: 0.0;
+          ellipsize: end;
+          max-width-chars: 26;
         }
-      };
-
-      [overlay]
-      Image corner_image {
-        tooltip-text: _("Hunted today");
-        halign: end;
-        valign: start;
-        margin-end: 10;
-        margin-top: 12;
-        icon-name: "bullseye-symbolic";
-        pixel-size: 16;
-        visible: false;
       }
     }
 
@@ -93,106 +82,106 @@ template $SpotCard : Box {
       margin-start: 10;
       margin-end: 10;
       margin-bottom: 10;
-      hexpand: false;
+      hexpand: true;
       spacing: 12;
 
       Box {
         orientation: horizontal;
         spacing: 10;
+        hexpand: true;
         tooltip-text: _("Location");
 
-        Image {
-          pixel-size: 20;
-          icon-name: "map-marker-symbolic";
-          valign: baseline;
-        }
-
-        Label location_desc {
-          margin-bottom: 0;
-          label: "US-WY";
-          wrap: true;
-          width-chars: 24;
-          xalign: 0.0;
-          ellipsize: end;
-          wrap-mode: word;
-        }
-      }
-
-      Box distance_bearing {
-        orientation: horizontal;
-        spacing: 10;
-        tooltip-text: _("Distance & Bearing");
-
         Box {
           orientation: horizontal;
           spacing: 10;
-
+        
           Image {
+            icon-name: "map-marker-symbolic";
             pixel-size: 20;
-            icon-name: "compass2-symbolic";
             valign: baseline;
+            accessibility {
+              label: _("Location");
+              role-description: _("icon");
+            }
           }
 
-          Label bearing_label {
-            halign: start;
-            valign: baseline;
-            label: "360°";
+          Label location_desc {
+            hexpand: true;
+            margin-bottom: 0;
+            label: "US-WY";
+            xalign: 0.0;
+            ellipsize: end;
+            max-width-chars: 12;
           }
         }
 
         Box {
           orientation: horizontal;
           spacing: 10;
+        
           Image {
+            icon-name: "grid-symbolic";
             pixel-size: 20;
-            icon-name: "distance-symbolic";
             valign: baseline;
+            accessibility {
+              label: _("Grid Square");
+              role-description: _("icon");
+            }
           }
 
-          Label distance_label {
-            halign: start;
-            valign: baseline;
-            label: "1660km";
+          Label grid_square {
+            margin-bottom: 0;
+            label: "FN20";
+            xalign: 0.0;
+            styles ["numeric"]
           }
-        }
+        } 
       }
 
       Box {
         orientation: horizontal;
         spacing: 10;
+        hexpand: true;
         tooltip-text: _("Frequency and mode");
 
         Box {
           orientation: horizontal;
           spacing: 10;
-          
+          hexpand: true;
+
+          $BandStrip band_strip {
+            width-request: 4;
+            height-request: 20;
+            valign: center;
+            band: "20m";
+          }
+
+          Label frequency {
+            hexpand: true;
+            halign: start;
+            valign: baseline;
+            label: "14074 kHz";
+            styles ["numeric"]
+          }
+        }
+
+        Box {
+          orientation: horizontal;
+          spacing: 10;
+
           Image {
             icon-name: "sound-wave-alt-symbolic";
             pixel-size: 20;
             valign: baseline;
+            accessibility {
+              label: _("Mode");
+              role-description: _("icon");
+            }
           }
 
-          Label frequency {
-            halign: start;
-            valign: baseline;
-            label: "14074 kHz";
-          }
-        }
-        
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-          
-          Image {
-            icon-name: "mode-symbolic";
-            pixel-size: 20;
-            valign: baseline;
-          }
-        
           Label mode {
             valign: baseline;
             label: "FT8";
-            styles ["caption monospace pill"]
           }
         }
       }
@@ -200,54 +189,52 @@ template $SpotCard : Box {
       Box {
         orientation: horizontal;
         spacing: 10;
-        tooltip-text: _("Hunter callsign");
+        hexpand: true;
+        tooltip-text: _("Age and spot count");
 
-        Adw.Avatar hunter_avatar {
-          size: 20;
-          valign: baseline;
+        Box {
+          orientation: horizontal;
+          spacing: 10;
+          hexpand: true;
+
+          Image {
+            pixel-size: 20;
+            icon-name: "clocks-symbolic";
+            valign: baseline;
+            accessibility {
+              label: _("Age");
+              role-description: _("icon");
+            }
+          }
+
+          Label time {
+            hexpand: true;
+            halign: start;
+            valign: baseline;
+            label: "2 minutes ago";
+          }
         }
 
-        Label hunter_callsign {
-          halign: start;
-          valign: baseline;
-          label: "K0VCZ";
-        }
-      }
+        Box {
+          orientation: horizontal;
+          spacing: 10;
 
-      Box {
-        orientation: horizontal;
-        spacing: 10;
-        tooltip-text: _("Age");
+          Image {
+            pixel-size: 20;
+            icon-name: "bullseye-symbolic";
+            valign: baseline;
+            accessibility {
+              label: _("Spot Count");
+              role-description: _("icon");
+            }
+          }
 
-        Image {
-          pixel-size: 20;
-          icon-name: "clocks-symbolic";
-          valign: baseline;
-        }
-
-        Label time {
-          halign: start;
-          valign: baseline;
-          label: "2 minutes ago";
-        }
-      }
-
-      Box {
-        orientation: horizontal;
-        spacing: 10;
-        tooltip-text: _("Spots");
-
-        Image {
-          pixel-size: 20;
-          icon-name: "history-undo-symbolic";
-          valign: baseline;
-        }
-
-        Label spots {
-          halign: start;
-          valign: baseline;
-          label: "16";
-          margin-bottom: 20;
+          Label spot_count {
+            halign: start;
+            valign: baseline;
+            label: "4";
+            styles ["numeric"]
+          }
         }
       }
     }
@@ -255,59 +242,40 @@ template $SpotCard : Box {
     Separator {
       styles ["horizontal"]
     }
-    
+
     Box {
-      halign: fill;
-      hexpand: true;
-      margin-top: 10;
-      margin-bottom: 10;
-      margin-start: 10;
-      margin-end: 10;
+      orientation: horizontal;
+      margin-start: 6;
+      margin-end: 6;
+      margin-top: 4;
+      margin-bottom: 4;
+      spacing: 6;
 
-      Box {
-        halign: start;
-        hexpand: true;
+      Box badge_box {
         orientation: horizontal;
+        spacing: 4;
+        hexpand: true;
+        valign: center;
+      }
 
-        Box {
-          halign: start;
-          spacing: 6;
-          
-          Button history_button {
-            clicked => $on_history_button_clicked();
-            Image {
-              tooltip-text: _("Spot History");
-              icon-name: "history-undo-symbolic";
-              icon-size: normal;
-            }
-          }
-
-          Button park_details_button {
-            clicked => $on_park_details_button_clicked();
-            Image {
-              tooltip-text: _("Park details");
-              icon-name: "maps-symbolic";
-              icon-size: normal;
-            }
-          }
+      Button tune_button {
+        label: _("Tune");
+        tooltip-text: _("Tune your radio to this frequency");
+        visible: false;
+        styles ["raised"]
+        accessibility {
+          label: _("Tune");
+          role-description: _("button");
         }
       }
 
-      Box {
-        spacing: 6;
-        halign: end;
-        
-        Button tune_button {
-          tooltip-text: _("Tune your radio to this frequency");
-          label: _("Tune");
-          clicked => $on_tune_button_clicked();
-        }
-
-        Button spot_button {
-          tooltip-text: _("Re-spot this park");
+      Button spot_button {
+        label: _("Re-Spot");
+        tooltip-text: _("Add your spot for this park");
+        styles ["raised", "suggested-action"]
+        accessibility {
           label: _("Re-Spot");
-          styles ["suggested-action"]
-          clicked => $on_spot_button_clicked();
+          role-description: _("button");
         }
       }
     }

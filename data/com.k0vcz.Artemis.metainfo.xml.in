@@ -70,16 +70,46 @@
 
   <screenshots>
     <screenshot type="default">
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/main-window.png</image>
-      <caption>Main spot hunting view with filters and live cards</caption>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/cards-light.png</image>
+      <caption>Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector.</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view.png</image>
-      <caption>Map view showing current park activity and station context</caption>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/cards-dark.png</image>
+      <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions.</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-light.png</image>
+      <caption>Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details.</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-dark.png</image>
+      <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting.</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-light.png</image>
+      <caption>Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector.</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-dark.png</image>
+      <caption>Dark theme map view showing active parks on an interactive map with the floating refresh status bar.</caption>
     </screenshot>
   </screenshots>
 
   <releases>
+    <release version="2.0" date="2026-05-15">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.0</url>
+      <description>
+        <p>Redesigned the main hunting workflow with a dedicated left sidebar, cleaner spot cards, a full list view, an improved map view, and a richer spot detail inspector.</p>
+        <ul>
+          <li>Moved band, mode, and program filters into the sidebar, with mode and program choices now based on the currently available spots.</li>
+          <li>Added spot weather, and badges for hunted/new activity</li>
+          <li>Added list-view operation with direct tune and re-spot buttons on each row.</li>
+          <li>Added FT4 support in Add Spot and Re-Spot flows, and fixed a bug preserving fractional kHz frequencies.</li>
+          <li>Improved map behavior so user panning is respected during refreshes and repeated spot selection updates.</li>
+          <li>Improved POTA, QRZ, weather, and radio-control reliability, including safer response parsing, better refresh coalescing, and more robust Hamlib integration.</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2" date="2026-03-19">
       <url type="details">https://github.com/jaybaird/artemis/releases/tag/v1.2</url>
       <description>

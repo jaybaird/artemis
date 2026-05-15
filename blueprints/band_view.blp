@@ -31,19 +31,24 @@ template $BandView : Box {
     hexpand: true;
     vexpand: true;
 
-    child: ScrolledWindow {
+    child: ScrolledWindow spot_scroll_window {
       vexpand: true;
       hexpand: true;
       halign: fill;
       valign: fill;
 
       FlowBox band_spot_cards {
-        column-spacing: 6;
-        row-spacing: 12;
+        column-spacing: 8;
+        row-spacing: 0;
+        margin-top: 0;
+        margin-start: 8;
+        margin-end: 8;
+        margin-bottom: 88;
         selection-mode: single;
         min-children-per-line: 2;
-        max-children-per-line: 8;
+        max-children-per-line: 2;
         homogeneous: true;
+        valign: start;
       }
     };
 

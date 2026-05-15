@@ -39,9 +39,13 @@ public sealed class BandView : Gtk.Box {
     public unowned Gtk.FlowBox band_spot_cards;
 
     [GtkChild]
+    private unowned Gtk.ScrolledWindow spot_scroll_window;
+
+    [GtkChild]
     public unowned Adw.StatusPage status_page;
 
     public unowned Adw.ViewStackPage ? page;
+    public signal void count_changed (uint count);
 
     private Gtk.Filter filter;
     private Gtk.CustomSorter sorter;
@@ -63,40 +67,7 @@ public sealed class BandView : Gtk.Box {
             var spot = item as Spot;
             if (spot == null)
                 return false;
-
-            if ((band_label != "All") && (spot.band != band_label))
-                return false;
-
-            if (settings.get_boolean ("hide-qrt") &&
-                spot.activator_comment.down ().contains ("qrt"))
-                return false;
-
-            if (settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
-                return false;
-
-            var stale_minutes = settings.get_int ("hide-older-than");
-            var now = new DateTime.now_utc ();
-            var expires = spot.spot_time.add_minutes (stale_minutes);
-            if (now.compare (expires) > 0)
-                return false;
-
-            if ((Application.current_program_filter != null) &&
-                !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
-                return false;
-
-            if ((Application.current_mode_filter != null) &&
-                !spot.mode.down ().contains (Application.current_mode_filter.down ()))
-                return false;
-
-            if (Application.current_search_text != null) {
-                var needle = Application.current_search_text.down ();
-                if (!(spot.callsign.down ().contains (needle) ||
-                      spot.park_ref.down ().contains (needle) ||
-                      spot.park_name.down ().contains (needle)))
-                    return false;
-            }
-
-            return true;
+            return spot_matches_current_filters (spot, band_label);
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
@@ -107,12 +78,6 @@ public sealed class BandView : Gtk.Box {
 
             if ((spot_a == null) || (spot_b == null))
                 return Gtk.Ordering.EQUAL;
-
-            var current_hash = Application.current_spot_hash;
-            if ((spot_a.hash == current_hash) && (spot_b.hash != current_hash))
-                return Gtk.Ordering.SMALLER;
-            if ((spot_b.hash == current_hash) && (spot_a.hash != current_hash))
-                return Gtk.Ordering.LARGER;
 
             int cmp = spot_a.spot_time.compare (spot_b.spot_time);
             if (cmp > 0)
@@ -164,8 +129,19 @@ public sealed class BandView : Gtk.Box {
             band_spot_cards.visible = (items > 0);
             status_page.visible = (items == 0);
 
+            if (items == 0) {
+                int raw_count = (band_label == "All")
+                    ? (int)Application.spot_repo.store.get_n_items ()
+                    : Application.spot_repo.get_band_count (band_label);
+                if (raw_count > 0)
+                    status_page.description = _("No spots on %s match your current filters").printf (band_label);
+                else
+                    status_page.description = _("There are no spots currently on %s").printf (band_label);
+            }
+
             if (page != null)
                 page.badge_number = sorted.get_n_items ();
+            count_changed (items);
         });
 
         var items = sorted.get_n_items ();
@@ -186,9 +162,12 @@ public sealed class BandView : Gtk.Box {
     }
 
     public void set_current_spot (Quark spot_hash) {
-        sorter.changed (Gtk.SorterChange.DIFFERENT);
-
         Idle.add (() => {
+            if (spot_hash == BLANK_HASH) {
+                band_spot_cards.unselect_all ();
+                return Source.REMOVE;
+            }
+
             for (var child = band_spot_cards.get_first_child () ; child != null
                  ;
                  child = child.get_next_sibling ()) {
@@ -199,12 +178,32 @@ public sealed class BandView : Gtk.Box {
                 var spot_card = fbchild.get_child () as SpotCard;
                 if ((spot_card != null) && (spot_card.spot.hash == spot_hash)) {
                     band_spot_cards.select_child (fbchild);
-                    break;
+                    Idle.add (() => {
+                        scroll_to_child (fbchild);
+                        return Source.REMOVE;
+                    });
+                    return Source.REMOVE;
                 }
             }
 
+            band_spot_cards.unselect_all ();
             return Source.REMOVE;
         });
+    }
+
+    private void scroll_to_child (Gtk.Widget child) {
+        Graphene.Rect bounds;
+        if (!child.compute_bounds (band_spot_cards, out bounds))
+            return;
+
+        var adj = spot_scroll_window.vadjustment;
+        var child_top = bounds.get_top_left ().y;
+        var child_bottom = bounds.get_bottom_right ().y;
+
+        if (child_top < adj.value)
+            adj.value = child_top;
+        else if (child_bottom > adj.value + adj.page_size)
+            adj.value = child_bottom - adj.page_size;
     }
 
     private void _refresh_cards () {

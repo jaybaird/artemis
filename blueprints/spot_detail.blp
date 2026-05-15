@@ -1,0 +1,211 @@
+/* blueprints/spot_detail.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $SpotDetail : Box {
+  orientation: vertical;
+
+  Stack detail_stack {
+    vexpand: true;
+    hexpand: true;
+
+    StackPage {
+      name: "empty";
+      child: Adw.StatusPage {
+        vexpand: true;
+        icon-name: "bullseye-symbolic";
+        title: _("No Spot Selected");
+        description: _("Select a spot from the list to view its details.");
+      };
+    }
+
+    StackPage {
+      name: "detail";
+      child: ScrolledWindow {
+        vexpand: true;
+        hscrollbar-policy: never;
+
+          Adw.Clamp {
+            maximum-size: 400;
+            tightening-threshold: 300;
+
+            Box {
+              orientation: vertical;
+              spacing: 24;
+              margin-top: 24;
+              margin-bottom: 24;
+              margin-start: 12;
+              margin-end: 12;
+
+            Box {
+              orientation: vertical;
+              spacing: 8;
+
+              Adw.Avatar detail_avatar {
+                size: 72;
+                halign: center;
+                text: "?";
+              }
+
+              Label detail_callsign {
+                halign: center;
+                ellipsize: end;
+                max-width-chars: 24;
+                styles ["title-1"]
+              }
+
+              Label detail_park_name {
+                halign: center;
+                wrap: true;
+                wrap-mode: word_char;
+                max-width-chars: 32;
+                justify: center;
+                styles ["title-2"]
+              }
+
+              Box {
+                halign: center;
+                orientation: horizontal;
+                spacing: 4;
+                styles ["card", "weather-summary-card"]
+
+                Image wx_conditions {
+                  icon-name: "storm-outline-symbolic";
+                  pixel-size: 20;
+                  valign: baseline;
+                  accessibility {
+                    label: _("Weather Conditions");
+                    role-description: _("icon");
+                  }
+                }
+
+                Label wx_conditions_txt {
+                  label: _("Thunderstorms");
+                  ellipsize: end;
+                  max-width-chars: 18;
+                }
+
+                Image {
+                  icon-name: "thermometer-symbolic";
+                  pixel-size: 20;
+                  valign: baseline;
+                  accessibility {
+                    label: _("Temperature");
+                    role-description: _("icon");
+                  }
+                }
+
+                Label wx_temp {
+                  label: _("48");
+                  styles ["numeric"]
+                }
+
+                Image {
+                  icon-name: "drop-hollow-symbolic";
+                  pixel-size: 20;
+                  valign: baseline;
+                  accessibility {
+                    label: _("Relative Humidity");
+                    role-description: _("icon");
+                  }
+                }
+
+                Label wx_humidity {
+                  label: _("60%");
+                  tooltip-text: _("Relative humidity");
+                  styles ["numeric"]
+                }
+              }
+            }
+          
+            Box {
+              orientation: horizontal;
+              spacing: 4;
+
+              Button detail_tune_button {
+                label: _("Tune");
+                tooltip-text: _("Tune your radio to this frequency");
+                hexpand: true;
+                visible: false;
+                accessibility {
+                  label: _("Tune");
+                  role-description: _("button");
+                }
+              }
+
+              Button detail_spot_button {
+                label: _("Re-Spot");
+                tooltip-text: _("Add your spot for this park");
+                hexpand: true;
+                visible: false;
+                styles ["suggested-action"]
+                accessibility {
+                  label: _("Re-Spot");
+                  role-description: _("button");
+                }
+              }
+            }
+
+            Adw.PreferencesGroup detail_activator_group {
+              title: _("Activator Profile");
+              Gtk.ListBox detail_activator_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Operating Details");
+              Gtk.ListBox detail_operating_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Location");
+              Gtk.ListBox detail_location_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Adw.PreferencesGroup {
+              title: _("Last Spot");
+              Gtk.ListBox detail_last_spot_list {
+                selection-mode: none;
+                styles ["boxed-list"]
+              }
+            }
+
+            Label {
+              halign: center;
+              justify: center;
+              label: _("Weather data © OpenWeather");
+              styles ["caption"]
+            }
+          }
+        }
+      };
+    }
+  }
+}

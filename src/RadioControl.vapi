@@ -49,7 +49,7 @@ public class RadioControl : GLib.Object {
     [CCode (cname = "radio_control_get_vfo_async")]
     public Dex.Future get_vfo ();
     [CCode (cname = "radio_control_set_vfo_async")]
-    public Dex.Future set_vfo (int frequency);
+    public Dex.Future set_vfo (double frequency);
 
     [CCode (cname = "radio_control_get_mode_async")]
     public Dex.Future get_mode ();
@@ -72,20 +72,64 @@ public class RadioControl : GLib.Object {
     [CCode (cname = "radio_control_hamlib_copyright")]
     public static unowned string hamlib_copyright ();
 
+    [CCode (cname = "radio_control_netrigctl_model_id")]
+    public static int netrigctl_model_id ();
+
     // Signals
     [CCode (cname = "radio-connected")]
     public signal void radio_connected ();
-    
+
     [CCode (cname = "radio-disconnected")]
     public signal void radio_disconnected ();
-    
+
     [CCode (cname = "radio-status")]
     public signal void radio_status (int frequency, RadioMode mode);
-    
+
     [CCode (cname = "radio-error")]
     public signal void radio_error (GLib.Error error);
 
     // Helpers
+    public static RadioMode mode_for_spot (Spot spot) {
+        var text_mode = spot.mode.down ();
+        if (text_mode == "ft8" || text_mode == "ft4")
+            return RadioMode.DIGITAL_U;
+        if (text_mode == "ssb")
+            return (spot.frequency_khz >= 14000) ? RadioMode.USB : RadioMode.LSB;
+        if (text_mode == "fm")
+            return RadioMode.FM;
+        if (text_mode == "am")
+            return RadioMode.AM;
+        if (text_mode == "cw")
+            return RadioMode.CW;
+        return RadioMode.UNKNOWN;
+    }
+
+    public void tune_to_spot (Spot spot) {
+        if (!is_rig_connected)
+            return;
+
+        var mode = RadioControl.mode_for_spot (spot);
+        new Dex.Future.finally (set_vfo (spot.frequency_khz), (result) => {
+            try {
+                result.await_boolean ();
+            } catch (GLib.Error e) {
+                GLib.warning ("Unable to tune VFO: %s", e.message);
+                return null;
+            }
+            if (mode == RadioMode.UNKNOWN)
+                return null;
+            new Dex.Future.finally (set_mode (mode), (mode_result) => {
+                try {
+                    mode_result.await_boolean ();
+                } catch (GLib.Error e) {
+                    GLib.warning ("Unable to set mode: %s", e.message);
+                }
+                return null;
+            }).disown ();
+            return null;
+        }).disown ();
+    }
+
     public static string mode_string (RadioMode mode) {
         switch (mode) {
             case AM: return "AM";
@@ -97,7 +141,7 @@ public class RadioControl : GLib.Object {
             case DIGITAL_L: return "LSB-D";
             case DIGITAL_U: return "USB-D";
             case FM: return "FM";
-            case DIGITAL_FM: return "FM-D"; 
+            case DIGITAL_FM: return "FM-D";
             case UNKNOWN: return "Unknown";
             default: return "Unknown";
         }

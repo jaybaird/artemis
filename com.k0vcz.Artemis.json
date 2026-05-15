@@ -1,7 +1,7 @@
 {
     "id": "com.k0vcz.Artemis",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "49",
+    "runtime-version": "50",
     "sdk": "org.gnome.Sdk",
     "command": "com.k0vcz.Artemis",
     "finish-args": [
@@ -13,12 +13,12 @@
     ],
     "cleanup": [
         "/include",
+        "/lib/cmake",
+        "/lib/girepository-1.0",
         "/lib/pkgconfig",
-        "/man",
         "/share/doc",
-        "/share/gtk-doc",
+        "/share/gir-1.0",
         "/share/man",
-        "/share/pkgconfig",
         "/share/vala",
         "*.la",
         "*.a"
@@ -39,9 +39,9 @@
             ],
             "sources": [
                 {
-                    "type": "git",
-                    "url": "https://github.com/Hamlib/Hamlib.git",
-                    "commit": "554e02b39442f002a9a14655d86cafab842573ba"
+                    "type": "archive",
+                    "url": "https://github.com/Hamlib/Hamlib/releases/download/4.6.5/hamlib-4.6.5.tar.gz",
+                    "sha256": "90d6f1dba59417c00f8f4545131c7efd31930cd0e178598980a8210425e3852e"
                 }
             ]
         },
@@ -96,7 +96,8 @@
             "builddir" : true,
             "buildsystem" : "meson",
             "config-opts":[
-                "-Dbuildtype=release"
+                "-Dbuildtype=release",
+                "-Dopenweather_api_key=79d09752976d3a97926412f49b93cd11"
             ],
             "build-commands": [
                 "chmod +x subprojects/blueprint-compiler/blueprint-compiler || true"

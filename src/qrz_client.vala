@@ -52,14 +52,16 @@ public sealed class QrzClient : Object {
         return "<%s:%u>%s".printf (name, value.length, value);
     }
 
-    private static string format_frequency_mhz (int frequency_khz) {
-        int whole_mhz = frequency_khz / 1000;
-        int fractional_khz = frequency_khz % 1000;
+    private static string format_frequency_mhz (double frequency_khz) {
+        var formatted = "%.6f".printf (frequency_khz / 1000.0);
 
-        if (fractional_khz < 0)
-            fractional_khz = -fractional_khz;
+        while (formatted.has_suffix ("0")) {
+            formatted = formatted.substring (0, formatted.length - 1);
+        }
+        if (formatted.has_suffix ("."))
+            formatted = formatted.substring (0, formatted.length - 1);
 
-        return "%d.%03d".printf (whole_mhz, fractional_khz);
+        return formatted;
     }
 
     private static string? lookup_response_value (
@@ -148,6 +150,11 @@ public sealed class QrzClient : Object {
             adif.append (adif_field ("notes", "POTA - %s".printf (park_ref)));
         }
 
+        if ((spot.rst_sent ?? "").strip () != "")
+            adif.append (adif_field ("rst_sent", spot.rst_sent.strip ()));
+        if ((spot.rst_rcvd ?? "").strip () != "")
+            adif.append (adif_field ("rst_rcvd", spot.rst_rcvd.strip ()));
+
         var comment = (spot.spotter_comment ?? "").strip ();
         if (comment != "")
             adif.append (adif_field ("comment", comment));
@@ -198,7 +205,10 @@ public sealed class QrzClient : Object {
             );
         }
 
-        var body = ((string)response.get_data ()).strip ();
+        var body = ((string)response.get_data ()).substring (
+            0,
+            (long)response.get_size ()
+        ).strip ();
         var params = parse_response_body (body);
         var result = lookup_response_value (params, "RESULT");
 

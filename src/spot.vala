@@ -29,11 +29,11 @@ public class RadioConstants {
     };
 
     public const string[] MODES = {
-        "SSB", "CW", "FT8", "FM", "AM", "RTTY", "JT65"
+        "SSB", "CW", "FT8", "FT4", "FM", "AM", "RTTY", "JT65"
     };
 }
 
-public string band_from_khz (int khz) {
+public string band_from_khz (double khz) {
     double mhz = (double)khz / 1e3;
 
     if ((mhz >= 1.8) && (mhz < 2.0))
@@ -72,7 +72,7 @@ public sealed class Spot : Object {
     public string park_name { get; construct; }
     public string location_desc { get; construct; }
     public string activator_comment { get; construct; }
-    public int frequency_khz { get; construct; }
+    public double frequency_khz { get; construct; }
     public string band { get; construct; }
     public string mode { get; construct; }
     public DateTime spot_time { get; construct; }
@@ -87,13 +87,16 @@ public sealed class Spot : Object {
     public Quark hash { get; construct; default = BLANK_HASH; }
     public bool is_new_park { get; construct; }
     public bool was_hunted_today { get; construct; }
+    public bool is_new_band { get; construct; }
+    public string? rst_sent { get; construct; }
+    public string? rst_rcvd { get; construct; }
 
     public Spot (string callsign,
                  string park_ref,
                  string park_name,
                  string location_desc,
                  string activator_comment,
-                 int frequency_khz,
+                 double frequency_khz,
                  string mode,
                  DateTime created_utc,
                  DateTime spot_time,
@@ -126,33 +129,101 @@ public sealed class Spot : Object {
         string frequency_khz,
         string mode,
         string spotter,
-        string spotter_comment) {
+        string spotter_comment,
+        string rst_sent,
+        string rst_rcvd) {
         Object (
             callsign: callsign,
             park_ref: park_ref,
             spot_time: spot_time,
-            frequency_khz: int.parse (frequency_khz),
+            frequency_khz: parse_frequency_input_khz (frequency_khz),
             mode: mode,
             spotter: spotter,
-            spotter_comment: spotter_comment
+            spotter_comment: spotter_comment,
+            rst_sent: rst_sent,
+            rst_rcvd: rst_rcvd
         );
     }
 
-    public Spot.from_json (Json.Object spot) {
+    private static string required_string_member (
+        Json.Object object,
+        string member
+    ) throws Error {
+        if (!object.has_member (member)) {
+            throw new IOError.INVALID_DATA (
+                "Spot is missing required member '%s'".printf (member)
+            );
+        }
+
+        var value = object.get_string_member_with_default (member, "");
+        if (value.strip () == "") {
+            throw new IOError.INVALID_DATA (
+                "Spot has empty required member '%s'".printf (member)
+            );
+        }
+
+        return value;
+    }
+
+    private static double parse_frequency_input_khz (string value) {
+        double frequency_khz = 0;
+        unowned string unparsed;
+
+        if (double.try_parse (value.strip (), out frequency_khz, out unparsed) &&
+            (unparsed == "")) {
+            return frequency_khz;
+        }
+
+        return 0;
+    }
+
+    private static double parse_frequency_khz (Json.Object object) throws Error {
+        var value = object.get_string_member_with_default ("frequency", "0").strip ();
+        double frequency_khz = 0;
+        unowned string unparsed;
+
+        if (!double.try_parse (value, out frequency_khz, out unparsed) ||
+            (unparsed != "")) {
+            throw new IOError.INVALID_DATA (
+                "Spot has invalid frequency '%s'".printf (value)
+            );
+        }
+
+        return frequency_khz;
+    }
+
+    private static DateTime parse_spot_time (Json.Object object) throws Error {
+        var value = required_string_member (object, "spotTime");
+        DateTime? parsed = new GLib.DateTime.from_iso8601 (
+            value,
+            new GLib.TimeZone.utc ()
+        );
+
+        if (parsed == null) {
+            throw new IOError.INVALID_DATA (
+                "Spot has invalid spotTime '%s'".printf (value)
+            );
+        }
+
+        return parsed;
+    }
+
+    public Spot.from_json (Json.Object spot) throws Error {
         Object (
-            callsign: spot.get_string_member ("activator"),
-            park_ref: spot.get_string_member ("reference"),
-            park_name: spot.get_string_member ("name"),
-            mode: spot.get_string_member ("mode"),
-            location_desc: spot.get_string_member ("locationDesc"),
-            activator_comment: spot.get_string_member ("activatorLastComments"),
-            spotter: spot.get_string_member ("spotter"),
-            spotter_comment: spot.get_string_member ("comments"),
+            callsign: required_string_member (spot, "activator"),
+            park_ref: required_string_member (spot, "reference"),
+            park_name: spot.get_string_member_with_default ("name", ""),
+            mode: required_string_member (spot, "mode"),
+            location_desc: spot.get_string_member_with_default ("locationDesc", ""),
+            activator_comment: spot.get_string_member_with_default (
+                "activatorLastComments",
+                ""
+            ),
+            spotter: spot.get_string_member_with_default ("spotter", ""),
+            spotter_comment: spot.get_string_member_with_default ("comments", ""),
             spot_count: (int)spot.get_int_member_with_default ("count", 0),
-            frequency_khz: int.parse (spot.get_string_member_with_default (
-                "frequency", "0")),
-            spot_time: new GLib.DateTime.from_iso8601 (spot.get_string_member (
-                "spotTime"), new GLib.TimeZone.utc ()),
+            frequency_khz: parse_frequency_khz (spot),
+            spot_time: parse_spot_time (spot),
             grid4: spot.get_string_member_with_default ("grid4", ""),
             grid6: spot.get_string_member_with_default ("grid6", "")
         );
@@ -171,6 +242,8 @@ public sealed class Spot : Object {
             park_ref, new DateTime.now_utc (), out error);
         is_new_park = !Application.spot_database.is_park_hunted (park_ref, out
             error);
+        is_new_band = !is_new_park && !Application.spot_database.had_qso_with_park_on_band (
+            park_ref, band, out error);
 
         coordinate = null;
         distance = -1.0;
@@ -211,7 +284,7 @@ public sealed class Spot : Object {
         builder.add_string_value (spotter);
 
         builder.set_member_name ("frequency");
-        builder.add_string_value (frequency_khz.to_string ("%d"));
+        builder.add_string_value (format_frequency_khz (frequency_khz));
 
         builder.set_member_name ("reference");
         builder.add_string_value (park_ref);
@@ -254,8 +327,12 @@ public sealed class SpotStore : Object {
 
     public void add_from_json (Json.Array array) {
         foreach (var element in array.get_elements ()) {
-            var obj = element.get_object ();
-            spot_store.append (new Spot.from_json (obj));
+            try {
+                var obj = element.get_object ();
+                spot_store.append (new Spot.from_json (obj));
+            } catch (Error err) {
+                warning ("Skipping malformed POTA spot: %s", err.message);
+            }
         }
     }
 } /* class SpotStore */

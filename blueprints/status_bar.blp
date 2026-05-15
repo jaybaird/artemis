@@ -1,0 +1,72 @@
+/* blueprints/status_bar.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+
+template $StatusBar : Box {
+  halign: fill;
+  hexpand: true;
+
+  styles ["view", "status-bar-overlay"]
+
+  CenterBox {
+    margin-bottom: 8;
+    margin-top: 8;
+    margin-start: 10;
+    margin-end: 10;
+    hexpand: true;
+
+    [start]
+    Label status_bar_text {
+      halign: start;
+      justify: left;
+      xalign: 0.0;
+      ellipsize: end;
+      max-width-chars: 16;
+      label: _("64 spots. (4 filtered)");
+    }
+
+    [center]
+    Label refresh_status {
+      halign: center;
+      justify: center;
+      xalign: 0.5;
+      ellipsize: end;
+      max-width-chars: 16;
+      label: _("Refreshes in 120s");
+    }
+
+    [end]
+    Box {
+      spacing: 15;
+      orientation: horizontal;
+      valign: center;
+      halign: end;
+
+      Label current_time {
+        tooltip-text: _("Current Time (UTC)");
+        ellipsize: end;
+        max-width-chars: 12;
+        styles ["utc-time", "monospace"]
+        label: "18:51:27 UTC";
+      }
+    }
+  }
+}

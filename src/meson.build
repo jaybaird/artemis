@@ -9,9 +9,15 @@ artemis_vala_sources = [
   'src/repo.vala',
   'src/activator.vala',
   'src/band_view.vala',
+  'src/band_strip.vala',
   'src/database.vala',
   'src/utils.vala',
+  'src/status_bar.vala',
   'src/map_view.vala',
+  'src/left_sidebar.vala',
+  'src/spot_detail.vala',
+  'src/spot_list_view.vala',
+  'src/weather_cache.vala',
 ]
 
 if is_windows
@@ -25,6 +31,11 @@ else
     language: 'vala')
   add_project_arguments('-DARTEMIS_UNIX', language: 'c')
 endif
+
+if devel
+  add_project_arguments('-DARTEMIS_DEBUG', language: 'c')
+endif
+
 
 glib_dep = dependency('glib-2.0')
 gobject_dep = dependency('gobject-2.0')

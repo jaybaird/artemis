@@ -45,9 +45,8 @@ public sealed class PotaClient : Object {
             throw new IOError.FAILED ("HTTP request failed: %u %s",
                 message.status_code, message.reason_phrase);
 
-        var data = (string)response.get_data ();
         var parser = new Json.Parser ();
-        parser.load_from_data (data);
+        parser.load_from_data ((string)response.get_data (), (ssize_t)response.get_size ());
 
         return parser.get_root ();
     }
@@ -67,9 +66,8 @@ public sealed class PotaClient : Object {
         yield session.send_and_read_async (message, Priority.DEFAULT, null);
 
         if (message.get_status () != Soup.Status.OK) {
-            warning ("POST failed: %u %s", message.get_status (), message.
-                get_reason_phrase ());
-            return;
+            throw new IOError.FAILED ("POTA spot upload failed: %u %s",
+                message.get_status (), message.get_reason_phrase ());
         }
     }
 
