@@ -178,7 +178,10 @@ public sealed class BandView : Gtk.Box {
                 var spot_card = fbchild.get_child () as SpotCard;
                 if ((spot_card != null) && (spot_card.spot.hash == spot_hash)) {
                     band_spot_cards.select_child (fbchild);
-                    scroll_to_child (fbchild);
+                    Idle.add (() => {
+                        scroll_to_child (fbchild);
+                        return Source.REMOVE;
+                    });
                     return Source.REMOVE;
                 }
             }

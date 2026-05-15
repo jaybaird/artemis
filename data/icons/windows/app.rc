@@ -3,8 +3,8 @@
 1 ICON "com.k0vcz.Artemis.ico"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,2,0
- PRODUCTVERSION 1,0,2,0
+ FILEVERSION 2,0,0,0
+ PRODUCTVERSION 2,0,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -21,11 +21,11 @@ BEGIN
     BEGIN
       VALUE "CompanyName", "K0VCZ\0"
       VALUE "FileDescription", "Artemis\0"
-      VALUE "FileVersion", "1.0.2\0"
+      VALUE "FileVersion", "2.0\0"
       VALUE "InternalName", "Artemis\0"
       VALUE "OriginalFilename", "com.k0vcz.Artemis.exe\0"
       VALUE "ProductName", "Artemis\0"
-      VALUE "ProductVersion", "1.0.2\0"
+      VALUE "ProductVersion", "2.0\0"
     END
   END
   BLOCK "VarFileInfo"

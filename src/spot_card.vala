@@ -249,6 +249,9 @@ public sealed class SpotCard : Gtk.Box {
     public Spot spot { get; construct; }
     private ulong callsign_cache_updated_handler = 0;
     private ulong radio_connection_state_handler = 0;
+    private uint avatar_retry_id = 0;
+    private uint avatar_fetch_attempt = 0;
+    private bool disposed = false;
 
     private Gdk.Texture? activator_avatar_texture {
         set {
@@ -295,12 +298,10 @@ public sealed class SpotCard : Gtk.Box {
         time.label = humanize_ago (spot.spot_time);
         spot_count.label = spot.spot_count.to_string ();
 
-        fetch_avatars.begin ((obj, res) => {
-            fetch_avatars.end (res);
-        });
         callsign_cache_updated_handler = Application.callsign_cache.entry_updated.connect ((updated_callsign) => {
             update_avatars_from_cache (updated_callsign);
         });
+        start_avatar_fetch ();
 
         refresh_highlight ();
 
@@ -327,18 +328,59 @@ public sealed class SpotCard : Gtk.Box {
         new AddSpot.from_spot (spot).present (get_root ());
     }
 
+    private void start_avatar_fetch () {
+        fetch_avatars.begin ((obj, res) => {
+            fetch_avatars.end (res);
+        });
+    }
+
+    private void schedule_avatar_retry () {
+        if (disposed || avatar_fetch_attempt >= 3 || avatar_retry_id != 0)
+            return;
+
+        avatar_fetch_attempt++;
+        avatar_retry_id = Timeout.add_seconds (avatar_fetch_attempt, () => {
+            avatar_retry_id = 0;
+            if (!disposed)
+                start_avatar_fetch ();
+            return Source.REMOVE;
+        });
+    }
+
+    private void cancel_avatar_retry () {
+        if (avatar_retry_id != 0) {
+            Source.remove (avatar_retry_id);
+            avatar_retry_id = 0;
+        }
+    }
+
     private async void fetch_avatars () {
         var ava_activator = yield Application.callsign_cache.get_avatar_for (spot.callsign);
+        if (disposed)
+            return;
+
         activator_avatar_texture = ava_activator;
+        if (ava_activator == null)
+            schedule_avatar_retry ();
+        else
+            cancel_avatar_retry ();
 
         var activator = yield Application.callsign_cache.get_callsign (spot.callsign);
+        if (disposed)
+            return;
+
         activator_info = activator;
     } /* fetch_avatars */
 
     private void update_avatars_from_cache (string updated_callsign) {
-        if (updated_callsign == spot.callsign) {
+        if (
+            (updated_callsign == spot.callsign) ||
+            (updated_callsign == pota_profile_callsign (spot.callsign))
+        ) {
             var activator_image = Application.callsign_cache.peek_avatar (spot.callsign);
             activator_avatar_texture = activator_image;
+            if (activator_image != null)
+                cancel_avatar_retry ();
 
             var activator = Application.callsign_cache.peek_callsign (spot.callsign);
             activator_info = activator;
@@ -346,6 +388,8 @@ public sealed class SpotCard : Gtk.Box {
     }
 
     ~SpotCard () {
+        disposed = true;
+        cancel_avatar_retry ();
         if (callsign_cache_updated_handler != 0) {
             if (SignalHandler.is_connected (Application.callsign_cache, callsign_cache_updated_handler))
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_updated_handler);

@@ -35,6 +35,7 @@ public class CallsignCacheEntry : Object {
 
 public class CallsignCache : Object {
     private HashTable<string, CallsignCacheEntry> ham_cache;
+    private HashMap<string, HashSet<string>> profile_aliases;
     private HashSet<string> avatar_fetch_inflight;
     private Soup.Session avatar_session;
     public uint ttl_seconds { get; construct; default = 3600; }
@@ -56,6 +57,7 @@ public class CallsignCache : Object {
     construct {
         ham_cache = new HashTable<string, CallsignCacheEntry> (GLib.str_hash,
             GLib.str_equal);
+        profile_aliases = new HashMap<string, HashSet<string>> ();
         avatar_fetch_inflight = new HashSet<string> ();
         avatar_session = new Soup.Session ();
         var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
@@ -75,7 +77,35 @@ public class CallsignCache : Object {
 
     public void clear () {
         ham_cache.remove_all ();
+        profile_aliases.clear ();
         avatar_fetch_inflight.clear ();
+    }
+
+    private string remember_profile_alias (string callsign) {
+        var profile_callsign = pota_profile_callsign (callsign);
+        var aliases = profile_aliases.get (profile_callsign);
+        if (aliases == null) {
+            aliases = new HashSet<string> ();
+            profile_aliases[profile_callsign] = aliases;
+        }
+
+        aliases.add (profile_callsign);
+        aliases.add (callsign);
+        return profile_callsign;
+    }
+
+    private void emit_profile_updated (string profile_callsign, string fallback_callsign) {
+        var aliases = profile_aliases.get (profile_callsign);
+        if (aliases == null) {
+            entry_updated (fallback_callsign);
+            if (profile_callsign != fallback_callsign)
+                entry_updated (profile_callsign);
+            return;
+        }
+
+        foreach (var alias in aliases) {
+            entry_updated (alias);
+        }
     }
 
     public async void load_callsigns (HashSet<string> callsigns) {
@@ -86,6 +116,10 @@ public class CallsignCache : Object {
 
     public Gdk.Texture? peek_avatar (string callsign) {
         var entry = ham_cache.lookup (callsign);
+        if ((entry == null) || is_entry_expired (entry)) {
+            var profile_callsign = pota_profile_callsign (callsign);
+            entry = ham_cache.lookup (profile_callsign);
+        }
         if (is_entry_expired (entry) || (entry == null))
             return null;
         return entry.avatar;
@@ -99,6 +133,7 @@ public class CallsignCache : Object {
     }
 
     public async Gdk.Texture? get_avatar_for (string callsign) {
+        var profile_callsign = remember_profile_alias (callsign);
         var entry = yield get_callsign (callsign);
 
         if (entry == null)
@@ -108,10 +143,10 @@ public class CallsignCache : Object {
         if ((cached_entry != null) && (cached_entry.avatar != null))
             return cached_entry.avatar;
 
-        if (avatar_fetch_inflight.contains (callsign))
+        if (avatar_fetch_inflight.contains (profile_callsign))
             return null;
 
-        avatar_fetch_inflight.add (callsign);
+        avatar_fetch_inflight.add (profile_callsign);
         Gdk.Texture? avatar = null;
         try {
             var gravatar_hash = entry.gravatar_hash;
@@ -129,13 +164,13 @@ public class CallsignCache : Object {
                     var texture = Gdk.Texture.for_pixbuf (pixbuf);
                     cached_entry.avatar = texture;
                     avatar = texture;
-                    entry_updated (callsign);
+                    emit_profile_updated (profile_callsign, callsign);
                 }
             }
         } catch (Error e) {
             warning ("Failed to fetch avatar for %s: %s", callsign, e.message);
         }
-        avatar_fetch_inflight.remove (callsign);
+        avatar_fetch_inflight.remove (profile_callsign);
         return avatar;
     }
 
@@ -145,7 +180,7 @@ public class CallsignCache : Object {
         if ((entry != null) && !is_entry_expired (entry))
             return entry.activator;
 
-        var profile_callsign = pota_profile_callsign (callsign);
+        var profile_callsign = remember_profile_alias (callsign);
         entry = ham_cache.lookup (profile_callsign);
         if ((entry != null) && !is_entry_expired (entry)) {
             ham_cache.set (callsign, entry);
@@ -164,9 +199,7 @@ public class CallsignCache : Object {
                 );
             ham_cache.set (profile_callsign, callsign_entry);
             ham_cache.set (callsign, callsign_entry);
-            entry_updated (callsign);
-            if (profile_callsign != callsign)
-                entry_updated (profile_callsign);
+            emit_profile_updated (profile_callsign, callsign);
             return callsign_entry.activator;
         } catch (Error err) {
             warning ("Failed to fetch activator profile for %s: %s",
