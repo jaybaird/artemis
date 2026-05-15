@@ -33,6 +33,7 @@
     <file compressed="true">icons/hicolor/symbolic/actions/windy-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/thermometer-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/drop-hollow-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/encoder-knob-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/verified-checkmark-symbolic.svg</file>
 
     <file compressed="true" alias="style.css">css/style.css</file>

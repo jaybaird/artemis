@@ -62,6 +62,7 @@ public sealed class LeftSidebar : Gtk.Box {
 
     private Gtk.ToggleButton? band_group_leader = null;
     private HashMap<string, Gtk.ToggleButton> band_buttons;
+    private ulong mode_handler = 0;
     private ulong program_handler = 0;
 
     private uint radio_vfo_anim_id = 0;
@@ -85,7 +86,7 @@ public sealed class LeftSidebar : Gtk.Box {
 
         radio_power_button.clicked.connect (() => power_clicked ());
 
-        mode_select.notify["selected"].connect (() => {
+        mode_handler = mode_select.notify["selected"].connect (() => {
             var idx = mode_select.selected;
             if (idx == Gtk.INVALID_LIST_POSITION)
                 return;
@@ -104,6 +105,23 @@ public sealed class LeftSidebar : Gtk.Box {
                 return;
             program_changed (idx > 0 ? model.get_string (idx) : null);
         });
+    }
+
+    public void update_mode_model (Gtk.StringList model, string? current_filter) {
+        SignalHandler.block (mode_select, mode_handler);
+        mode_select.model = model;
+
+        uint selected = 0;
+        if (current_filter != null) {
+            for (uint i = 0; i < model.get_n_items (); i++) {
+                if (model.get_string (i) == current_filter) {
+                    selected = i;
+                    break;
+                }
+            }
+        }
+        mode_select.selected = selected;
+        SignalHandler.unblock (mode_select, mode_handler);
     }
 
     public void update_program_model (Gtk.StringList model, string? current_filter) {

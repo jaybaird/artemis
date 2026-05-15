@@ -502,7 +502,7 @@ public sealed class PreferencesDialog : Object {
                 break;
             case "NETWORK":
                 row_radio_model.visible = true;
-                row_radio_model.selected = 1;
+                select_radio_model (RadioControl.netrigctl_model_id ());
                 row_radio_model.selectable = false;
 
                 serial_settings_group.visible = false;
@@ -528,7 +528,6 @@ public sealed class PreferencesDialog : Object {
 
     void test_radio_connection () {
         if (Application.radio_control == null || row_radio_model.selected == 0) return;
-        var radio_model = Application.settings.get_int ("radio-model");
 
         var connection_type = row_connection_type.model.get_item (row_connection_type.selected) as Gtk.StringObject;
         var device_path = row_device_path.model.get_item (row_device_path.selected) as Gtk.StringObject;
@@ -540,6 +539,10 @@ public sealed class PreferencesDialog : Object {
             connection_type_text = "none";
         else
             connection_type_text = "network";
+
+        var radio_model = connection_type_text == "network" ?
+            RadioControl.netrigctl_model_id () :
+            Application.settings.get_int ("radio-model");
 
         var config = RadioConfiguration () {
             model_id = radio_model,
@@ -605,6 +608,17 @@ public sealed class PreferencesDialog : Object {
 
             return null;
         }).disown ();
+    }
+
+    void select_radio_model (int model_id) {
+        var models = RadioControl.get_radio_models ();
+
+        for (uint i = 0 ; i < models.length ; i++) {
+            if (models[i].model_id == model_id) {
+                row_radio_model.selected = i;
+                return;
+            }
+        }
     }
 
     int get_network_port () {

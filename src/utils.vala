@@ -54,6 +54,33 @@ public static string format_vfo (float freq_khz) {
     return "%u.%03u.%02u".printf (mhz, khz, hz / 10);
 }
 
+public static string format_frequency_khz (double frequency_khz) {
+    if (Math.fabs (frequency_khz - Math.round (frequency_khz)) < 0.0005)
+        return "%.0f".printf (frequency_khz);
+
+    var formatted = "%.3f".printf (frequency_khz);
+    while (formatted.has_suffix ("0")) {
+        formatted = formatted.substring (0, formatted.length - 1);
+    }
+    if (formatted.has_suffix ("."))
+        formatted = formatted.substring (0, formatted.length - 1);
+
+    return formatted;
+}
+
+public static string pota_profile_callsign (string callsign) {
+    var stripped_callsign = callsign.strip ();
+    var profile_callsign = "";
+
+    foreach (var part in stripped_callsign.split ("/")) {
+        var candidate = part.strip ();
+        if (candidate.length > profile_callsign.length)
+            profile_callsign = candidate;
+    }
+
+    return (profile_callsign != "") ? profile_callsign : stripped_callsign;
+}
+
 public sealed class SpotBadgeInfo : Object {
     public string icon_name { get; construct; }
     public string tooltip { get; construct; }

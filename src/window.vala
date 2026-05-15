@@ -56,8 +56,6 @@ public sealed class AppWindow : Gtk.Window {
     private unowned SpotDetail spot_detail;
 
     private uint timer_id = 0;
-    private uint progress_timer_id = 0;
-    private int64 last_refresh_time = 0;
 
     private uint current_ticks = 0;
     private bool update_paused = false;
@@ -65,6 +63,7 @@ public sealed class AppWindow : Gtk.Window {
     private MapView map_view;
     private SpotListView list_view;
     private bool radio_connect_inflight = false;
+    private Quark map_centered_spot_hash = BLANK_HASH;
 
     private ulong radio_status_handler = 0;
     private ulong radio_error_handler = 0;
@@ -116,9 +115,21 @@ public sealed class AppWindow : Gtk.Window {
         });
 
         Application.spot_repo.refreshed.connect ((spots_updated) => {
+            if ((Application.current_mode_filter != null) &&
+                !string_list_contains (
+                    Application.spot_repo.mode_model,
+                    Application.current_mode_filter
+                )) {
+                Application.current_mode_filter = null;
+            }
+
             left_sidebar.update_bands (
                 Application.spot_repo.band_counts,
                 Application.current_band_filter ?? "All"
+            );
+            left_sidebar.update_mode_model (
+                Application.spot_repo.mode_model,
+                Application.current_mode_filter
             );
             left_sidebar.update_program_model (
                 Application.spot_repo.program_model,
@@ -130,9 +141,9 @@ public sealed class AppWindow : Gtk.Window {
                 Application.current_spot_hash = BLANK_HASH;
             }
 
-            last_refresh_time = get_monotonic_time ();
             current_ticks = 0;
 
+            update_refresh_status ();
             update_status_bar ();
         });
 
@@ -207,6 +218,10 @@ public sealed class AppWindow : Gtk.Window {
             Application.spot_repo.band_counts,
             Application.current_band_filter ?? "All"
         );
+        left_sidebar.update_mode_model (
+            Application.spot_repo.mode_model,
+            Application.current_mode_filter
+        );
         left_sidebar.update_program_model (
             Application.spot_repo.program_model,
             Application.current_program_filter
@@ -223,6 +238,9 @@ public sealed class AppWindow : Gtk.Window {
             vexpand = true
         };
         list_container.append (list_view);
+        Application.app.radio_connection_state_changed.connect (() => {
+            list_view.set_row_actions_visible (content_paned.get_end_child () == null);
+        });
 
         spot_detail.set_action_buttons_visible (true);
         set_inspector_visible (true);
@@ -238,6 +256,7 @@ public sealed class AppWindow : Gtk.Window {
         spot_detail.set_spot (spot);
 
         if (spot == null) {
+            map_centered_spot_hash = BLANK_HASH;
             foreach (var page in band_pages) {
                 var band_view = page.get_child () as BandView;
                 band_view.set_current_spot (BLANK_HASH);
@@ -247,11 +266,10 @@ public sealed class AppWindow : Gtk.Window {
             return;
         }
 
-        if (content_paned.get_end_child () == null)
-            set_inspector_visible (true);
-
-        if (map_view != null)
+        if ((map_view != null) && (spot_hash != map_centered_spot_hash)) {
             map_view.go_to_spot (spot);
+            map_centered_spot_hash = spot_hash;
+        }
 
         sync_band_view_to_spot (spot_hash, spot);
         if (list_view != null)
@@ -270,6 +288,8 @@ public sealed class AppWindow : Gtk.Window {
         inspector_toggle.active = visible;
         syncing_inspector_toggle = false;
         inspector_toggle.tooltip_text = visible ? _("Hide Inspector") : _("Show Inspector");
+        if (list_view != null)
+            list_view.set_row_actions_visible (!visible);
     }
 
     private void sync_band_view_to_spot (Quark spot_hash, Spot spot) {
@@ -301,6 +321,15 @@ public sealed class AppWindow : Gtk.Window {
     private void bounce_map_filter_if_ready () {
         if (map_view != null)
             map_view.bounce_filter ();
+    }
+
+    private bool string_list_contains (Gtk.StringList model, string value) {
+        for (uint i = 0; i < model.get_n_items (); i++) {
+            if (model.get_string (i) == value)
+                return true;
+        }
+
+        return false;
     }
 
     private bool current_spot_matches_filters () {
@@ -345,18 +374,10 @@ public sealed class AppWindow : Gtk.Window {
         if (timer_id != 0)
             Source.remove (timer_id);
 
-        if (progress_timer_id != 0)
-            Source.remove (progress_timer_id);
-
-        last_refresh_time = get_monotonic_time ();
+        update_refresh_status ();
 
         timer_id = Timeout.add_seconds (1, () => {
             tick.begin ();
-            return Source.CONTINUE;
-        });
-
-        progress_timer_id = Timeout.add (100, () => {
-            progress_tick ();
             return Source.CONTINUE;
         });
 
@@ -403,7 +424,9 @@ public sealed class AppWindow : Gtk.Window {
             return;
 
         var config = RadioConfiguration () {
-            model_id = Application.settings.get_int ("radio-model"),
+            model_id = Application.settings.get_string ("radio-connection-type") == "network" ?
+                RadioControl.netrigctl_model_id () :
+                Application.settings.get_int ("radio-model"),
             connection_type = Application.settings.get_string ("radio-connection-type"),
             device_path = Application.settings.get_string ("radio-device"),
             network_host = Application.settings.get_string ("radio-network-host"),
@@ -483,19 +506,17 @@ public sealed class AppWindow : Gtk.Window {
         }).disown ();
     }
 
-    private void progress_tick () {
-        if (update_paused)
+    private void update_refresh_status () {
+        if (update_paused) {
+            status_bar.set_paused (true);
             return;
-        var now = get_monotonic_time ();
-        double elapsed = (now - last_refresh_time) / 1000000.0;
+        }
+
         var update_time = Application.settings.get_int ("update-interval");
-
-        double fraction = elapsed / (double)update_time;
-        if (fraction > 1.0)
-            fraction = 1.0;
-
-        status_bar.set_refresh_progress (fraction);
+        var seconds_remaining = update_time - current_ticks;
+        status_bar.set_refresh_countdown (seconds_remaining);
     }
+
 
     private async void tick () {
         if (!update_paused) {
@@ -503,7 +524,6 @@ public sealed class AppWindow : Gtk.Window {
             var update_time = Application.settings.get_int ("update-interval");
             if (current_ticks >= update_time) {
                 current_ticks = current_ticks - update_time;
-                last_refresh_time = get_monotonic_time ();
                 yield Application.spot_repo.update_spots ();
 
                 Idle.add (() => {
@@ -512,12 +532,7 @@ public sealed class AppWindow : Gtk.Window {
                 });
             }
 
-            var seconds_remaining = update_time - current_ticks;
-            status_bar.set_refresh_tooltip (ngettext (
-                "Spots will refresh in %u second",
-                "Spots will refresh in %u seconds",
-                seconds_remaining
-            ).printf (seconds_remaining));
+            update_refresh_status ();
         }
 
         var now = new GLib.DateTime.now_utc ().format ("%H:%M:%S UTC");
@@ -540,7 +555,7 @@ public sealed class AppWindow : Gtk.Window {
         if (update_paused) {
             current_ticks = 0;
         } else {
-            last_refresh_time = get_monotonic_time ();
+            current_ticks = 0;
             Application.spot_repo.update_spots.begin ();
         }
         refresh_toggle.active = update_paused;
@@ -548,15 +563,12 @@ public sealed class AppWindow : Gtk.Window {
             ? "arrow-circular-bottom-right-symbolic"
             : "media-playback-pause-symbolic";
         refresh_toggle.tooltip_text = update_paused ? _("Resume") : _("Pause");
-        status_bar.set_paused (update_paused);
+        update_refresh_status ();
     }
 
     ~AppWindow () {
         if (timer_id != 0)
             Source.remove (timer_id);
-
-        if (progress_timer_id != 0)
-            Source.remove (progress_timer_id);
 
         disconnect_radio_handlers ();
     }

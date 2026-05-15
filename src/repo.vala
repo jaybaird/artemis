@@ -145,9 +145,16 @@ public class CallsignCache : Object {
         if ((entry != null) && !is_entry_expired (entry))
             return entry.activator;
 
+        var profile_callsign = pota_profile_callsign (callsign);
+        entry = ham_cache.lookup (profile_callsign);
+        if ((entry != null) && !is_entry_expired (entry)) {
+            ham_cache.set (callsign, entry);
+            return entry.activator;
+        }
+
         // cache miss, load from API
         try {
-            var result = yield Application.pota_client.fetch_operator (callsign)
+            var result = yield Application.pota_client.fetch_operator (profile_callsign)
             ;
 
             var callsign_entry = new CallsignCacheEntry (
@@ -155,10 +162,15 @@ public class CallsignCache : Object {
                 GLib.get_monotonic_time () + (ttl_seconds * GLib.TimeSpan.SECOND
                                               )
                 );
+            ham_cache.set (profile_callsign, callsign_entry);
             ham_cache.set (callsign, callsign_entry);
             entry_updated (callsign);
+            if (profile_callsign != callsign)
+                entry_updated (profile_callsign);
             return callsign_entry.activator;
         } catch (Error err) {
+            warning ("Failed to fetch activator profile for %s: %s",
+                profile_callsign, err.message);
             return null;
         }
     }
@@ -173,9 +185,12 @@ public sealed class SpotRepo : Object {
     public signal void current_spot_changed (Quark spot_hash);
 
     public Gtk.StringList program_model { get; private set; }
+    public Gtk.StringList mode_model { get; private set; }
     public uint64 tracked_spot_hash { get; set; default = uint64.MAX; }
 
     public HashMap<string, int> band_counts;
+    private bool update_in_progress = false;
+    private bool update_pending = false;
 
     public SpotRepo () {
         Object ();
@@ -184,6 +199,7 @@ public sealed class SpotRepo : Object {
     construct {
         store = new GLib.ListStore (typeof (Spot));
         program_model = new Gtk.StringList ({});
+        mode_model = new Gtk.StringList ({});
         band_counts = new HashMap<string, int> ();
     }
 
@@ -206,61 +222,118 @@ public sealed class SpotRepo : Object {
     }
 
     public async void update_spots () {
-        busy_changed (true);
+        if (update_in_progress) {
+            update_pending = true;
+            return;
+        }
 
-        var unique_callsigns = new HashSet<string> ();
-        var spots_updated = 0u;
+        update_in_progress = true;
 
-        try {
-            store.remove_all ();
-            band_counts.clear ();
-            program_model.splice (0, program_model.get_n_items (), {});
+        do {
+            update_pending = false;
+            busy_changed (true);
 
-            var programs = new HashSet<string> ();
-            var spots = yield Application.pota_client.fetch_spots ();
+            var spots_updated = 0u;
 
-            if ((spots != null) &&
-                (spots.get_node_type () == Json.NodeType.ARRAY)) {
-                var spots_array = spots.get_array ();
-                for (uint i = 0 ; i < spots_array.get_length () ; i++) {
-                    var element = spots_array.get_element (i).get_object ();
-                    var spot = new Spot.from_json (element);
+            try {
+                var unique_callsigns = new HashSet<string> ();
+                var parsed_spots = new ArrayList<Spot> ();
+                var parsed_band_counts = new HashMap<string, int> ();
+                var programs = new HashSet<string> ();
+                var modes = new HashSet<string> ();
+                var spots = yield Application.pota_client.fetch_spots ();
 
-                    unique_callsigns.add (spot.callsign);
-                    unique_callsigns.add (spot.spotter);
+                if ((spots != null) &&
+                    (spots.get_node_type () == Json.NodeType.ARRAY)) {
+                    var spots_array = spots.get_array ();
+                    for (uint i = 0 ; i < spots_array.get_length () ; i++) {
+                        try {
+                            var element = spots_array.get_element (i).get_object ();
+                            var spot = new Spot.from_json (element);
 
-                    if (spot.park_ref.contains ("-")) {
-                        var program = spot.park_ref.split ("-", 2)[0];
-                        programs.add (program);
+                            unique_callsigns.add (spot.callsign);
+                            unique_callsigns.add (spot.spotter);
+
+                            if (spot.park_ref.contains ("-")) {
+                                var program = spot.park_ref.split ("-", 2)[0];
+                                programs.add (program);
+                            }
+                            if (spot.mode.strip () != "")
+                                modes.add (spot.mode);
+                            if (parsed_band_counts.has_key (spot.band)) {
+                                parsed_band_counts[spot.band] =
+                                    parsed_band_counts[spot.band] + 1;
+                            } else {
+                                parsed_band_counts[spot.band] = 1;
+                            }
+                            parsed_spots.add (spot);
+                        } catch (Error err) {
+                            warning ("Skipping malformed POTA spot at index %u: %s",
+                                i, err.message);
+                        }
                     }
-                    if (band_counts.has_key (spot.band)) {
-                        band_counts[spot.band] = band_counts[spot.band] + 1;
-                    } else {
-                        band_counts[spot.band] = 1;
+                }
+
+                // TODO: alert if watched callsign is seen in unique_callsigns
+
+                var programs_sorted = new ArrayList<string> ();
+                foreach (var program in programs) {
+                    programs_sorted.add (program);
+                }
+                programs_sorted.sort ((a, b) => { return strcmp (a, b); });
+
+                var modes_sorted = new ArrayList<string> ();
+                foreach (var known_mode in RadioConstants.MODES) {
+                    if (modes.contains (known_mode))
+                        modes_sorted.add (known_mode);
+                }
+                var unknown_modes = new ArrayList<string> ();
+                foreach (var mode in modes) {
+                    var is_known = false;
+                    foreach (var known_mode in RadioConstants.MODES) {
+                        if (mode == known_mode) {
+                            is_known = true;
+                            break;
+                        }
                     }
+                    if (!is_known)
+                        unknown_modes.add (mode);
+                }
+                unknown_modes.sort ((a, b) => { return strcmp (a, b); });
+                foreach (var mode in unknown_modes) {
+                    modes_sorted.add (mode);
+                }
+
+                store.remove_all ();
+                band_counts.clear ();
+                foreach (var entry in parsed_band_counts.entries) {
+                    band_counts[entry.key] = entry.value;
+                }
+                program_model.splice (0, program_model.get_n_items (), {});
+                mode_model.splice (0, mode_model.get_n_items (), {});
+
+                foreach (var spot in parsed_spots) {
                     store.append (spot);
                 }
-                spots_updated = spots_array.get_length ();
+                spots_updated = parsed_spots.size;
+
+                program_model.append (_("All"));
+                foreach (var program in programs_sorted) {
+                    program_model.append (program);
+                }
+                mode_model.append (_("All"));
+                foreach (var mode in modes_sorted) {
+                    mode_model.append (mode);
+                }
+
+                busy_changed (false);
+                refreshed (spots_updated);
+            } catch (Error err) {
+                busy_changed (false);
+                update_error (err);
             }
+        } while (update_pending);
 
-            // TODO: alert if watched callsign is seen in unique_callsigns
-
-            var programs_sorted = new ArrayList<string> ();
-            foreach (var program in programs) {
-                programs_sorted.add (program);
-            }
-            programs_sorted.sort ((a, b) => { return strcmp (a, b); });
-
-            program_model.append (_("All"));
-            foreach (var program in programs_sorted) {
-                program_model.append (program);
-            }
-
-            busy_changed (false);
-            refreshed (spots_updated);
-        } catch (Error err) {
-            busy_changed (false);
-            update_error (err);
-        }
+        update_in_progress = false;
     } /* update_spots */
 }     /* class SpotRepo */

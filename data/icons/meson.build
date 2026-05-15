@@ -49,7 +49,8 @@ install_data(
     'hicolor/symbolic/actions/sun-outline-symbolic.svg',
     'hicolor/symbolic/actions/windy-symbolic.svg',
     'hicolor/symbolic/actions/thermometer-symbolic.svg',
-    'hicolor/symbolic/actions/drop-hollow-symbolic.svg'
+    'hicolor/symbolic/actions/drop-hollow-symbolic.svg',
+    'hicolor/symbolic/actions/encoder-knob-symbolic.svg'
   ],
   install_dir: get_option('datadir') / application_id / 'icons/hicolor/scalable/actions'
 )

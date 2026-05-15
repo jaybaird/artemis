@@ -111,10 +111,13 @@ radio_control_hamlib_version(void);
 const gchar *
 radio_control_hamlib_copyright(void);
 
+gint
+radio_control_netrigctl_model_id(void);
+
 /* Setters */
 
 DexFuture *
-radio_control_set_vfo_async(RadioControl *self, int frequency);
+radio_control_set_vfo_async(RadioControl *self, double frequency);
 
 DexFuture *
 radio_control_set_mode_async(RadioControl *self, enum RadioMode mode);

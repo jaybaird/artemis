@@ -9,6 +9,8 @@ public sealed class SpotListRow : Gtk.Box {
     private Gtk.Label mode_label;
     private Gtk.Box badge_box;
     private Gtk.Label time_label;
+    private Gtk.Button tune_button;
+    private Gtk.Button spot_button;
 
     public SpotListRow (Spot spot) {
         Object (spot: spot);
@@ -69,7 +71,9 @@ public sealed class SpotListRow : Gtk.Box {
         location_label.max_width_chars = 12;
         trailing_box.append (location_label);
 
-        frequency_label = new Gtk.Label ("%d kHz".printf (spot.frequency_khz)) {
+        frequency_label = new Gtk.Label (
+            "%s kHz".printf (format_frequency_khz (spot.frequency_khz))
+        ) {
             xalign = 1.0f
         };
         frequency_label.add_css_class ("numeric");
@@ -94,7 +98,37 @@ public sealed class SpotListRow : Gtk.Box {
         time_label.add_css_class ("dim-label");
         trailing_box.append (time_label);
 
+        tune_button = new Gtk.Button.from_icon_name ("encoder-knob-symbolic") {
+            tooltip_text = _("Tune your radio to this frequency"),
+            valign = Gtk.Align.CENTER,
+            visible = false
+        };
+        tune_button.add_css_class ("flat");
+        tune_button.clicked.connect (() => {
+            Application.current_spot_hash = spot.hash;
+            Application.radio_control.tune_to_spot (spot);
+        });
+        trailing_box.append (tune_button);
+
+        spot_button = new Gtk.Button.from_icon_name ("bullseye-symbolic") {
+            tooltip_text = _("Add your spot for this park"),
+            valign = Gtk.Align.CENTER,
+            visible = false
+        };
+        spot_button.add_css_class ("suggested-action");
+        spot_button.clicked.connect (() => {
+            Application.current_spot_hash = spot.hash;
+            new AddSpot.from_spot (spot).present (get_root ());
+        });
+        trailing_box.append (spot_button);
+
         append (trailing_box);
+    }
+
+    public void set_actions_visible (bool visible) {
+        tune_button.visible = visible && Application.is_radio_configured;
+        tune_button.sensitive = Application.radio_control.is_rig_connected;
+        spot_button.visible = visible;
     }
 }
 
@@ -117,6 +151,7 @@ public sealed class SpotListView : Gtk.Box {
     private Gtk.FilterListModel filtered;
     private Gtk.SortListModel sorted;
     private bool just_selected = false;
+    private bool row_actions_visible = false;
 
     public signal void count_changed (uint count);
 
@@ -132,12 +167,12 @@ public sealed class SpotListView : Gtk.Box {
         scroll_window = new Gtk.ScrolledWindow () {
             hexpand = true,
             vexpand = true,
-            hscrollbar_policy = Gtk.PolicyType.NEVER,
-            margin_bottom = BOTTOM_INSET
+            hscrollbar_policy = Gtk.PolicyType.NEVER
         };
 
         spot_list = new Gtk.ListBox () {
-            selection_mode = Gtk.SelectionMode.SINGLE
+            selection_mode = Gtk.SelectionMode.SINGLE,
+            margin_bottom = BOTTOM_INSET
         };
         spot_list.add_css_class ("boxed-list");
         scroll_window.set_child (spot_list);
@@ -149,8 +184,7 @@ public sealed class SpotListView : Gtk.Box {
             description = _("Adjust your filters to see more activations."),
             icon_name = "view-list-symbolic",
             hexpand = true,
-            vexpand = true,
-            margin_bottom = BOTTOM_INSET
+            vexpand = true
         };
         append (status_page);
 
@@ -180,7 +214,13 @@ public sealed class SpotListView : Gtk.Box {
         filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
         sorted = new Gtk.SortListModel (filtered, sorter);
 
-        spot_list.bind_model (sorted, create_spot_list_row);
+        spot_list.bind_model (sorted, (item) => {
+            var row = create_spot_list_row (item);
+            var spot_row = row as SpotListRow;
+            if (spot_row != null)
+                spot_row.set_actions_visible (row_actions_visible);
+            return row;
+        });
 
         spot_list.row_activated.connect ((row) => {
             var list_row = row.get_child () as SpotListRow;
@@ -238,6 +278,21 @@ public sealed class SpotListView : Gtk.Box {
 
     public uint get_n_items () {
         return sorted.get_n_items ();
+    }
+
+    public void set_row_actions_visible (bool visible) {
+        row_actions_visible = visible;
+
+        for (var child = spot_list.get_first_child (); child != null;
+             child = child.get_next_sibling ()) {
+            var row = child as Gtk.ListBoxRow;
+            if (row == null)
+                continue;
+
+            var list_row = row.get_child () as SpotListRow;
+            if (list_row != null)
+                list_row.set_actions_visible (visible);
+        }
     }
 
     public void set_current_spot (Quark spot_hash) {

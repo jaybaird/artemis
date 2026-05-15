@@ -68,12 +68,16 @@ template $SpotDetail : Box {
 
               Label detail_callsign {
                 halign: center;
+                ellipsize: end;
+                max-width-chars: 24;
                 styles ["title-1"]
               }
 
               Label detail_park_name {
                 halign: center;
                 wrap: true;
+                wrap-mode: word_char;
+                max-width-chars: 32;
                 justify: center;
                 styles ["title-2"]
               }
@@ -96,6 +100,8 @@ template $SpotDetail : Box {
 
                 Label wx_conditions_txt {
                   label: _("Thunderstorms");
+                  ellipsize: end;
+                  max-width-chars: 18;
                 }
 
                 Image {

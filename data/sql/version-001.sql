@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS qsos (
   park_ref TEXT NOT NULL,
   callsign TEXT NOT NULL,
   mode TEXT,
-  frequency_khz INTEGER,
+  frequency_khz REAL,
   created_utc DATETIME NOT NULL,
   spotter TEXT,
   spotter_comment TEXT,

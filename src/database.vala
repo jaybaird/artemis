@@ -110,7 +110,7 @@ public sealed class QsoRow : Object {
     public string? park_ref { get; construct; }
     public string? callsign { get; construct; }
     public string? mode { get; construct; }
-    public int frequency_khz { get; construct; }
+    public double frequency_khz { get; construct; }
     public string? created_utc { get; construct; }
     public string? spotter { get; construct; }
     public string? spotter_comment { get; construct; }
@@ -122,7 +122,7 @@ public sealed class QsoRow : Object {
             park_ref: st.column_text (1),
             callsign: st.column_text (2),
             mode: (st.column_type (3) == Sqlite.NULL) ? null : st.column_text (3),
-            frequency_khz: (st.column_type (4) == Sqlite.NULL) ? 0 : st.column_int (4),
+            frequency_khz: (st.column_type (4) == Sqlite.NULL) ? 0 : st.column_double (4),
             created_utc: st.column_text (5),
             spotter: (st.column_type (6) == Sqlite.NULL) ? null : st.column_text (6),
             spotter_comment: (st.column_type (7) == Sqlite.NULL) ? null : st.column_text (7),
@@ -166,6 +166,9 @@ public static GLib.Quark spot_db_error_quark () {
 
 public class SpotDb : Object {
     private Sqlite.Database? db = null;
+    private Statement? is_park_hunted_stmt = null;
+    private Statement? had_qso_on_utc_day_stmt = null;
+    private Statement? had_qso_on_band_stmt = null;
 
     public SpotDb () {}
 
@@ -314,7 +317,7 @@ public class SpotDb : Object {
         st.bind_text (1, spot.park_ref);
         st.bind_text (2, spot.callsign);
         st.bind_text (3, spot.mode);
-        st.bind_int (4, spot.frequency_khz);
+        st.bind_double (4, spot.frequency_khz);
         st.bind_text (5, iso8601_from_borrowed_utc (spot.spot_time));
         st.bind_text (6, spot.spotter);
         st.bind_text (7, spot.spotter_comment);
@@ -406,8 +409,8 @@ public class SpotDb : Object {
 
         const string SQL =
             "SELECT qso_count FROM parks WHERE reference = ? AND qso_count > 0;";
-        Statement st;
-        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+        if (is_park_hunted_stmt == null &&
+            db.prepare_v2 (SQL, -1, out is_park_hunted_stmt) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare park hunted query: %s".printf (db.errmsg ()
@@ -415,6 +418,9 @@ public class SpotDb : Object {
             ;
             return false;
         }
+        unowned Statement st = is_park_hunted_stmt;
+        st.reset ();
+        st.clear_bindings ();
         st.bind_text (1, park_reference);
         var rc = st.step ();
         bool hunted = (rc == Sqlite.ROW);
@@ -644,14 +650,17 @@ public class SpotDb : Object {
           );
           """;
 
-        Statement st;
-        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+        if (had_qso_on_utc_day_stmt == null &&
+            db.prepare_v2 (SQL, -1, out had_qso_on_utc_day_stmt) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.
                 SQLITE_FAILED
                 , "Failed to prepare had_qso_with_park_on_utc_day query: %s".
                 printf (db.errmsg ()));
             return false;
         }
+        unowned Statement st = had_qso_on_utc_day_stmt;
+        st.reset ();
+        st.clear_bindings ();
         st.bind_text (1, park_ref);
         st.bind_text (2, start_iso);
         st.bind_text (3, next_iso);
@@ -692,14 +701,17 @@ public class SpotDb : Object {
           );
           """;
 
-        Statement st;
-        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+        if (had_qso_on_band_stmt == null &&
+            db.prepare_v2 (SQL, -1, out had_qso_on_band_stmt) != Sqlite.OK) {
             error = new Error (spot_db_error_quark (), DatabaseError.SQLITE_FAILED,
                 "Failed to prepare had_qso_with_park_on_band query: %s".printf (
                     db.errmsg ()));
             return false;
         }
 
+        unowned Statement st = had_qso_on_band_stmt;
+        st.reset ();
+        st.clear_bindings ();
         st.bind_text (1, park_ref);
         st.bind_int (2, min_khz);
         st.bind_int (3, max_khz);

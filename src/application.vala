@@ -19,6 +19,8 @@
  */
 
 public sealed class Application : Adw.Application {
+    public signal void radio_connection_state_changed ();
+
     private static Quark _current_spot_hash = 0;
     public static Quark current_spot_hash {
         get {
@@ -97,6 +99,18 @@ public sealed class Application : Adw.Application {
         callsign_cache = new CallsignCache (3600);
         weather_cache = new WeatherCache ();
         radio_control = new RadioControl ();
+        radio_control.radio_connected.connect (() => {
+            is_radio_connected = true;
+            radio_connection_state_changed ();
+        });
+        radio_control.radio_disconnected.connect (() => {
+            is_radio_connected = false;
+            radio_connection_state_changed ();
+        });
+        radio_control.radio_error.connect ((err) => {
+            is_radio_connected = false;
+            radio_connection_state_changed ();
+        });
     }
 
     public override void activate () {
@@ -112,6 +126,7 @@ public sealed class Application : Adw.Application {
 #endif
         var icon_dir = File.new_for_path (Path.build_filename (data_dir, Build.DOMAIN)).get_child ("icons");
         debug (icon_dir.get_path ());
+        icon_theme.add_resource_path ("/com/k0vcz/artemis/icons");
         if (icon_dir.query_exists ()) {
             icon_theme.add_search_path (icon_dir.get_path ());
         }

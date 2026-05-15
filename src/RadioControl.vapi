@@ -49,7 +49,7 @@ public class RadioControl : GLib.Object {
     [CCode (cname = "radio_control_get_vfo_async")]
     public Dex.Future get_vfo ();
     [CCode (cname = "radio_control_set_vfo_async")]
-    public Dex.Future set_vfo (int frequency);
+    public Dex.Future set_vfo (double frequency);
 
     [CCode (cname = "radio_control_get_mode_async")]
     public Dex.Future get_mode ();
@@ -72,16 +72,19 @@ public class RadioControl : GLib.Object {
     [CCode (cname = "radio_control_hamlib_copyright")]
     public static unowned string hamlib_copyright ();
 
+    [CCode (cname = "radio_control_netrigctl_model_id")]
+    public static int netrigctl_model_id ();
+
     // Signals
     [CCode (cname = "radio-connected")]
     public signal void radio_connected ();
-    
+
     [CCode (cname = "radio-disconnected")]
     public signal void radio_disconnected ();
-    
+
     [CCode (cname = "radio-status")]
     public signal void radio_status (int frequency, RadioMode mode);
-    
+
     [CCode (cname = "radio-error")]
     public signal void radio_error (GLib.Error error);
 
@@ -138,7 +141,7 @@ public class RadioControl : GLib.Object {
             case DIGITAL_L: return "LSB-D";
             case DIGITAL_U: return "USB-D";
             case FM: return "FM";
-            case DIGITAL_FM: return "FM-D"; 
+            case DIGITAL_FM: return "FM-D";
             case UNKNOWN: return "Unknown";
             default: return "Unknown";
         }

@@ -106,13 +106,14 @@ public sealed class AddSpot : Adw.Dialog {
         activator_callsign.editable = false;
         park_ref.text = spot.park_ref;
         park_ref.editable = false;
-        frequency.text = "%d".printf (spot.frequency_khz);
+        frequency.text = format_frequency_khz (spot.frequency_khz);
+        select_mode (spot.mode);
     }
 
     public AddSpot.with_frequency (float frequency_khz) {
         Object ();
 
-        frequency.text = "%d".printf ((int)frequency_khz);
+        frequency.text = format_frequency_khz (frequency_khz);
     }
 
     construct {
@@ -134,6 +135,7 @@ public sealed class AddSpot : Adw.Dialog {
         var settings = Application.settings;
         spotter_callsign.text = settings.get_string ("callsign");
         spotter_comments.text = settings.get_string ("spot-message");
+        select_mode (settings.get_string ("default-mode"));
 
         cancel_button = builder.get_object ("cancel_button") as Gtk.Button;
         cancel_button.clicked.connect (() => {
@@ -187,6 +189,20 @@ public sealed class AddSpot : Adw.Dialog {
             });
         });
     }
+
+    private void select_mode (string mode_name) {
+        var model = mode.get_model () as Gtk.StringList;
+        if (model == null)
+            return;
+
+        var normalized_mode = mode_name.strip ().up ();
+        for (uint i = 0 ; i < model.get_n_items () ; i++) {
+            if (model.get_string (i).up () == normalized_mode) {
+                mode.selected = i;
+                return;
+            }
+        }
+    }
 } /* class AddSpot */
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_card.ui")]
@@ -232,9 +248,7 @@ public sealed class SpotCard : Gtk.Box {
 
     public Spot spot { get; construct; }
     private ulong callsign_cache_updated_handler = 0;
-    private ulong radio_connected_handler = 0;
-    private ulong radio_disconnected_handler = 0;
-    private ulong radio_error_handler = 0;
+    private ulong radio_connection_state_handler = 0;
 
     private Gdk.Texture? activator_avatar_texture {
         set {
@@ -276,7 +290,7 @@ public sealed class SpotCard : Gtk.Box {
         grid_square.visible = grid != "";
 
         band_strip.band = spot.band;
-        frequency.label = "%d kHz".printf (spot.frequency_khz);
+        frequency.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));
         mode.label = spot.mode;
         time.label = humanize_ago (spot.spot_time);
         spot_count.label = spot.spot_count.to_string ();
@@ -294,13 +308,7 @@ public sealed class SpotCard : Gtk.Box {
         tune_button.clicked.connect (on_tune_clicked);
         spot_button.clicked.connect (on_spot_clicked);
 
-        radio_connected_handler = Application.radio_control.radio_connected.connect (() => {
-            update_tune_button_state ();
-        });
-        radio_disconnected_handler = Application.radio_control.radio_disconnected.connect (() => {
-            update_tune_button_state ();
-        });
-        radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
+        radio_connection_state_handler = Application.app.radio_connection_state_changed.connect (() => {
             update_tune_button_state ();
         });
     }
@@ -343,20 +351,10 @@ public sealed class SpotCard : Gtk.Box {
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_updated_handler);
             callsign_cache_updated_handler = 0;
         }
-        if (radio_connected_handler != 0) {
-            if (SignalHandler.is_connected (Application.radio_control, radio_connected_handler))
-                SignalHandler.disconnect (Application.radio_control, radio_connected_handler);
-            radio_connected_handler = 0;
-        }
-        if (radio_disconnected_handler != 0) {
-            if (SignalHandler.is_connected (Application.radio_control, radio_disconnected_handler))
-                SignalHandler.disconnect (Application.radio_control, radio_disconnected_handler);
-            radio_disconnected_handler = 0;
-        }
-        if (radio_error_handler != 0) {
-            if (SignalHandler.is_connected (Application.radio_control, radio_error_handler))
-                SignalHandler.disconnect (Application.radio_control, radio_error_handler);
-            radio_error_handler = 0;
+        if (radio_connection_state_handler != 0) {
+            if (SignalHandler.is_connected (Application.app, radio_connection_state_handler))
+                SignalHandler.disconnect (Application.app, radio_connection_state_handler);
+            radio_connection_state_handler = 0;
         }
     }
 

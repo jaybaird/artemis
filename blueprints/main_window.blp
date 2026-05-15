@@ -107,6 +107,7 @@ template $AppWindow : Window {
         orientation: horizontal;
         resize-start-child: true;
         resize-end-child: false;
+        shrink-end-child: false;
 
         start-child: Overlay {
           hexpand: true;
@@ -184,7 +185,8 @@ template $AppWindow : Window {
           [overlay]
           $StatusBar status_bar {
             valign: end;
-            halign: center;
+            halign: fill;
+            hexpand: true;
             margin-start: 28;
             margin-end: 28;
             margin-bottom: 12;
@@ -192,7 +194,8 @@ template $AppWindow : Window {
         };
 
         end-child: $SpotDetail spot_detail {
-          width-request: 300;
+          width-request: 360;
+          hexpand: false;
         };
       };
     }

@@ -24,18 +24,13 @@ public sealed class StatusBar : Gtk.Box {
     private unowned Gtk.Label status_bar_text;
 
     [GtkChild]
-    private unowned Gtk.ProgressBar refresh_progress;
+    private unowned Gtk.Label refresh_status;
 
     [GtkChild]
     private unowned Gtk.Label current_time;
 
     public StatusBar () {
         Object ();
-    }
-
-    construct {
-        refresh_progress.fraction = 0;
-        refresh_progress.tooltip_text = "";
     }
 
     public void set_time (string time) {
@@ -52,20 +47,13 @@ public sealed class StatusBar : Gtk.Box {
         status_bar_text.label = "%s • %u filtered".printf (spots_text, filtered_count);
     }
 
-    public void set_refresh_progress (double fraction) {
-        refresh_progress.fraction = fraction;
-    }
-
-    public void set_refresh_tooltip (string tooltip) {
-        refresh_progress.tooltip_text = tooltip;
+    public void set_refresh_countdown (uint seconds_remaining) {
+        refresh_status.label = _("Refreshes in %us").printf (seconds_remaining);
     }
 
     public void set_paused (bool paused) {
         if (paused) {
-            refresh_progress.tooltip_text = _("Updates Paused");
-            refresh_progress.fraction = 0;
-        } else {
-            refresh_progress.tooltip_text = "";
+            refresh_status.label = _("Paused");
         }
     }
 

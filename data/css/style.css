@@ -225,10 +225,20 @@ banner {
     min-height: 25px;
     border-radius: 9999px;
     background-color: var(--accent-red);
+    color: white;
 }
 
 .radio-power-button:checked {
     background-color: var(--accent-green);
+    color: white;
+}
+
+.radio-power-button label {
+    color: white;
+}
+
+.radio-power-button:disabled label {
+    color: alpha(white, 0.65);
 }
 
 .radio-power-button:hover {
@@ -240,14 +250,6 @@ banner {
     border: 1px solid color-mix(in srgb, @window_fg_color 12%, transparent);
     border-radius: 18px;
     box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
-}
-
-.status-bar-overlay progressbar trough {
-    background-color: color-mix(in srgb, @window_fg_color 8%, transparent);
-}
-
-.status-bar-overlay progressbar progress {
-    background-color: color-mix(in srgb, @accent_bg_color 82%, white 18%);
 }
 
 .weather-summary-card {

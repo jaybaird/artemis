@@ -62,6 +62,9 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
         value_label = new Gtk.Label ("") {
             xalign = 1.0f,
             wrap = wrap,
+            wrap_mode = Pango.WrapMode.WORD_CHAR,
+            max_width_chars = wrap ? 28 : 18,
+            ellipsize = wrap ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END,
             selectable = true,
             hexpand = true
         };
@@ -286,7 +289,9 @@ public sealed class SpotDetail : Gtk.Box {
         detail_park_name.label = spot.park_name;
         set_weather_loading ();
 
-        detail_frequency_row.value = "%d kHz".printf (spot.frequency_khz);
+        detail_frequency_row.value = "%s kHz".printf (
+            format_frequency_khz (spot.frequency_khz)
+        );
         detail_mode_row.value = spot.mode;
         detail_spot_count_row.value = ngettext ("%d spot", "%d spots", spot.spot_count)
             .printf (spot.spot_count);
@@ -340,7 +345,11 @@ public sealed class SpotDetail : Gtk.Box {
 
         var escaped = GLib.Uri.escape_string (spot.park_ref, null, false);
         park_url = @"https://pota.app/#/park/$escaped";
-        var escaped_callsign = GLib.Uri.escape_string (spot.callsign, null, false);
+        var escaped_callsign = GLib.Uri.escape_string (
+            pota_profile_callsign (spot.callsign),
+            null,
+            false
+        );
         activator_url = @"https://pota.app/#/profile/$escaped_callsign";
     }
 
@@ -435,8 +444,10 @@ public sealed class SpotDetail : Gtk.Box {
     private async void fetch_avatar () {
         if (current_spot == null)
             return;
-        var texture = yield Application.callsign_cache.get_avatar_for (current_spot.callsign);
-        if (current_spot != null)
+
+        var callsign = current_spot.callsign;
+        var texture = yield Application.callsign_cache.get_avatar_for (callsign);
+        if ((current_spot != null) && (current_spot.callsign == callsign))
             detail_avatar.custom_image = texture;
     }
 

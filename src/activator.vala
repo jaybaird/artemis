@@ -49,10 +49,10 @@ public sealed class Activator : Object {
 
     public Activator.from_json (Json.Object object) {
         Object (
-            callsign: object.get_string_member ("callsign"),
-            name: object.get_string_member ("name"),
-            qth: object.get_string_member ("qth"),
-            gravatar_hash: object.get_string_member ("gravatar"),
+            callsign: object.get_string_member_with_default ("callsign", ""),
+            name: object.get_string_member_with_default ("name", ""),
+            qth: object.get_string_member_with_default ("qth", ""),
+            gravatar_hash: object.get_string_member_with_default ("gravatar", ""),
             endorsements: (uint)object.get_int_member_with_default ("endorsements", 0),
             activations: (uint)object.get_int_member_with_default (
                 "activations",

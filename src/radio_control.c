@@ -338,6 +338,7 @@ struct _RadioControl {
   GObject parent_instance;
 
   RIG   *rig;
+  GMutex rig_mutex;
 
   guint poll_interval_ms;
 
@@ -395,7 +396,7 @@ radio_control_dispose(GObject *object)
 {
   RadioControl *self = ARTEMIS_RADIO_CONTROL(object);
 
-  if (self->rig != NULL)
+  if (radio_control_get_is_rig_connected(self))
   {
     g_autoptr (GError) error = NULL;
     DexFuture *disconnect = radio_control_disconnect_async(self);
@@ -419,6 +420,16 @@ radio_control_dispose(GObject *object)
   g_clear_object(&self->watcher);
 
   G_OBJECT_CLASS(radio_control_parent_class)->dispose(object);
+}
+
+static void
+radio_control_finalize(GObject *object)
+{
+  RadioControl *self = ARTEMIS_RADIO_CONTROL(object);
+
+  g_mutex_clear(&self->rig_mutex);
+
+  G_OBJECT_CLASS(radio_control_parent_class)->finalize(object);
 }
 
 static void
@@ -468,6 +479,7 @@ radio_control_class_init(RadioControlClass *klass)
   );
 
   G_OBJECT_CLASS(klass)->dispose = radio_control_dispose;
+  G_OBJECT_CLASS(klass)->finalize = radio_control_finalize;
 }
 
 static int
@@ -500,6 +512,7 @@ radio_control_init(RadioControl *self)
 #endif
 
   self->poll_interval_ms = 500;
+  g_mutex_init(&self->rig_mutex);
   self->canceled = dex_cancellable_new();
   self->scheduler = dex_thread_pool_scheduler_new();
 
@@ -516,19 +529,28 @@ radio_control_new()
 gboolean
 radio_control_get_is_rig_connected(RadioControl *self)
 {
-  return self->is_connected;
+  g_mutex_lock(&self->rig_mutex);
+  gboolean is_connected = self->is_connected;
+  g_mutex_unlock(&self->rig_mutex);
+  return is_connected;
 }
 
 float
 radio_control_get_frequency(RadioControl *self)
 {
-  return self->frequency_khz;
+  g_mutex_lock(&self->rig_mutex);
+  float frequency_khz = self->frequency_khz;
+  g_mutex_unlock(&self->rig_mutex);
+  return frequency_khz;
 }
 
 enum RadioMode
 radio_control_get_mode(RadioControl *self)
 {
-  return self->mode;
+  g_mutex_lock(&self->rig_mutex);
+  enum RadioMode mode = self->mode;
+  g_mutex_unlock(&self->rig_mutex);
+  return mode;
 }
 
 typedef struct {
@@ -593,11 +615,22 @@ connect_worker(gpointer user_data)
 
   g_autoptr (GError) error = NULL;
 
+  g_mutex_lock(&self->rig_mutex);
+
+  if (self->rig != NULL)
+  {
+    rig_close(self->rig);
+    rig_cleanup(self->rig);
+    self->rig = NULL;
+  }
+  self->is_connected = FALSE;
+
   self->rig = rig_init(config->model_id);
 
   if (self->rig == NULL)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed to initialize radio model %d", config->model_id);
+    g_mutex_unlock(&self->rig_mutex);
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
@@ -664,9 +697,11 @@ connect_worker(gpointer user_data)
     rig_cleanup(self->rig);
     self->rig = NULL;
     self->is_connected = FALSE;
+    g_mutex_unlock(&self->rig_mutex);
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
   self->is_connected = TRUE;
+  g_mutex_unlock(&self->rig_mutex);
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
   status->radio = g_object_ref(self);
@@ -689,6 +724,7 @@ connect_worker(gpointer user_data)
       g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Radio connection setup failed");
     }
 
+    g_mutex_unlock(&self->rig_mutex);
     return dex_future_new_for_error(g_steal_pointer(&error));
 }
 
@@ -714,6 +750,7 @@ disconnect_worker(gpointer user_data)
 {
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
 
+  g_mutex_lock(&self->rig_mutex);
   self->is_connected = FALSE;
 
   if (self->rig != NULL)
@@ -722,6 +759,7 @@ disconnect_worker(gpointer user_data)
     rig_cleanup(self->rig);
     self->rig = NULL;
   }
+  g_mutex_unlock(&self->rig_mutex);
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
   status->status = SIG_DISCONNECTED;
@@ -746,7 +784,16 @@ get_vfo_worker(gpointer user_data)
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
   g_autoptr (GError) error = NULL;
   freq_t freq;
+  g_mutex_lock(&self->rig_mutex);
+  if (!self->is_connected || self->rig == NULL)
+  {
+    g_mutex_unlock(&self->rig_mutex);
+    g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
+      "Unable to get VFO, rig is not connected");
+    return dex_future_new_for_error(g_steal_pointer(&error));
+  }
   int result = rig_get_freq(self->rig, RIG_VFO_CURR, &freq);
+  g_mutex_unlock(&self->rig_mutex);
   if (result != RIG_OK)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_CONNECTION_CLOSED,
@@ -770,7 +817,16 @@ get_mode_worker(gpointer user_data)
   g_autoptr (GError) error = NULL;
   rmode_t mode;
   pbwidth_t pbwidth;
+  g_mutex_lock(&self->rig_mutex);
+  if (!self->is_connected || self->rig == NULL)
+  {
+    g_mutex_unlock(&self->rig_mutex);
+    g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
+      "Unable to get mode, rig is not connected");
+    return dex_future_new_for_error(g_steal_pointer(&error));
+  }
   int result = rig_get_mode(self->rig, RIG_VFO_CURR, &mode, &pbwidth);
+  g_mutex_unlock(&self->rig_mutex);
   if (result != RIG_OK)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_CONNECTION_CLOSED,
@@ -806,14 +862,17 @@ set_mode_worker(gpointer user_data)
   RadioControl *self = data->radio;
 
   g_autoptr (GError) error = NULL;
-  if (!self->is_connected)
+  g_mutex_lock(&self->rig_mutex);
+  if (!self->is_connected || self->rig == NULL)
   {
+    g_mutex_unlock(&self->rig_mutex);
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
       "Unable to set mode, rig is not connected");
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
   int result = rig_set_mode(self->rig, RIG_VFO_CURR, map_artemis_mode(data->mode), RIG_PASSBAND_NOCHANGE);
+  g_mutex_unlock(&self->rig_mutex);
   if (result != RIG_OK)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
@@ -852,14 +911,17 @@ set_vfo_worker(gpointer user_data)
   RadioControl *self = data->radio;
 
   g_autoptr (GError) error = NULL;
-  if (!self->is_connected)
+  g_mutex_lock(&self->rig_mutex);
+  if (!self->is_connected || self->rig == NULL)
   {
+    g_mutex_unlock(&self->rig_mutex);
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
-      "Unable to set mode, rig is not connected");
+      "Unable to set VFO, rig is not connected");
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
   int result = rig_set_freq(self->rig, RIG_VFO_CURR, data->frequency);
+  g_mutex_unlock(&self->rig_mutex);
   if (result != RIG_OK)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
@@ -871,11 +933,11 @@ set_vfo_worker(gpointer user_data)
 }
 
 DexFuture *
-radio_control_set_vfo_async(RadioControl *self, int frequency)
+radio_control_set_vfo_async(RadioControl *self, double frequency)
 {
   _SetVFOData *data = g_new0(_SetVFOData, 1);
   data->radio = g_object_ref(self);
-  data->frequency = (double)frequency * 1000.0;
+  data->frequency = frequency * 1000.0;
 
   return dex_scheduler_spawn(self->scheduler, 0, set_vfo_worker, data, (GDestroyNotify)set_vfo_data_free);
 }
@@ -892,6 +954,12 @@ radio_control_hamlib_copyright(void)
   return rig_copyright();
 }
 
+gint
+radio_control_netrigctl_model_id(void)
+{
+  return RIG_MODEL_NETRIGCTL;
+}
+
 static DexFuture *
 watcher_iteration(DexFuture *_, gpointer user_data)
 {
@@ -902,8 +970,11 @@ watcher_iteration(DexFuture *_, gpointer user_data)
     return NULL;
   }
 
+  g_mutex_lock(&self->rig_mutex);
+
   /* Stay idle while disconnected instead of running a tight loop. */
   if (!self->is_connected || self->rig == NULL) {
+    g_mutex_unlock(&self->rig_mutex);
     return dex_timeout_new_msec(self->poll_interval_ms);
   }
 
@@ -919,6 +990,7 @@ watcher_iteration(DexFuture *_, gpointer user_data)
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
   status->radio = g_object_ref(self);
+  _RadioStatus *disconnect_status = NULL;
   
   if (r_f == RIG_OK && r_ps == RIG_OK)
   {
@@ -951,13 +1023,18 @@ watcher_iteration(DexFuture *_, gpointer user_data)
         self->rig = NULL;
       }
 
-      _RadioStatus *disconnect_status = g_new0(_RadioStatus, 1);
+      disconnect_status = g_new0(_RadioStatus, 1);
       disconnect_status->radio = g_object_ref(self);
       disconnect_status->status = SIG_DISCONNECTED;
-      dex_future_disown(
-        dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, disconnect_status, (GDestroyNotify)radio_status_free)
-      );
     }
+  }
+
+  g_mutex_unlock(&self->rig_mutex);
+
+  if (disconnect_status != NULL) {
+    dex_future_disown(
+      dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, disconnect_status, (GDestroyNotify)radio_status_free)
+    );
   }
   
   dex_future_disown(
