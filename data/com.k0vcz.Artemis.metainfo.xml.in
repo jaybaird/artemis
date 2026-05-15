@@ -5,7 +5,7 @@
   <project_license>GPL-3.0-or-later</project_license>
 
   <name>Artemis</name>
-  <summary>A Parks on the Air Spotting Tool</summary>
+  <summary>Hunt Parks on the Air</summary>
   <description>
     <p>Artemis helps amateur radio operators hunt Parks on the Air activations with a fast desktop workflow for filtering spots, tracking targets, and tuning radios.</p>
     <p>Use live spot filtering by band, mode, and program, view parks on an interactive map, and coordinate your station with integrated CAT control through Hamlib.</p>
