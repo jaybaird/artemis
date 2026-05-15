@@ -25,6 +25,7 @@ install_data(
     'hicolor/symbolic/actions/bullseye-symbolic.svg',
     'hicolor/symbolic/actions/verified-checkmark-symbolic.svg',
     'hicolor/symbolic/actions/radio-console-symbolic.svg',
+    'hicolor/symbolic/actions/sound-wave-alt-symbolic.svg',
     'hicolor/symbolic/actions/sound-wave-add-symbolic.svg',
     'hicolor/symbolic/actions/compass2-symbolic.svg',
     'hicolor/symbolic/actions/distance-symbolic.svg',
