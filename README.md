@@ -15,11 +15,23 @@ Artemis is designed to be cross-platform, lightweight, and easy to use.
 
 ## Screenshots
 
-![Main window showing live spots and filters](./screenshots/main-window.png)
-*Main spot hunting view with filters and live cards.*
+![Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector](./screenshots/cards-light.png)
+*Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector.*
 
-![Map view showing park activity](./screenshots/map-view.png)
-*Map view showing current park activity and station context.*
+![Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions](./screenshots/cards-dark.png)
+*Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions.*
+
+![Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details](./screenshots/list-light.png)
+*Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details.*
+
+![Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting](./screenshots/list-dark.png)
+*Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting.*
+
+![Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector](./screenshots/map-light.png)
+*Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector.*
+
+![Dark theme map view showing active parks on an interactive map with the floating refresh status bar](./screenshots/map-dark.png)
+*Dark theme map view showing active parks on an interactive map with the floating refresh status bar.*
 
 ## Features
 
