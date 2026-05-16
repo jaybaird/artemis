@@ -7,7 +7,7 @@
   <name>Artemis</name>
   <summary>Hunt Parks on the Air</summary>
   <description>
-    <p>Artemis helps amateur radio operators hunt Parks on the Air activations with a fast desktop workflow for filtering spots, tracking targets, and tuning radios.</p>
+    <p>Artemis helps amateur radio operators hunt Parks on the Air activations with a fast desktop workflow for filtering spots, spotting, and tuning radios with one-click QSY.</p>
     <p>Use live spot filtering by band, mode, and program, view parks on an interactive map, and coordinate your station with integrated CAT control through Hamlib.</p>
   </description>
 
@@ -96,6 +96,16 @@
   </screenshots>
 
   <releases>
+    <release version="2.0.1" date="2026-05-15">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.0.1</url>
+      <description>
+        <p>Fixes the following bugs:</p>
+        <ul>
+          <li>Mode and program filters would be reset on every refresh</li>
+          <li>Frequencies with sub-kHz would be truncated</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.0" date="2026-05-15">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.0</url>
       <description>
