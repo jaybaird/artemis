@@ -56,7 +56,7 @@ public class RadioControl : GLib.Object {
     [CCode (cname = "radio_control_set_mode_async")]
     public Dex.Future set_mode (RadioMode mode);
 
-    public float frequency { get; }
+    public double frequency { get; }
     public RadioMode mode { get; }
 
     // Property
@@ -83,7 +83,7 @@ public class RadioControl : GLib.Object {
     public signal void radio_disconnected ();
 
     [CCode (cname = "radio-status")]
-    public signal void radio_status (int frequency, RadioMode mode);
+    public signal void radio_status (double frequency, RadioMode mode);
 
     [CCode (cname = "radio-error")]
     public signal void radio_error (GLib.Error error);

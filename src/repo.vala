@@ -342,22 +342,26 @@ public sealed class SpotRepo : Object {
                 foreach (var entry in parsed_band_counts.entries) {
                     band_counts[entry.key] = entry.value;
                 }
-                program_model.splice (0, program_model.get_n_items (), {});
-                mode_model.splice (0, mode_model.get_n_items (), {});
+
+                var new_program_model = new Gtk.StringList ({});
+                var new_mode_model = new Gtk.StringList ({});
 
                 foreach (var spot in parsed_spots) {
                     store.append (spot);
                 }
                 spots_updated = parsed_spots.size;
 
-                program_model.append (_("All"));
+                new_program_model.append (_("All"));
                 foreach (var program in programs_sorted) {
-                    program_model.append (program);
+                    new_program_model.append (program);
                 }
-                mode_model.append (_("All"));
+                new_mode_model.append (_("All"));
                 foreach (var mode in modes_sorted) {
-                    mode_model.append (mode);
+                    new_mode_model.append (mode);
                 }
+
+                program_model = new_program_model;
+                mode_model = new_mode_model;
 
                 busy_changed (false);
                 refreshed (spots_updated);

@@ -110,7 +110,7 @@ public sealed class AddSpot : Adw.Dialog {
         select_mode (spot.mode);
     }
 
-    public AddSpot.with_frequency (float frequency_khz) {
+    public AddSpot.with_frequency (double frequency_khz) {
         Object ();
 
         frequency.text = format_frequency_khz (frequency_khz);

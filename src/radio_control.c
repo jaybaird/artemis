@@ -346,7 +346,7 @@ struct _RadioControl {
   DexFuture       *watcher;
 
   gboolean        is_connected;
-  float           frequency_khz;
+  double          frequency_khz;
   enum RadioMode  mode;
 
   gulong    settings_changed_handler;
@@ -463,7 +463,7 @@ radio_control_class_init(RadioControlClass *klass)
     NULL,
     G_TYPE_NONE,
     2,
-    G_TYPE_INT,
+    G_TYPE_DOUBLE,
     G_TYPE_INT
   );
 
@@ -535,11 +535,11 @@ radio_control_get_is_rig_connected(RadioControl *self)
   return is_connected;
 }
 
-float
+double
 radio_control_get_frequency(RadioControl *self)
 {
   g_mutex_lock(&self->rig_mutex);
-  float frequency_khz = self->frequency_khz;
+  double frequency_khz = self->frequency_khz;
   g_mutex_unlock(&self->rig_mutex);
   return frequency_khz;
 }
@@ -555,7 +555,7 @@ radio_control_get_mode(RadioControl *self)
 
 typedef struct {
   RadioControl            *radio;
-  int                     frequency; // in kHz
+  double                  frequency; // in kHz
   enum RadioMode          mode;
   enum RadioStatusSignal  status;
   GError                  *error;
@@ -995,10 +995,10 @@ watcher_iteration(DexFuture *_, gpointer user_data)
   if (r_f == RIG_OK && r_ps == RIG_OK)
   {
     status->status = SIG_STATUS;
-    status->frequency = (int)(freq / 1000.0);
+    status->frequency = ((double)freq) / 1000.0;
     status->mode = map_hamlib_mode(mode);
 
-    self->frequency_khz = (float)(freq / 1000.0);
+    self->frequency_khz = ((double)freq) / 1000.0;
     self->mode = map_hamlib_mode(mode);
   }
   else 

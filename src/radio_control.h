@@ -93,7 +93,7 @@ radio_control_disconnect_async(RadioControl *self);
 gboolean
 radio_control_get_is_rig_connected(RadioControl *self);
 
-float
+double
 radio_control_get_frequency(RadioControl *self);
 
 enum RadioMode

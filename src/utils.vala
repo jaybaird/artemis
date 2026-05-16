@@ -45,13 +45,13 @@ public static Gee.ArrayList<T> to_array<T> (Gee.Iterator<T> iter) {
     return list;
 }
 
-public static string format_vfo (float freq_khz) {
-    uint freq_hz = (uint)(freq_khz * 1000.0 + 0.5);
-    uint mhz = freq_hz / 1000000;
-    uint khz = (freq_hz / 1000) % 1000;
-    uint hz = freq_hz % 1000;
+public static string format_vfo (double freq_khz) {
+    uint64 freq_hz = (uint64)Math.round (freq_khz * 1000.0);
+    uint64 mhz = freq_hz / 1000000;
+    uint64 khz = (freq_hz / 1000) % 1000;
+    uint64 hz = freq_hz % 1000;
 
-    return "%u.%03u.%02u".printf (mhz, khz, hz / 10);
+    return "%lu.%03lu.%02lu".printf ((ulong)mhz, (ulong)khz, (ulong)(hz / 10));
 }
 
 public static string format_frequency_khz (double frequency_khz) {

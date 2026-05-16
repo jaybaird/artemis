@@ -64,13 +64,15 @@ public sealed class LeftSidebar : Gtk.Box {
     private HashMap<string, Gtk.ToggleButton> band_buttons;
     private ulong mode_handler = 0;
     private ulong program_handler = 0;
+    private bool syncing_mode_model = false;
+    private bool syncing_program_model = false;
 
     private uint radio_vfo_anim_id = 0;
     private int64 radio_vfo_anim_started_at = 0;
     private bool has_displayed_radio_vfo = false;
-    private int displayed_radio_vfo_khz = 0;
-    private int radio_vfo_anim_start_khz = 0;
-    private int radio_vfo_anim_target_khz = 0;
+    private double displayed_radio_vfo_khz = 0;
+    private double radio_vfo_anim_start_khz = 0;
+    private double radio_vfo_anim_target_khz = 0;
 
     public signal void band_selected (string band);
     public signal void mode_changed (string? mode);
@@ -87,6 +89,8 @@ public sealed class LeftSidebar : Gtk.Box {
         radio_power_button.clicked.connect (() => power_clicked ());
 
         mode_handler = mode_select.notify["selected"].connect (() => {
+            if (syncing_mode_model)
+                return;
             var idx = mode_select.selected;
             if (idx == Gtk.INVALID_LIST_POSITION)
                 return;
@@ -97,6 +101,8 @@ public sealed class LeftSidebar : Gtk.Box {
         });
 
         program_handler = program_select.notify["selected"].connect (() => {
+            if (syncing_program_model)
+                return;
             var idx = program_select.selected;
             if (idx == Gtk.INVALID_LIST_POSITION)
                 return;
@@ -108,6 +114,7 @@ public sealed class LeftSidebar : Gtk.Box {
     }
 
     public void update_mode_model (Gtk.StringList model, string? current_filter) {
+        syncing_mode_model = true;
         SignalHandler.block (mode_select, mode_handler);
         mode_select.model = model;
 
@@ -122,9 +129,11 @@ public sealed class LeftSidebar : Gtk.Box {
         }
         mode_select.selected = selected;
         SignalHandler.unblock (mode_select, mode_handler);
+        syncing_mode_model = false;
     }
 
     public void update_program_model (Gtk.StringList model, string? current_filter) {
+        syncing_program_model = true;
         SignalHandler.block (program_select, program_handler);
         program_select.model = model;
 
@@ -139,6 +148,7 @@ public sealed class LeftSidebar : Gtk.Box {
         }
         program_select.selected = selected;
         SignalHandler.unblock (program_select, program_handler);
+        syncing_program_model = false;
     }
 
     public void set_selected_band (string band) {
@@ -205,11 +215,11 @@ public sealed class LeftSidebar : Gtk.Box {
         radio_power_button.label = text;
     }
 
-    public void set_vfo_animated (int freq_khz) {
+    public void set_vfo_animated (double freq_khz) {
         if (!has_displayed_radio_vfo) {
             displayed_radio_vfo_khz = freq_khz;
             has_displayed_radio_vfo = true;
-            radio_vfo.label = format_vfo ((float)freq_khz);
+            radio_vfo.label = format_vfo (freq_khz);
             return;
         }
 
@@ -217,8 +227,9 @@ public sealed class LeftSidebar : Gtk.Box {
 
         radio_vfo_anim_start_khz = displayed_radio_vfo_khz;
         radio_vfo_anim_target_khz = freq_khz;
-        if (radio_vfo_anim_start_khz == radio_vfo_anim_target_khz) {
-            radio_vfo.label = format_vfo ((float)freq_khz);
+        if (Math.fabs (radio_vfo_anim_start_khz - radio_vfo_anim_target_khz) < 0.001) {
+            displayed_radio_vfo_khz = freq_khz;
+            radio_vfo.label = format_vfo (freq_khz);
             return;
         }
 
@@ -231,14 +242,13 @@ public sealed class LeftSidebar : Gtk.Box {
                 t = 1.0;
 
             var eased_t = 1.0 - ((1.0 - t) * (1.0 - t));
-            var interpolated = (double)radio_vfo_anim_start_khz +
-                ((double)(radio_vfo_anim_target_khz - radio_vfo_anim_start_khz) * eased_t);
-            displayed_radio_vfo_khz = (int)Math.round (interpolated);
-            radio_vfo.label = format_vfo ((float)displayed_radio_vfo_khz);
+            displayed_radio_vfo_khz = radio_vfo_anim_start_khz +
+                ((radio_vfo_anim_target_khz - radio_vfo_anim_start_khz) * eased_t);
+            radio_vfo.label = format_vfo (displayed_radio_vfo_khz);
 
             if (t >= 1.0) {
                 displayed_radio_vfo_khz = radio_vfo_anim_target_khz;
-                radio_vfo.label = format_vfo ((float)displayed_radio_vfo_khz);
+                radio_vfo.label = format_vfo (displayed_radio_vfo_khz);
                 radio_vfo_anim_id = 0;
                 return Source.REMOVE;
             }
