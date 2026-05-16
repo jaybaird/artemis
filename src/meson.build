@@ -1,6 +1,8 @@
 artemis_vala_sources = [
   'src/application.vala',
   'src/window.vala',
+  'src/astronomy_window.vala',
+  'src/solar_conditions.vala',
   'src/pota_client.vala',
   'src/qrz_client.vala',
   'src/preferences.vala',
@@ -15,9 +17,13 @@ artemis_vala_sources = [
   'src/status_bar.vala',
   'src/map_view.vala',
   'src/left_sidebar.vala',
+  'src/astronomy.vala',
   'src/spot_detail.vala',
   'src/spot_list_view.vala',
   'src/weather_cache.vala',
+  'src/wsjtx_message.vala',
+  'src/wsjtx_parser.vala',
+  'src/wsjtx_udp.vala'
 ]
 
 if is_windows
@@ -86,6 +92,7 @@ artemis_vala_deps = [
   dependency('libdex-1'),
   dependency('gee-0.8'),
   dependency('sqlite3'),
+  dependency('libxml-2.0'),
   dependency('shumate-1.0'),
   mathlib
 ]

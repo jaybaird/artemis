@@ -1,6 +1,7 @@
 inputs = files(
   'add_spot_page.blp',
   'main_window.blp',
+  'astronomy_window.blp',
   'preferences.blp',
   'spot_card.blp',
   'spot_history_dialog.blp',
@@ -16,6 +17,7 @@ inputs = files(
 outs = [
   'add_spot_page.ui',
   'main_window.ui',
+  'astronomy_window.ui',
   'preferences.ui',
   'spot_card.ui',
   'spot_history_dialog.ui',

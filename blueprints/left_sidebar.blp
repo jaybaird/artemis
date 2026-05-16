@@ -19,6 +19,7 @@
  */
 
 using Gtk 4.0;
+using Adw 1;
 
 template $LeftSidebar : Box {
   orientation: vertical;
@@ -29,9 +30,8 @@ template $LeftSidebar : Box {
 
   styles ["card"]
 
-  ScrolledWindow {
+  Adw.Bin {
     vexpand: true;
-    hscrollbar-policy: never;
 
     Box {
       orientation: vertical;

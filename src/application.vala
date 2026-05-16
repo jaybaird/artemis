@@ -41,6 +41,8 @@ public sealed class Application : Adw.Application {
     public static PotaClient pota_client { get; private set; }
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
+    public static SolarConditionsService solar_conditions { get; private set; }
+    public static Artemis.Wsjtx.UdpService wsjtx_udp { get; private set; }
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -98,6 +100,8 @@ public sealed class Application : Adw.Application {
 
         callsign_cache = new CallsignCache (3600);
         weather_cache = new WeatherCache ();
+        solar_conditions = new SolarConditionsService ();
+        wsjtx_udp = new Artemis.Wsjtx.UdpService ();
         radio_control = new RadioControl ();
         radio_control.radio_connected.connect (() => {
             is_radio_connected = true;

@@ -40,7 +40,7 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
         }
     }
 
-    public DetailFieldRow (string title, bool wrap = false) {
+    public DetailFieldRow (string title, bool wrap = false, string? icon_name = null) {
         Object ();
 
         var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
@@ -50,6 +50,15 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
             margin_end = 12,
             hexpand = true
         };
+
+        if (icon_name != null) {
+            var icon = new Gtk.Image.from_icon_name (icon_name) {
+                pixel_size = 16,
+                valign = Gtk.Align.CENTER
+            };
+            icon.add_css_class ("dim-label");
+            box.append (icon);
+        }
 
         title_label = new Gtk.Label (title) {
             xalign = 0.0f,
@@ -77,6 +86,87 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
 
     public void add_value_css_class (string css_class) {
         value_label.add_css_class (css_class);
+    }
+}
+
+public sealed class DetailTimePairRow : Gtk.ListBoxRow {
+    private Gtk.Label title_label;
+    private Gtk.Label first_value_label;
+    private Gtk.Label second_value_label;
+
+    public string title {
+        set {
+            title_label.label = value;
+        }
+    }
+
+    public string first_value {
+        set {
+            first_value_label.label = value;
+        }
+    }
+
+    public string second_value {
+        set {
+            second_value_label.label = value;
+        }
+    }
+
+    public DetailTimePairRow (
+        string title,
+        string first_icon_name,
+        string second_icon_name
+    ) {
+        Object ();
+
+        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
+            margin_top = 10,
+            margin_bottom = 10,
+            margin_start = 12,
+            margin_end = 12,
+            hexpand = true
+        };
+
+        title_label = new Gtk.Label (title) {
+            xalign = 0.0f,
+            width_chars = 12
+        };
+        title_label.add_css_class ("caption");
+        title_label.add_css_class ("dim-label");
+        box.append (title_label);
+
+        var values_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
+            hexpand = true
+        };
+        values_box.halign = Gtk.Align.END;
+
+        values_box.append (build_time_pair (first_icon_name, out first_value_label));
+        values_box.append (build_time_pair (second_icon_name, out second_value_label));
+
+        box.append (values_box);
+        child = box;
+    }
+
+    private Gtk.Box build_time_pair (string icon_name, out Gtk.Label value_label) {
+        var pair = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
+            halign = Gtk.Align.END
+        };
+
+        var icon = new Gtk.Image.from_icon_name (icon_name) {
+            pixel_size = 16,
+            valign = Gtk.Align.CENTER
+        };
+        icon.add_css_class ("dim-label");
+        pair.append (icon);
+
+        value_label = new Gtk.Label ("") {
+            xalign = 1.0f,
+            selectable = true
+        };
+        value_label.add_css_class ("body");
+        pair.append (value_label);
+
+        return pair;
     }
 }
 
@@ -174,6 +264,8 @@ public sealed class SpotDetail : Gtk.Box {
     private DetailFieldRow detail_bearing_row;
     private DetailFieldRow detail_distance_row;
     private DetailFieldRow detail_grid_row;
+    private DetailTimePairRow detail_sun_row;
+    private DetailTimePairRow detail_moon_row;
     private DetailLinkRow detail_park_row;
     private DetailFieldRow detail_spotter_row;
     private DetailFieldRow detail_spot_time_row;
@@ -237,11 +329,23 @@ public sealed class SpotDetail : Gtk.Box {
         detail_distance_row = new DetailFieldRow (_("Distance"));
         detail_grid_row = new DetailFieldRow (_("Coordinates"));
         detail_grid_row.add_value_css_class ("numeric");
+        detail_sun_row = new DetailTimePairRow (
+            _("Sun"),
+            "daytime-sunrise-symbolic",
+            "daytime-sunset-symbolic"
+        );
+        detail_moon_row = new DetailTimePairRow (
+            _("Moon"),
+            "moonrise-symbolic",
+            "moonset-symbolic"
+        );
         detail_park_row = new DetailLinkRow (_("View Park Details"));
         detail_location_list.append (detail_location_row);
         detail_location_list.append (detail_bearing_row);
         detail_location_list.append (detail_distance_row);
         detail_location_list.append (detail_grid_row);
+        detail_location_list.append (detail_sun_row);
+        detail_location_list.append (detail_moon_row);
         detail_location_list.append (detail_park_row);
 
         detail_spotter_row = new DetailFieldRow (_("Spotter"));
@@ -316,8 +420,25 @@ public sealed class SpotDetail : Gtk.Box {
                 spot.coordinate.latitude,
                 spot.coordinate.longitude
             );
+            var now = new DateTime.now_utc ();
+            var sun_times = Astronomy.sun_rise_set_times (now, spot.coordinate);
+            var moon_times = Astronomy.moon_rise_set_times (now, spot.coordinate);
+
+            detail_sun_row.visible = (sun_times.rise != null) || (sun_times.set != null);
+            detail_sun_row.first_value = format_time_label (sun_times.rise);
+            detail_sun_row.second_value = format_time_label (sun_times.set);
+
+            detail_moon_row.visible = (moon_times.rise != null) || (moon_times.set != null);
+            detail_moon_row.first_value = format_time_label (moon_times.rise);
+            detail_moon_row.second_value = format_time_label (moon_times.set);
         } else {
             detail_grid_row.value = "";
+            detail_sun_row.visible = false;
+            detail_sun_row.first_value = "";
+            detail_sun_row.second_value = "";
+            detail_moon_row.visible = false;
+            detail_moon_row.first_value = "";
+            detail_moon_row.second_value = "";
         }
 
         var has_location = Application.settings.get_string ("location") != "" && spot.distance >= 0;
@@ -351,6 +472,13 @@ public sealed class SpotDetail : Gtk.Box {
             false
         );
         activator_url = @"https://pota.app/#/profile/$escaped_callsign";
+    }
+
+    private string format_time_label (DateTime? time) {
+        if (time == null)
+            return "—";
+
+        return time.to_utc ().format ("%H:%M UTC");
     }
 
     private string weather_temperature_label (double temperature) {

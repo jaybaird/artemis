@@ -413,4 +413,66 @@ Adw.PreferencesDialog prefs_dialog {
       }
     }
   }
+
+  Adw.PreferencesPage wsjtx_page {
+    title: _("WSJT-X");
+    icon-name: "network-wireless-symbolic";
+
+    Adw.PreferencesGroup {
+      title: _("UDP Listener");
+      description: _("Configure the local IP and port Artemis listens on for WSJT-X unicast or multicast packets.");
+
+      Adw.EntryRow row_wsjtx_listen_ip {
+        title: _("Listen IP");
+        text: "127.0.0.1";
+        accessibility {
+          label: _("Listen IP");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow row_wsjtx_listen_port {
+        title: _("Port");
+        input-purpose: digits;
+        accessibility {
+          label: _("Port");
+          role-description: _("text entry");
+        }
+      }
+    }
+
+    Adw.PreferencesGroup {
+      title: _("Status");
+
+      Adw.ActionRow wsjtx_status_row {
+        title: _("Listener");
+        subtitle: _("Not listening");
+
+        Box {
+          orientation: horizontal;
+          spacing: 12;
+          valign: center;
+
+          Image wsjtx_status_icon {
+            icon-name: "network-offline-symbolic";
+            pixel-size: 16;
+            accessibility {
+              label: _("Listener Status");
+              role-description: _("status icon");
+            }
+          }
+
+          Label wsjtx_status_label {
+            label: _("Inactive");
+          }
+        }
+      }
+
+      Label wsjtx_status_detail {
+        xalign: 0.0;
+        wrap: true;
+        styles ["dim-label"]
+      }
+    }
+  }
 }

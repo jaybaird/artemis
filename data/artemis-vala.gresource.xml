@@ -3,6 +3,7 @@
   <gresource prefix="/com/k0vcz/artemis/">
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file preprocess="xml-stripblanks">ui/main_window.ui</file>
+    <file preprocess="xml-stripblanks">ui/astronomy_window.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_card.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_page.ui</file>
     <file preprocess="xml-stripblanks">ui/add_spot_page.ui</file>
@@ -35,6 +36,12 @@
     <file compressed="true">icons/hicolor/symbolic/actions/thermometer-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/drop-hollow-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/encoder-knob-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/headphones-muted-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/headphones-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/daytime-sunrise-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/daytime-sunset-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/moonrise-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/moonset-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/verified-checkmark-symbolic.svg</file>
 
     <file compressed="true" alias="style.css">css/style.css</file>

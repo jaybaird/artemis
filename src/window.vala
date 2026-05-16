@@ -55,6 +55,7 @@ public sealed class AppWindow : Gtk.Window {
     [GtkChild]
     private unowned SpotDetail spot_detail;
 
+    private AstronomyWindow? astronomy_window = null;
     private uint timer_id = 0;
 
     private uint current_ticks = 0;
@@ -91,6 +92,7 @@ public sealed class AppWindow : Gtk.Window {
             }
         });
         refresh_toggle.clicked.connect (on_refresh_button_clicked);
+        astronomy_window = null;
 
         search_entry.set_key_capture_widget (this);
 
@@ -249,6 +251,19 @@ public sealed class AppWindow : Gtk.Window {
         Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
         Application.settings.changed["hide-older-than"].connect (refresh_spot_views);
 
+    }
+
+    [GtkCallback]
+    private void on_astronomy_button_clicked () {
+        if (astronomy_window == null) {
+            astronomy_window = new AstronomyWindow ((Gtk.Application) application);
+            astronomy_window.close_request.connect (() => {
+                astronomy_window = null;
+                return false;
+            });
+        }
+
+        astronomy_window.present ();
     }
 
     private void on_spot_selected (Quark spot_hash) {

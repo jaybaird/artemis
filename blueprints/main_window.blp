@@ -44,6 +44,16 @@ template $AppWindow : Window {
       }
     }
 
+    Button astronomy_button {
+      icon-name: "sun-outline-symbolic";
+      tooltip-text: _("Astronomy");
+      clicked => $on_astronomy_button_clicked();
+      accessibility {
+        label: _("Astronomy");
+        role-description: _("button");
+      }
+    }
+
     ToggleButton refresh_toggle {
       icon-name: "media-playback-pause-symbolic";
       tooltip-text: _("Pause");
@@ -89,9 +99,7 @@ template $AppWindow : Window {
     }
   }
 
-  Box {
-    orientation: vertical;
-
+  Adw.Bin {
     Paned {
       orientation: horizontal;
       hexpand: true;

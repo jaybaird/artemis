@@ -45,6 +45,8 @@ public sealed class PreferencesDialog : Object {
 
     private Adw.EntryRow row_network_host;
     private Adw.EntryRow row_network_port;
+    private Adw.EntryRow row_wsjtx_listen_ip;
+    private Adw.EntryRow row_wsjtx_listen_port;
     private Adw.PreferencesGroup serial_settings_group;
     private Adw.PreferencesGroup network_settings_group;
     private Adw.PreferencesGroup radio_test_group;
@@ -64,6 +66,10 @@ public sealed class PreferencesDialog : Object {
     private Gtk.Image connection_status_icon;
     private Gtk.Label connection_status_label;
     private Gtk.Label hamlib_version_label;
+    private Adw.ActionRow wsjtx_status_row;
+    private Gtk.Image wsjtx_status_icon;
+    private Gtk.Label wsjtx_status_label;
+    private Gtk.Label wsjtx_status_detail;
 
     private File? logbook_csv = null;
 
@@ -104,6 +110,8 @@ public sealed class PreferencesDialog : Object {
 
         row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
         row_network_port = builder.get_object ("row_network_port") as Adw.EntryRow;
+        row_wsjtx_listen_ip = builder.get_object ("row_wsjtx_listen_ip") as Adw.EntryRow;
+        row_wsjtx_listen_port = builder.get_object ("row_wsjtx_listen_port") as Adw.EntryRow;
         serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
         network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
         radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
@@ -127,10 +135,15 @@ public sealed class PreferencesDialog : Object {
         test_connection_button = builder.get_object ("test_connection_button") as Gtk.Button;
         connection_status_icon = builder.get_object ("connection_status_icon") as Gtk.Image;
         connection_status_label = builder.get_object ("connection_status_label") as Gtk.Label;
+        wsjtx_status_row = builder.get_object ("wsjtx_status_row") as Adw.ActionRow;
+        wsjtx_status_icon = builder.get_object ("wsjtx_status_icon") as Gtk.Image;
+        wsjtx_status_label = builder.get_object ("wsjtx_status_label") as Gtk.Label;
+        wsjtx_status_detail = builder.get_object ("wsjtx_status_detail") as Gtk.Label;
 
         setup_bindings ();
         setup_signals ();
         update_connection_groups_visibility ();
+        update_wsjtx_status ();
     } /* get_widgets */
 
     public void present (Gtk.Window parent) {
@@ -226,6 +239,10 @@ public sealed class PreferencesDialog : Object {
             "text",
             SettingsBindFlags.DEFAULT);
         bind_network_port_entry ();
+        Application.settings.bind ("wsjtx-listen-ip", row_wsjtx_listen_ip,
+            "text",
+            SettingsBindFlags.DEFAULT);
+        bind_wsjtx_port_entry ();
 
         Application.settings.bind ("enable-logging", row_enable_logging,
             "active",
@@ -267,6 +284,23 @@ public sealed class PreferencesDialog : Object {
         });
     }
 
+    void bind_wsjtx_port_entry () {
+        sync_wsjtx_port_entry ();
+
+        row_wsjtx_listen_port.changed.connect (() => {
+            int parsed_port;
+            if (!try_parse_port (row_wsjtx_listen_port.text, out parsed_port))
+                return;
+
+            if (Application.settings.get_int ("wsjtx-listen-port") != parsed_port)
+                Application.settings.set_int ("wsjtx-listen-port", parsed_port);
+        });
+
+        Application.settings.changed["wsjtx-listen-port"].connect (() => {
+            sync_wsjtx_port_entry ();
+        });
+    }
+
     void sync_network_port_entry () {
         var current_port = Application.settings.get_int ("radio-network-port").to_string ();
         if (row_network_port.text != current_port)
@@ -274,6 +308,10 @@ public sealed class PreferencesDialog : Object {
     }
 
     bool try_parse_network_port (string text, out int port) {
+        return try_parse_port (text, out port);
+    }
+
+    bool try_parse_port (string text, out int port) {
         port = 0;
         var stripped = text.strip ();
         if (stripped.length == 0)
@@ -288,6 +326,12 @@ public sealed class PreferencesDialog : Object {
 
         port = (int)parsed_port64;
         return true;
+    }
+
+    void sync_wsjtx_port_entry () {
+        var current_port = Application.settings.get_int ("wsjtx-listen-port").to_string ();
+        if (row_wsjtx_listen_port.text != current_port)
+            row_wsjtx_listen_port.text = current_port;
     }
 
     void bind_combo_to_string_setting (string setting_key, Adw.ComboRow combo_row) {
@@ -483,6 +527,24 @@ public sealed class PreferencesDialog : Object {
         test_connection_button.clicked.connect (on_test_connection);
         import_file_row.activated.connect (on_import_file);
         import_log.activated.connect (do_import_file);
+        Application.wsjtx_udp.status_changed.connect (update_wsjtx_status);
+    }
+
+    void update_wsjtx_status () {
+        if (Application.wsjtx_udp == null)
+            return;
+
+        wsjtx_status_row.subtitle = Application.wsjtx_udp.status_subtitle;
+        wsjtx_status_label.label = Application.wsjtx_udp.status_label;
+        wsjtx_status_detail.label = Application.wsjtx_udp.status_detail;
+
+        if (Application.wsjtx_udp.is_connected) {
+            wsjtx_status_icon.icon_name = "network-idle-symbolic";
+        } else if (Application.wsjtx_udp.is_listening) {
+            wsjtx_status_icon.icon_name = "network-workgroup-symbolic";
+        } else {
+            wsjtx_status_icon.icon_name = "network-offline-symbolic";
+        }
     }
 
     void update_connection_groups_visibility () {

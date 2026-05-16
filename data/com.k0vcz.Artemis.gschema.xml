@@ -108,6 +108,19 @@
         <range min="1" max="65535"/>
         </key>
 
+        <key name="wsjtx-listen-ip" type="s">
+        <default>"127.0.0.1"</default>
+        <summary>WSJT-X listen IP</summary>
+        <description>Local unicast or multicast IP address to listen on for WSJT-X UDP packets.</description>
+        </key>
+
+        <key name="wsjtx-listen-port" type="i">
+        <default>2237</default>
+        <summary>WSJT-X listen port</summary>
+        <description>UDP port used to receive WSJT-X packets.</description>
+        <range min="1" max="65535"/>
+        </key>
+
         <key name="radio-baud-rate" type="i">
         <default>9600</default>
         <summary>Serial baud rate</summary>
