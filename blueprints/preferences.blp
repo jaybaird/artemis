@@ -65,7 +65,7 @@ Gtk.StringList handshake_model {
   strings: ["None", "XON/XOFF", "Hardware"];
 }
 
-Adw.PreferencesDialog prefs_dialog {
+template $PreferencesDialog : Adw.PreferencesDialog {
   title: _("Preferences");
   search-enabled: true;
 
@@ -351,8 +351,9 @@ Adw.PreferencesDialog prefs_dialog {
       }
     }
   }
+  
   Adw.PreferencesPage import_page {
-    title: _("Logbook");
+    title: _("Logging");
     icon-name: "user-bookmarks-symbolic";
 
     Adw.PreferencesGroup {

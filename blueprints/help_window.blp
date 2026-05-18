@@ -1,0 +1,81 @@
+/* blueprints/help_window.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $HelpWindow : Adw.Window {
+  title: _("Artemis Help");
+  default-width: 1080;
+  default-height: 760;
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("Artemis Help");
+      };
+
+      [end]
+      SearchEntry search_entry {
+        width-request: 320;
+        placeholder-text: _("Search Help");
+      }
+    }
+
+    content: Paned {
+      orientation: horizontal;
+      vexpand: true;
+      shrink-start-child: false;
+      shrink-end-child: false;
+      position: 360;
+      wide-handle: true;
+
+      start-child: Adw.Bin {
+        vexpand: true;
+        styles ["sidebar"]
+
+        ScrolledWindow {
+          hscrollbar-policy: never;
+          min-content-width: 320;
+          vexpand: true;
+
+          child: ListBox article_list {
+            selection-mode: browse;
+          };
+        }
+      };
+
+      end-child: ScrolledWindow {
+        hscrollbar-policy: never;
+        vexpand: true;
+
+        child: Box article_body {
+          orientation: vertical;
+          spacing: 16;
+          margin-top: 24;
+          margin-bottom: 24;
+          margin-start: 24;
+          margin-end: 24;
+        };
+      };
+    };
+  }
+}

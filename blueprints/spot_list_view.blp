@@ -1,4 +1,4 @@
-/* blueprints/band_view.blp
+/* blueprints/spot_list_view.blp
  *
  * Copyright 2026 Jay Baird (K0VCZ)
  *
@@ -21,44 +21,28 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $BandView : Box {
-  vexpand: true;
+template $SpotListView : Box {
+  orientation: vertical;
   hexpand: true;
-  halign: fill;
-  valign: fill;
+  vexpand: true;
 
-  Overlay {
+  ScrolledWindow scroll_window {
     hexpand: true;
     vexpand: true;
+    hscrollbar-policy: never;
 
-    child: ScrolledWindow spot_scroll_window {
-      vexpand: true;
-      hexpand: true;
-      halign: fill;
-      valign: fill;
-
-      FlowBox band_spot_cards {
-        column-spacing: 8;
-        row-spacing: 0;
-        margin-top: 0;
-        margin-start: 8;
-        margin-end: 8;
-        margin-bottom: 0;
-        selection-mode: single;
-        min-children-per-line: 2;
-        max-children-per-line: 2;
-        homogeneous: true;
-        valign: start;
-      }
+    child: ListBox spot_list {
+      selection-mode: single;
+      styles ["boxed-list"]
     };
+  }
 
-    [overlay]
-    Adw.StatusPage status_page {
-      halign: fill;
-      valign: fill;
-      hexpand: true;
-      vexpand: true;
-      visible: false;
-    }
+  Adw.StatusPage status_page {
+    visible: false;
+    title: _("No Spots Match");
+    description: _("Adjust your filters to see more activations.");
+    icon-name: "view-list-symbolic";
+    hexpand: true;
+    vexpand: true;
   }
 }

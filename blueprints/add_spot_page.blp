@@ -25,104 +25,108 @@ Gtk.StringList modes_model {
   strings: ["SSB","CW","FT8","FT4","FM","AM","RTTY","JT65"];
 }
 
-Box add_spot_content {
-  width-request: 500;
-  orientation: vertical;
-  spacing: 12;
-  margin-top: 12;
-  margin-bottom: 12;
-  margin-start: 12;
-  margin-end: 12;
-
-  Adw.PreferencesGroup {
-    title: _("Add Spot");
-
-    Adw.EntryRow activator_callsign {
-      title: _("Activator Callsign");
-      accessibility {
-        label: _("Activator Callsign");
-        role-description: _("text entry");
-      }
-    }
-
-    Adw.EntryRow spotter_callsign {
-      title: _("Spotter Callsign");
-      accessibility {
-        label: _("Spotter Callsign");
-        role-description: _("text entry");
-      }
-    }
-
-    Adw.EntryRow frequency {
-      title: _("Frequency (kHz)");
-      accessibility {
-        label: _("Frequency");
-        role-description: _("text entry");
-      }
-    }
-
-    Adw.ComboRow mode {
-      title: _("Mode");
-      model: modes_model;
-      accessibility {
-        label: _("Mode");
-        role-description: _("combo box");
-      }
-    }
-
-    Adw.EntryRow park_ref {
-      title: _("Park Reference");
-      accessibility {
-        label: _("Park Reference");
-        role-description: _("text entry");
-      }
-    }
-
-    Adw.EntryRow rst_sent {
-      title: _("RST Sent");
-      accessibility {
-        label: _("RST Sent");
-        role-description: _("text entry");
-      }
-    }
-
-    Adw.EntryRow rst_received {
-      title: _("RST Received");
-      accessibility {
-        label: _("RST Received");
-        role-description: _("text entry");
-      }
-    }
-
-    Adw.EntryRow spotter_comments {
-      title: _("Spotter Comments");
-      accessibility {
-        label: _("Spotter Comments");
-        role-description: _("text entry");
-      }
-    }
-  }
+template $AddSpot : Adw.Dialog {
+  title: _("Add Spot");
+  content-width: 500;
 
   Box {
-    orientation: horizontal;
-    halign: end;
-    spacing: 6;
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 12;
     margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
 
-    Button cancel_button {
-      label: _("Cancel");
-      accessibility {
-        label: _("Cancel");
-        role-description: _("button");
+    Adw.PreferencesGroup {
+      title: _("Add Spot");
+
+      Adw.EntryRow activator_callsign {
+        title: _("Activator Callsign");
+        accessibility {
+          label: _("Activator Callsign");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow spotter_callsign {
+        title: _("Spotter Callsign");
+        accessibility {
+          label: _("Spotter Callsign");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow frequency {
+        title: _("Frequency (kHz)");
+        accessibility {
+          label: _("Frequency");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.ComboRow mode {
+        title: _("Mode");
+        model: modes_model;
+        accessibility {
+          label: _("Mode");
+          role-description: _("combo box");
+        }
+      }
+
+      Adw.EntryRow park_ref {
+        title: _("Park Reference");
+        accessibility {
+          label: _("Park Reference");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow rst_sent {
+        title: _("RST Sent");
+        accessibility {
+          label: _("RST Sent");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow rst_received {
+        title: _("RST Received");
+        accessibility {
+          label: _("RST Received");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow spotter_comments {
+        title: _("Spotter Comments");
+        accessibility {
+          label: _("Spotter Comments");
+          role-description: _("text entry");
+        }
       }
     }
 
-    Button submit_button {
-      label: _("Add Spot");
-      styles ["suggested-action"]
-      accessibility {
+    Box {
+      orientation: horizontal;
+      halign: end;
+      spacing: 6;
+      margin-bottom: 12;
+
+      Button cancel_button {
+        label: _("Cancel");
+        accessibility {
+          label: _("Cancel");
+          role-description: _("button");
+        }
+      }
+
+      Button submit_button {
         label: _("Add Spot");
-        role-description: _("button");
+        styles ["suggested-action"]
+        accessibility {
+          label: _("Add Spot");
+          role-description: _("button");
+        }
       }
     }
   }

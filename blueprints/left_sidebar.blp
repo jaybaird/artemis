@@ -23,22 +23,12 @@ using Adw 1;
 
 template $LeftSidebar : Box {
   orientation: vertical;
-  margin-top: 12;
-  margin-bottom: 12;
-  margin-start: 12;
-  margin-end: 6;
-
-  styles ["card"]
 
   Adw.Bin {
     vexpand: true;
 
     Box {
       orientation: vertical;
-      margin-top: 8;
-      margin-bottom: 8;
-      margin-start: 8;
-      margin-end: 8;
       spacing: 2;
 
       Label {
@@ -60,11 +50,6 @@ template $LeftSidebar : Box {
 
   Box {
     orientation: vertical;
-    margin-top: 8;
-    margin-bottom: 8;
-    margin-start: 8;
-    margin-end: 8;
-    spacing: 8;
 
     Label {
       label: _("Mode");
@@ -99,11 +84,6 @@ template $LeftSidebar : Box {
 
   Box {
     orientation: vertical;
-    margin-top: 8;
-    margin-bottom: 8;
-    margin-start: 8;
-    margin-end: 8;
-    spacing: 8;
 
     Label {
       label: _("Radio");
@@ -115,8 +95,6 @@ template $LeftSidebar : Box {
     Box {
       orientation: vertical;
       spacing: 6;
-      margin-start: 8;
-      margin-end: 8;
 
       Label radio_vfo {
         hexpand: true;

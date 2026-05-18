@@ -21,117 +21,81 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $AstronomyWindow : Window {
+template $AstronomyWindow : Adw.Window {
   title: _("Solar Conditions");
-  default-width: 720;
+  default-width: 900;
   default-height: 840;
 
-  ScrolledWindow {
-    hscrollbar-policy: never;
-    hexpand: true;
-    vexpand: true;
-
-    child: Box {
-      orientation: vertical;
-      spacing: 24;
-      margin-top: 24;
-      margin-bottom: 24;
-      margin-start: 12;
-      margin-end: 12;
-
-    Box {
-      orientation: vertical;
-      spacing: 8;
-
-      Label freshness_label {
-        halign: start;
-        wrap: true;
-        xalign: 0.0;
-        styles ["title-2"]
-      }
-
-      Label updated_label {
-        halign: start;
-        wrap: true;
-        xalign: 0.0;
-        styles ["dim-label"]
-      }
-
-      Label error_label {
-        halign: start;
-        wrap: true;
-        xalign: 0.0;
-        visible: false;
-        styles ["error"]
-      }
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("Solar Conditions");
+      };
     }
 
-    Adw.PreferencesGroup {
-      title: _("Primary Indicators");
-      Gtk.ListBox primary_list {
-        selection-mode: none;
-        styles ["boxed-list"]
-      }
-    }
+    content: ScrolledWindow {
+      hscrollbar-policy: never;
+      hexpand: true;
+      vexpand: true;
 
-    Adw.PreferencesGroup {
-      title: _("Geomagnetic Indicators");
-      Gtk.ListBox geomagnetic_list {
-        selection-mode: none;
-        styles ["boxed-list"]
-      }
-    }
-
-    Adw.PreferencesGroup {
-      title: _("HF Conditions");
-      Gtk.ListBox hf_list {
-        selection-mode: none;
-        styles ["boxed-list"]
-      }
-    }
-
-    Adw.PreferencesGroup {
-      title: _("VHF / E-Skip");
-      Gtk.ListBox vhf_list {
-        selection-mode: none;
-        styles ["boxed-list"]
-      }
-    }
-
-    Adw.PreferencesGroup {
-      title: _("Kp History");
-      Box kp_history_box {
+      child: Box {
         orientation: vertical;
-        spacing: 12;
-        margin-top: 6;
-        margin-bottom: 6;
+        spacing: 24;
+        margin-bottom: 24;
         margin-start: 12;
         margin-end: 12;
 
-        DrawingArea kp_chart {
-          content-width: 640;
-          content-height: 180;
-          hexpand: true;
-          vexpand: false;
+        Adw.Bin {
+          Label error_label {
+            halign: start;
+            wrap: true;
+            xalign: 0.0;
+            visible: false;
+            styles ["error"]
+          }
         }
 
-        Label kp_history_hint {
-          halign: start;
-          xalign: 0.0;
-          label: _("Last 24 hours of NOAA planetary K-index observations.");
+        Adw.PreferencesGroup {
+          title: _("Propagation Overview");
+
+          Adw.Bin {
+            margin-top: 4;
+            margin-bottom: 4;
+            margin-start: 6;
+            margin-end: 6;
+
+            Picture propagation_picture {
+              hexpand: true;
+              vexpand: false;
+              width-request: -1;
+              height-request: 220;
+              content-fit: contain;
+              accessibility {
+                label: _("Propagation from HamQSL");
+                role-description: _("propagation image");
+              }
+            }
+          }
+        }
+
+        Adw.PreferencesGroup {
+          title: _("NOAA Alerts");
+          Gtk.ListBox alerts_list {
+            selection-mode: none;
+            styles ["boxed-list"]
+          }
+        }
+
+        Label updated_label {
+          halign: center;
+          justify: center;
           wrap: true;
-          styles ["caption"]
+          xalign: 0.5;
+          margin-top: 4;
+          styles ["caption", "dim-label"]
         }
-      }
-    }
-
-      Adw.PreferencesGroup {
-        title: _("NOAA Alerts");
-        Gtk.ListBox alerts_list {
-          selection-mode: none;
-          styles ["boxed-list"]
-        }
-      }
+      };
     };
   }
 }

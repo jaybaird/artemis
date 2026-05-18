@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 1,
+  "sections": [
+    {
+      "id": "getting-started",
+      "title": "Getting Started",
+      "articles": [
+        {
+          "id": "what-is-artemis",
+          "title": "What is Artemis?",
+          "summary": "Artemis is a desktop app for tracking, filtering, mapping, and working live Parks on the Air spots.",
+          "icon": null,
+          "badge": "Start Here",
+          "paragraphs": [
+            "Artemis brings current POTA spots, map context, station tools, and local hunting history into one GTK desktop app.",
+            "The main window is organized around the active hunter workflow. Start in Cards or List to scan the feed, switch to Map when geography matters, and use the inspector to review park, activator, weather, and operating details before you act.",
+            "Optional integrations such as radio CAT control, WSJT-X listening, and QRZ logging can automate parts of your session without replacing the tools you already use."
+          ],
+          "keywords": [
+            "overview",
+            "introduction",
+            "spots",
+            "map",
+            "artemis"
+          ]
+        },
+        {
+          "id": "first-setup",
+          "title": "What should I configure first?",
+          "summary": "Set your callsign and location first, then review update, radio, WSJT-X, and QRZ settings as needed.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Preferences and start with your callsign and location. Your callsign is required for posting spots and QRZ logging, and your location enables distance and bearing calculations in the inspector.",
+            "Next, review the refresh interval and any spot filters you want Artemis to use by default when it starts.",
+            "If you use external tools, this is also the right time to configure radio control, WSJT-X listening, and QRZ upload."
+          ],
+          "keywords": [
+            "setup",
+            "preferences",
+            "callsign",
+            "location",
+            "radio",
+            "wsjt-x"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spots-and-filters",
+      "title": "Spots and Filters",
+      "articles": [
+        {
+          "id": "views-and-filters",
+          "title": "How do I work with the spots views?",
+          "summary": "Use the sidebar, search field, and Cards, List, or Map views together to narrow the live feed quickly.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "The sidebar lets you filter by band, mode, and program. The search box filters visible spots by callsign or park details.",
+            "Cards is the default scanning view, List gives you a compact tabular pass over the feed, and Map helps when distance and location matter more than row density.",
+            "Pause updates when you want the visible set of spots to stop changing while you inspect or log a contact."
+          ],
+          "keywords": [
+            "cards",
+            "list",
+            "map",
+            "search",
+            "filters",
+            "sidebar"
+          ]
+        },
+        {
+          "id": "spot-badges",
+          "title": "What do the spot badges mean?",
+          "summary": "Badges indicate whether a park is new, already hunted today, a new band for you, or recently heard via WSJT-X.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Artemis uses badges so you can judge a spot at a glance without opening the inspector every time.",
+            "A new park badge means you have not logged that park locally yet. Hunted today means you already worked it on the current UTC day. New band means you have worked the park before, but not on the displayed band.",
+            "If WSJT-X recently decoded the activator, Artemis can mark the spot so you know it has been heard locally through your digital setup."
+          ],
+          "keywords": [
+            "badges",
+            "new park",
+            "hunted today",
+            "new band",
+            "heard"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map-and-inspector",
+      "title": "Map and Inspector",
+      "articles": [
+        {
+          "id": "inspector-details",
+          "title": "What does the inspector show?",
+          "summary": "The inspector expands a selected spot into park, activator, weather, location, and spotting context.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "When you select a spot, the inspector shows frequency, mode, spot count, location, weather, map coordinates, distance, bearing, and sunrise or moonrise context when the park has usable coordinates.",
+            "The inspector also exposes park history links and activator profile details when that data is available.",
+            "Use the dock button in the header bar if you want to hide the inspector temporarily and give more room to the main spot views."
+          ],
+          "keywords": [
+            "inspector",
+            "detail",
+            "weather",
+            "distance",
+            "bearing",
+            "history"
+          ]
+        },
+        {
+          "id": "map-view",
+          "title": "When should I use Map view?",
+          "summary": "Map view is useful when distance, location clustering, or directional context matters more than a compact list.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Switch to Map view when you want to understand where an activation is relative to your QTH or compare several nearby parks at once.",
+            "Map view works best for parks that include coordinates or grid data that Artemis can translate into map positions.",
+            "The inspector stays useful in Map view, since it turns the selected marker back into a full operating summary."
+          ],
+          "keywords": [
+            "map",
+            "markers",
+            "location",
+            "distance",
+            "grid"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spotting-and-logging",
+      "title": "Spotting and Logging",
+      "articles": [
+        {
+          "id": "posting-spots",
+          "title": "How do I add or re-spot an activation?",
+          "summary": "Use Add Spot to create a spot manually or re-open the form from an existing spot to post a quicker follow-up.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Choose Add Spot from the header bar to post a manual spot. Artemis fills in the right fields when you start from an existing spot and use the re-spot path.",
+            "Your configured callsign is required before posting is enabled.",
+            "Successful spot posts also feed Artemis local logging and can trigger optional downstream integrations such as QRZ upload."
+          ],
+          "keywords": [
+            "add spot",
+            "re-spot",
+            "spotting",
+            "callsign"
+          ]
+        },
+        {
+          "id": "local-logging",
+          "title": "How does logging work?",
+          "summary": "Artemis keeps local QSO and hunted-park history and can extend that workflow to QRZ and WSJT-X automation.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Artemis stores local QSO records and uses them to determine whether a park is new, already hunted today, or worked on a given band.",
+            "If WSJT-X logs a matching POTA QSO, Artemis can use that information to update local hunting history automatically.",
+            "If QRZ upload is enabled, Artemis can also serialize the logged contact as ADIF and send it to QRZ Logbook."
+          ],
+          "keywords": [
+            "logging",
+            "qso",
+            "history",
+            "qrz",
+            "adif",
+            "wsjt-x"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "integrations",
+      "title": "Integrations",
+      "articles": [
+        {
+          "id": "radio-control",
+          "title": "What does radio control do?",
+          "summary": "Radio CAT control lets Artemis show your current radio state and tune directly to selected spots.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "If your radio is configured through Hamlib, Artemis can connect to it, show the current frequency and mode, and tune to a selected spot from the main window or inspector.",
+            "The power button in the sidebar controls the CAT connection state. Artemis updates the sidebar status as the rig connects, disconnects, or reports an error.",
+            "Radio control is optional. Artemis still works as a spot browser and logger without it."
+          ],
+          "keywords": [
+            "radio",
+            "cat",
+            "hamlib",
+            "tune"
+          ]
+        },
+        {
+          "id": "wsjtx-help",
+          "title": "What does WSJT-X integration do?",
+          "summary": "WSJT-X integration tracks recent decodes and can help Artemis recognize active digital POTA contacts.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "When enabled, Artemis listens for WSJT-X UDP traffic and tracks recently decoded callsigns.",
+            "That lets Artemis highlight spots you have actually heard and can also support automatic local logging when WSJT-X logs a matching POTA QSO.",
+            "If the connection never appears, confirm that Artemis and WSJT-X are using the same address and port."
+          ],
+          "keywords": [
+            "wsjt-x",
+            "ft8",
+            "ft4",
+            "udp",
+            "decode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "troubleshooting",
+      "title": "Troubleshooting",
+      "articles": [
+        {
+          "id": "spots-not-loading",
+          "title": "Why aren't spots loading?",
+          "summary": "Check network connectivity first, then force a refresh or relaunch the app if the live feed stays empty.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "If the spot views stay empty, first confirm the machine has working network access and that the POTA feed is reachable.",
+            "Use Refresh from the application menu or the keyboard shortcut to force a manual reload.",
+            "If the problem persists, restart Artemis to reset its live fetch cycle and clear transient network state."
+          ],
+          "keywords": [
+            "empty",
+            "refresh",
+            "network",
+            "spots"
+          ]
+        },
+        {
+          "id": "where-to-get-help",
+          "title": "Where can I get more help?",
+          "summary": "Start with this help window, then use the project links in About Artemis if you need more context.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Use the Artemis Help window to browse setup, workflow, and troubleshooting topics without leaving the app.",
+            "If you still need more context, open About Artemis for project metadata and links that are shipped with the application.",
+            "When reporting an issue, include the feature you were using and any visible error text so the problem can be traced more quickly."
+          ],
+          "keywords": [
+            "help",
+            "support",
+            "about",
+            "issues"
+          ]
+        }
+      ]
+    }
+  ]
+}

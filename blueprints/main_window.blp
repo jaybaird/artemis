@@ -21,140 +21,151 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $AppWindow : Window {
+template $AppWindow : Adw.ApplicationWindow {
   title: _("Artemis");
   default-width: 1280;
   default-height: 720;
 
-  [titlebar]
-  Adw.HeaderBar {
-    title-widget: Adw.ViewSwitcher {
-      halign: center;
-      stack: views;
-      policy: wide;
-    };
+  Adw.ToastOverlay toast_overlay {
+    child: Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        title-widget: Adw.ViewSwitcher {
+          halign: center;
+          stack: views;
+          policy: wide;
+        };
 
-    Button add_spot {
-      icon-name: "list-add-symbolic";
-      tooltip-text: _("Add Spot");
-      clicked => $on_add_button_clicked();
-      accessibility {
-        label: _("Add Spot");
-        role-description: _("button");
-      }
-    }
+        Button add_spot {
+          icon-name: "list-add-symbolic";
+          tooltip-text: _("Add Spot");
+          clicked => $on_add_button_clicked();
+          accessibility {
+            label: _("Add Spot");
+            role-description: _("button");
+          }
+        }
 
-    Button astronomy_button {
-      icon-name: "sun-outline-symbolic";
-      tooltip-text: _("Astronomy");
-      clicked => $on_astronomy_button_clicked();
-      accessibility {
-        label: _("Astronomy");
-        role-description: _("button");
-      }
-    }
+        Button astronomy_button {
+          icon-name: "sun-outline-symbolic";
+          tooltip-text: _("Astronomy");
+          clicked => $on_astronomy_button_clicked();
+          accessibility {
+            label: _("Astronomy");
+            role-description: _("button");
+          }
+        }
 
-    ToggleButton refresh_toggle {
-      icon-name: "media-playback-pause-symbolic";
-      tooltip-text: _("Pause");
-      accessibility {
-        label: _("Pause Updates");
-        role-description: _("toggle button");
-      }
-    }
+        ToggleButton refresh_toggle {
+          icon-name: "media-playback-pause-symbolic";
+          tooltip-text: _("Pause");
+          accessibility {
+            label: _("Pause Updates");
+            role-description: _("toggle button");
+          }
+        }
 
-    [end]
-    Box {
-      orientation: horizontal;
-      spacing: 4;
+        [end]
+        Box {
+          orientation: horizontal;
+          spacing: 4;
 
-      SearchEntry search_entry {
-        width-request: 250;
-        input-hints: no_spellcheck;
-        placeholder-text: _("Search for Park or Callsign");
-        accessibility {
-          label: _("Search for Park or Callsign");
-          role-description: _("search entry");
+          ToggleButton sidebar_toggle {
+            icon-name: "sidebar-show-symbolic";
+            tooltip-text: _("Hide Sidebar");
+            active: true;
+            accessibility {
+              label: _("Show Sidebar");
+              role-description: _("toggle button");
+            }
+          }
+
+          SearchEntry search_entry {
+            width-request: 250;
+            input-hints: no_spellcheck;
+            placeholder-text: _("Search for Park or Callsign");
+            accessibility {
+              label: _("Search for Park or Callsign");
+              role-description: _("search entry");
+            }
+          }
+
+          ToggleButton inspector_toggle {
+            icon-name: "dock-right-symbolic";
+            tooltip-text: _("Show Inspector");
+            active: true;
+            accessibility {
+              label: _("Show Inspector");
+              role-description: _("toggle button");
+            }
+          }
+
+          MenuButton button_menu {
+            menu-model: menu_app;
+            icon-name: "open-menu-symbolic";
+            accessibility {
+              label: _("Application Menu");
+              role-description: _("menu button");
+            }
+          }
         }
       }
 
-      ToggleButton inspector_toggle {
-        icon-name: "dock-right-symbolic";
-        tooltip-text: _("Show Inspector");
-        active: true;
-        accessibility {
-          label: _("Show Inspector");
-          role-description: _("toggle button");
-        }
-      }
+      content: Adw.OverlaySplitView sidebar_split {
+        show-sidebar: true;
+        enable-show-gesture: true;
+        enable-hide-gesture: true;
+        min-sidebar-width: 220;
+        max-sidebar-width: 260;
+        sidebar-width-fraction: 0.2;
+        sidebar-width-unit: sp;
+        sidebar-position: start;
 
-      MenuButton button_menu {
-        menu-model: menu_app;
-        icon-name: "open-menu-symbolic";
-        accessibility {
-          label: _("Application Menu");
-          role-description: _("menu button");
-        }
-      }
-    }
-  }
+        content: Adw.OverlaySplitView inspector_split {
+          show-sidebar: true;
+          enable-show-gesture: true;
+          enable-hide-gesture: true;
+          min-sidebar-width: 320;
+          max-sidebar-width: 360;
+          sidebar-width-fraction: 0.28;
+          sidebar-width-unit: sp;
+          sidebar-position: end;
 
-  Adw.Bin {
-    Paned {
-      orientation: horizontal;
-      hexpand: true;
-      vexpand: true;
-      resize-start-child: false;
-      resize-end-child: true;
-
-      start-child: $LeftSidebar left_sidebar {
-        width-request: 220;
-      };
-
-      end-child: Paned content_paned {
-        orientation: horizontal;
-        resize-start-child: true;
-        resize-end-child: false;
-        shrink-end-child: false;
-
-        start-child: Overlay {
-          hexpand: true;
-          vexpand: true;
-
-          child: Box {
-            orientation: vertical;
+          content: Adw.ToolbarView {
             hexpand: true;
-            margin-top: 12;
-            margin-start: 12;
-            margin-end: 12;
+            vexpand: true;
 
-              Adw.ViewStack views {
-              vexpand: true;
+            content: Adw.Bin {
+              hexpand: true;
 
-              Adw.ViewStackPage {
-                title: _("Cards");
-                icon-name: "grid-filled-symbolic";
+              child: Adw.ViewStack views {
+                vexpand: true;
 
-                child: Box {
-                  orientation: vertical;
+                Adw.ViewStackPage {
+                  title: _("Cards");
+                  icon-name: "grid-filled-symbolic";
 
-                  Overlay {
-                    hexpand: true;
-                    vexpand: true;
+                  child: Adw.Bin {
+                    margin-top: 12;
+                    margin-start: 12;
+                    margin-end: 12;
 
-                    child:
-                      Box root {
-                        orientation: vertical;
+                    Overlay {
+                      hexpand: true;
+                      vexpand: true;
 
-                        Adw.ViewStack band_stack {
-                          enable-transitions: true;
-                          hexpand: true;
-                          vexpand: true;
-                        }
-                      };
+                      child:
+                        Adw.Bin root {
+
+                          Adw.ViewStack band_stack {
+                            enable-transitions: true;
+                            hexpand: true;
+                            vexpand: true;
+                          }
+                        };
 
                       [overlay]
-                      Box loading_spinner {
+                      Adw.Bin loading_spinner {
                         halign: center;
                         valign: center;
                         visible: false;
@@ -164,49 +175,60 @@ template $AppWindow : Window {
                           height-request: 64;
                         }
                       }
-                  }
-                };
-              }
+                    }
+                  };
+                }
 
-              Adw.ViewStackPage {
-                title: _("List");
-                icon-name: "view-list-symbolic";
+                Adw.ViewStackPage {
+                  title: _("List");
+                  icon-name: "view-list-symbolic";
 
-                child: Box list_container {
-                  orientation: vertical;
-                  styles ["card"]
-                };
-              }
+                  child: Box list_container {
+                    margin-top: 12;
+                    margin-start: 12;
+                    margin-end: 12;
+                    orientation: vertical;
+                    styles ["card"]
+                  };
+                }
 
-              Adw.ViewStackPage {
-                title: _("Map");
-                icon-name: "map-symbolic";
+                Adw.ViewStackPage {
+                  title: _("Map");
+                  icon-name: "map-symbolic";
 
-                child: Box map_container {
-                  orientation: vertical;
-                  styles ["card"]
-                };
-              }
+                  child: Adw.Bin {
+                    margin-top: 12;
+                    margin-start: 12;
+                    margin-end: 12;
+
+                    child: Box map_container {
+                      orientation: vertical;
+                      styles ["card", "map-card"]
+                    };
+                  };
+                }
+              };
+            };
+
+            [bottom]
+            $StatusBar status_bar {
+              hexpand: true;
+              margin-top: 0;
+              margin-bottom: 0;
             }
           };
 
-          [overlay]
-          $StatusBar status_bar {
-            valign: end;
-            halign: fill;
-            hexpand: true;
-            margin-start: 28;
-            margin-end: 28;
-            margin-bottom: 12;
-          }
+          sidebar: $SpotDetail spot_detail {
+            width-request: 360;
+            hexpand: false;
+          };
         };
 
-        end-child: $SpotDetail spot_detail {
-          width-request: 360;
-          hexpand: false;
+        sidebar: $LeftSidebar left_sidebar {
+          width-request: 220;
         };
       };
-    }
+    };
   }
 }
 
@@ -225,6 +247,11 @@ menu menu_app {
 
   section {
     item {
+      label: _("Help");
+      action: "app.help";
+    }
+
+    item {
       label: _("Preferences");
       action: "app.preferences";
     }
@@ -233,11 +260,6 @@ menu menu_app {
     item {
       label: _("About Artemis");
       action: "app.about";
-    }
-
-    item {
-      label: _("Quit");
-      action: "app.quit";
     }
   }
 }
