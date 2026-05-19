@@ -23,7 +23,6 @@ using Gee;
 namespace Artemis.Wsjtx {
     public sealed class WsjtxSession : Object {
         private const uint PACKET_STALE_SECONDS = 30;
-        private const int64 CQ_POTA_TRACK_WINDOW_USEC = 30 * GLib.TimeSpan.MINUTE;
 
         private WsjtxListener? listener;
         private uint stale_timeout_id = 0;
@@ -31,7 +30,8 @@ namespace Artemis.Wsjtx {
         private string last_instance_id = "";
         private uint32 last_schema = 0;
         private string last_error_message = "";
-        private HashMap<string, int64?> recent_cq_pota_calls = new HashMap<string, int64?> ();
+        private string last_highlighted_callsign = "";
+        private string last_selected_tx_callsign = "";
         private HashSet<string> processed_logged_adif_keys = new HashSet<string> ();
 
         public bool listening { get; private set; default = false; }
@@ -158,6 +158,8 @@ namespace Artemis.Wsjtx {
             last_sender = "";
             last_instance_id = "";
             last_error_message = "";
+            last_highlighted_callsign = "";
+            last_selected_tx_callsign = "";
         }
 
         private void on_packet_received (Artemis.Wsjtx.Packet packet, string sender) {
@@ -200,10 +202,11 @@ namespace Artemis.Wsjtx {
                     dx_call = status.dx_call;
                     transmitting = status.transmitting;
                     decoding = status.decoding;
+                    select_transmitting_spot_if_needed ();
                     break;
                 case MessageType.DECODE:
                     var decode = packet.get_decode ();
-                    remember_cq_pota_decode (decode);
+                    highlight_active_spot_decode (decode);
                     decode_received (decode);
                     break;
                 case MessageType.LOGGED_ADIF:
@@ -274,6 +277,46 @@ namespace Artemis.Wsjtx {
             return "%s:%d".printf (ip_text, port);
         }
 
+        private void highlight_active_spot_decode (DecodePacket decode) {
+            var spot = Application.spot_repo.get_spot_for_decode_text (decode.text);
+            if (spot == null)
+                return;
+
+            var callsign = spot.callsign.strip ().up ();
+            if (callsign == "" || callsign == last_highlighted_callsign)
+                return;
+
+            try {
+                var datagram = PacketWriter.build_highlight_callsign (
+                    last_instance_id,
+                    callsign
+                );
+                if (listener != null)
+                    listener.send_to_last_sender (datagram);
+                last_highlighted_callsign = callsign;
+            } catch (Error err) {
+                warning ("Unable to highlight %s in WSJT-X: %s", callsign, err.message);
+            }
+        }
+
+        private void select_transmitting_spot_if_needed () {
+            var callsign = dx_call.strip ().up ();
+            if (!transmitting || callsign == "") {
+                last_selected_tx_callsign = "";
+                return;
+            }
+
+            if (callsign == last_selected_tx_callsign)
+                return;
+
+            var spot = Application.spot_repo.get_spot_for_callsign (callsign);
+            if (spot == null)
+                return;
+
+            Application.current_spot_hash = spot.hash;
+            last_selected_tx_callsign = callsign;
+        }
+
         private string listener_detail (bool multicast, string ip_text, int port) {
             if (multicast) {
                 return _("Joined multicast group %s on UDP port %d.").printf (
@@ -291,7 +334,6 @@ namespace Artemis.Wsjtx {
         private struct ParsedLoggedAdif {
             public string call;
             public string station_callsign;
-            public string park_ref;
             public string mode;
             public double frequency_khz;
             public string rst_sent;
@@ -301,79 +343,41 @@ namespace Artemis.Wsjtx {
             public string dedupe_key;
         }
 
-        private void remember_cq_pota_decode (DecodePacket decode) {
-            prune_recent_cq_pota_calls ();
-
-            var callsign = parse_cq_pota_callsign (decode.text);
-            if (callsign == null)
-                return;
-
-            recent_cq_pota_calls.set (callsign, GLib.get_monotonic_time ());
-        }
-
-        private void prune_recent_cq_pota_calls () {
-            var cutoff = GLib.get_monotonic_time () - CQ_POTA_TRACK_WINDOW_USEC;
-            var expired = new HashSet<string> ();
-
-            foreach (var entry in recent_cq_pota_calls.entries) {
-                if (entry.value < cutoff)
-                    expired.add (entry.key);
-            }
-
-            foreach (var key in expired)
-                recent_cq_pota_calls.unset (key);
-        }
-
-        private string? parse_cq_pota_callsign (string decode_text) {
-            try {
-                MatchInfo match_info;
-                string[] patterns = {
-                    "^\\s*CQ\\s+POTA\\s+([A-Z0-9/]+)\\b",
-                    "^\\s*CQ\\s+([A-Z0-9/]+)\\s+POTA\\b"
-                };
-
-                foreach (var pattern in patterns) {
-                    var regex = new Regex (pattern, RegexCompileFlags.CASELESS);
-                    if (regex.match (decode_text.strip (), 0, out match_info)) {
-                        var match = match_info.fetch (1);
-                        if ((match != null) && (match.strip () != ""))
-                            return match.strip ().up ();
-                    }
-                }
-            } catch (RegexError err) {
-                warning ("Unable to parse CQ POTA decode: %s", err.message);
-            }
-
-            return null;
-        }
-
         private async void handle_logged_adif (LoggedAdifPacket packet) {
             ParsedLoggedAdif? parsed = parse_logged_adif (packet.adif);
             if (parsed == null)
                 return;
 
-            prune_recent_cq_pota_calls ();
-            if (!recent_cq_pota_calls.has_key (parsed.call.up ()))
+            var active_spot = Application.spot_repo.get_spot_for_callsign (parsed.call);
+            var park_ref = active_spot != null ? active_spot.park_ref : "";
+            var mode = parsed.mode != "" ? parsed.mode : active_spot != null ? active_spot.mode : "";
+            var frequency_khz = parsed.frequency_khz > 0.0 ?
+                parsed.frequency_khz :
+                active_spot != null ? active_spot.frequency_khz : 0.0;
+            var dedupe_key = "%s|%s|%s".printf (
+                parsed.dedupe_key,
+                park_ref,
+                mode
+            );
+
+            if (processed_logged_adif_keys.contains (dedupe_key))
                 return;
 
-            if (processed_logged_adif_keys.contains (parsed.dedupe_key))
-                return;
+            processed_logged_adif_keys.add (dedupe_key);
 
-            processed_logged_adif_keys.add (parsed.dedupe_key);
-
-            if ((parsed.park_ref == "") || (parsed.mode == "") || (parsed.frequency_khz <= 0.0) ||
+            if ((mode == "") || (frequency_khz <= 0.0) ||
                 (parsed.station_callsign == "") || (parsed.spot_time == null)) {
-                warning ("Skipping WSJT-X auto spot for %s: ADIF record missing required POTA fields",
+                warning ("Skipping WSJT-X logged QSO for %s: ADIF record missing required fields",
                     parsed.call);
                 return;
             }
 
             var spot = new Spot.from_add_spot (
                 parsed.call,
-                parsed.park_ref,
+                park_ref,
                 parsed.spot_time,
-                "%.3f".printf (parsed.frequency_khz),
-                parsed.mode,
+                "%.3f".printf (frequency_khz),
+                mode,
                 parsed.station_callsign,
                 parsed.comment,
                 parsed.rst_sent,
@@ -381,7 +385,16 @@ namespace Artemis.Wsjtx {
             );
 
             try {
-                yield Application.pota_client.post_spot (spot);
+                if (park_ref != "") {
+                    yield Application.pota_client.post_spot (
+                        parsed.call,
+                        parsed.station_callsign,
+                        park_ref,
+                        "%.3f".printf (frequency_khz),
+                        mode,
+                        parsed.comment
+                    );
+                }
 
                 Error? db_error = null;
                 Application.spot_database.add_qso_from_spot (spot, out db_error);
@@ -393,13 +406,15 @@ namespace Artemis.Wsjtx {
                 string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
                 if (enable_logging && (qrz_api_key != "")) {
                     try {
-                        yield Application.qrz_client.upload_adif_record (packet.adif);
+                        yield Application.qrz_client.upload_spot_qso (spot);
                     } catch (Error err) {
                         warning ("Unable to upload WSJT-X ADIF to QRZ: %s", err.message);
                     }
                 }
             } catch (Error err) {
-                warning ("Unable to auto spot CQ POTA contact %s: %s", parsed.call, err.message);
+                warning ("Unable to auto spot WSJT-X POTA contact %s: %s",
+                    parsed.call,
+                    err.message);
             }
         }
 
@@ -428,14 +443,6 @@ namespace Artemis.Wsjtx {
             if (call == "")
                 return null;
 
-            var sig = map_record_value (record, "SIG").up ();
-            var park_ref = first_non_empty (
-                map_record_value (record, "POTAREF"),
-                map_record_value (record, "SIG_INFO")
-            ).up ();
-            if ((sig != "") && (sig != "POTA"))
-                park_ref = "";
-
             var mode = map_record_value (record, "MODE").up ();
             var frequency_khz = parse_frequency_khz (map_record_value (record, "FREQ"));
             var station_callsign = first_non_empty (
@@ -456,7 +463,6 @@ namespace Artemis.Wsjtx {
             ParsedLoggedAdif parsed = {};
             parsed.call = call;
             parsed.station_callsign = station_callsign;
-            parsed.park_ref = park_ref;
             parsed.mode = mode;
             parsed.frequency_khz = frequency_khz;
             parsed.rst_sent = map_record_value (record, "RST_SENT");
@@ -465,7 +471,7 @@ namespace Artemis.Wsjtx {
             parsed.spot_time = parse_adif_datetime (qso_date, time_on);
             parsed.dedupe_key = "%s|%s|%s|%s".printf (
                 call,
-                park_ref,
+                "",
                 qso_date,
                 time_on
             );

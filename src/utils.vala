@@ -68,6 +68,20 @@ public static string format_frequency_khz (double frequency_khz) {
     return formatted;
 }
 
+public static int scaled_avatar_size (int base_size) {
+    var settings = Gtk.Settings.get_default ();
+    if (settings == null)
+        return base_size;
+
+    var font_desc = Pango.FontDescription.from_string (settings.gtk_font_name);
+    var font_size = font_desc.get_size ();
+    if (font_size <= 0)
+        return base_size;
+
+    var scale = (double) font_size / (10.0 * Pango.SCALE);
+    return (int) Math.round (base_size * scale);
+}
+
 public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error {
     var loader = new Gly.Loader.for_bytes (bytes);
     var image = yield loader.load_async (null);

@@ -34,6 +34,14 @@ namespace Artemis.Wsjtx {
             output.put_byte (value);
         }
 
+        public void write_i8 (int8 value) throws Error {
+            output.put_byte ((uint8) value);
+        }
+
+        public void write_u16 (uint16 value) throws Error {
+            output.put_uint16 (value);
+        }
+
         public void write_bool (bool value) throws Error {
             write_u8 (value ? (uint8) 1 : (uint8) 0);
         }
@@ -78,6 +86,20 @@ namespace Artemis.Wsjtx {
 
         public void write_qtime (WsjtxTime value) throws Error {
             write_u32 (value.msecs_since_midnight);
+        }
+
+        public void write_qcolor_rgb (
+            uint8 red,
+            uint8 green,
+            uint8 blue,
+            uint8 alpha = 255
+        ) throws Error {
+            write_i8 (1);
+            write_u16 ((uint16) alpha * 257);
+            write_u16 ((uint16) red * 257);
+            write_u16 ((uint16) green * 257);
+            write_u16 ((uint16) blue * 257);
+            write_u16 (0);
         }
 
         public void write_header (
@@ -179,6 +201,21 @@ namespace Artemis.Wsjtx {
             writer.write_header (MessageType.CLEAR, id, schema);
             if (include_window)
                 writer.write_u8 (window);
+            return writer.finish ();
+        }
+
+        public static uint8[] build_highlight_callsign (
+            string id,
+            string callsign,
+            bool highlight_last = true,
+            uint32 schema = MAX_SCHEMA
+        ) throws Error {
+            var writer = new PacketWriter ();
+            writer.write_header (MessageType.HIGHLIGHT_CALLSIGN, id, schema);
+            writer.write_utf8 (callsign);
+            writer.write_qcolor_rgb (46, 160, 67);
+            writer.write_qcolor_rgb (255, 255, 255);
+            writer.write_bool (highlight_last);
             return writer.finish ();
         }
     }

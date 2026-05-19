@@ -25,6 +25,8 @@ template $AppWindow : Adw.ApplicationWindow {
   title: _("Artemis");
   default-width: 1280;
   default-height: 720;
+  width-request: 360;
+  height-request: 480;
 
   Adw.OverlaySplitView sidebar_split {
     collapsed: false;
@@ -54,176 +56,191 @@ template $AppWindow : Adw.ApplicationWindow {
       sidebar-position: end;
 
       [content] 
-      Adw.ToolbarView {
-        [top]
-        Adw.HeaderBar {
-          title-widget: Adw.ViewSwitcher {
-            halign: center;
-            stack: views;
-            policy: wide;
-          };
+      Adw.BreakpointBin {
+        width-request: 360;
+        height-request: 480;
 
-          [start]
-          Box {
-            orientation: horizontal;
-            spacing: 4;
+        Adw.Breakpoint {
+          condition ("max-width: 550sp")
+          setters {
+            switcher_bar.reveal: true;
+            main_header.title-widget: null;
+          }
+        }
 
-            Button astronomy_button {
-              icon-name: "sun-outline-symbolic";
-              tooltip-text: _("Astronomy");
-              accessibility {
-                label: _("Astronomy");
-                role-description: _("button");
+        child: Adw.ToolbarView {
+          extend-content-to-top-edge: true;
+
+          [top]
+          Adw.HeaderBar main_header {
+            show-start-title-buttons: true;
+            show-end-title-buttons: true;
+
+            title-widget: Adw.ViewSwitcher {
+              halign: center;
+              stack: views;
+              policy: wide;
+            };
+
+            [start]
+            Box {
+              orientation: horizontal;
+              spacing: 4;
+
+              Adw.Clamp collapsed_sidebar_controls {
+                maximum-size: 96;
+                visible: false;
+
+                Box {
+                  orientation: horizontal;
+                  spacing: 4;
+
+                  Button header_add_spot_button {
+                    icon-name: "list-add-symbolic";
+                    tooltip-text: _("Add Spot");
+                    accessibility {
+                      label: _("Add Spot");
+                      role-description: _("button");
+                    }
+                  }
+
+                  ToggleButton sidebar_toggle {
+                    icon-name: "sidebar-show-symbolic";
+                    tooltip-text: _("Hide Sidebar");
+                    active: true;
+                    accessibility {
+                      label: _("Show Sidebar");
+                      role-description: _("toggle button");
+                    }
+                  }
+                }
+              }
+
+              Button astronomy_button {
+                icon-name: "sun-outline-symbolic";
+                tooltip-text: _("Astronomy");
+                accessibility {
+                  label: _("Astronomy");
+                  role-description: _("button");
+                }
+              }
+
+              ToggleButton refresh_toggle {
+                icon-name: "media-playback-pause-symbolic";
+                tooltip-text: _("Pause");
+                accessibility {
+                  label: _("Pause Updates");
+                  role-description: _("toggle button");
+                }
               }
             }
 
-            ToggleButton refresh_toggle {
-              icon-name: "media-playback-pause-symbolic";
-              tooltip-text: _("Pause");
-              accessibility {
-                label: _("Pause Updates");
-                role-description: _("toggle button");
+            [end]
+            Box {
+              orientation: horizontal;
+              spacing: 4;
+
+              ToggleButton search_button {
+                icon-name: "edit-find-symbolic";
+                tooltip-text: _("Search");
+                accessibility {
+                  label: _("Search");
+                  role-description: _("toggle button");
+                }
+              }
+
+              ToggleButton inspector_toggle {
+                icon-name: "dock-right-symbolic";
+                tooltip-text: _("Show Inspector");
+                active: true;
+                accessibility {
+                  label: _("Show Inspector");
+                  role-description: _("toggle button");
+                }
+              }
+
+              MenuButton button_menu {
+                menu-model: menu_app;
+                icon-name: "open-menu-symbolic";
+                accessibility {
+                  label: _("Application Menu");
+                  role-description: _("menu button");
+                }
               }
             }
           }
 
-          [end]
-          Box {
-            orientation: horizontal;
-            spacing: 4;
-
-            ToggleButton sidebar_toggle {
-              icon-name: "sidebar-show-symbolic";
-              tooltip-text: _("Hide Sidebar");
-              active: true;
-              accessibility {
-                label: _("Show Sidebar");
-                role-description: _("toggle button");
-              }
-            }
-
+          [top]
+          SearchBar search_bar {
             SearchEntry search_entry {
-              width-request: 250;
+              hexpand: true;
               input-hints: no_spellcheck;
               placeholder-text: _("Search for Park or Callsign");
+              styles ["overlay-search-entry"]
               accessibility {
                 label: _("Search for Park or Callsign");
                 role-description: _("search entry");
               }
             }
-
-            ToggleButton inspector_toggle {
-              icon-name: "dock-right-symbolic";
-              tooltip-text: _("Show Inspector");
-              active: true;
-              accessibility {
-                label: _("Show Inspector");
-                role-description: _("toggle button");
-              }
-            }
-
-            MenuButton button_menu {
-              menu-model: menu_app;
-              icon-name: "open-menu-symbolic";
-              accessibility {
-                label: _("Application Menu");
-                role-description: _("menu button");
-              }
-            }
           }
-        }
+     
+          content: Adw.ToastOverlay toast_overlay {
 
-        [content]
-        Adw.ToastOverlay toast_overlay {
-          width-request: 800;
-          hexpand: true;
-          vexpand: true;
-          
-          Adw.ViewStack views {
-            enable-transitions: true;
-            
-            Adw.ViewStackPage {
-              title: _("Cards");
-              icon-name: "grid-filled-symbolic";
+            Adw.ViewStack views {
+              Adw.ViewStackPage {
+                name: "cards";
+                title: _("Cards");
+                icon-name: "grid-filled-symbolic";
 
-              child: Adw.Bin {
-                hexpand: true;
-                vexpand: true;
-                margin-top: 12;
-                margin-start: 12;
-                margin-end: 12;
-
-                Overlay {
+                child: $BandView band_view {
                   hexpand: true;
                   vexpand: true;
+                  margin-top: 48;
+                  margin-start: 12;
+                  margin-end: 12;
+                };
+              }
 
-                  child:
-                    Adw.Bin root {
-                      hexpand: true;
-                      vexpand: true;
-                      Adw.ViewStack band_stack {
-                        enable-transitions: true;
-                        hexpand: true;
-                        vexpand: true;
-                      }
-                    };
+              Adw.ViewStackPage {
+                name: "list";
+                title: _("List");
+                icon-name: "view-list-symbolic";
 
-                  [overlay]
-                  Adw.Bin loading_spinner {
-                    halign: center;
-                    valign: center;
-                    visible: false;
-
-                    Adw.Spinner {
-                      width-request: 64;
-                      height-request: 64;
-                    }
-                  }
-                }
-              };
-            }
-
-            Adw.ViewStackPage {
-              title: _("List");
-              icon-name: "view-list-symbolic";
-
-              child: Box list_container {
-                hexpand: true;
-                vexpand: true;
-                margin-top: 12;
-                margin-start: 12;
-                margin-end: 12;
-                styles ["card"]
-              };
-            }
-
-            Adw.ViewStackPage {
-              title: _("Map");
-              icon-name: "map-symbolic";
-
-              child: Adw.Bin {
-                hexpand: true;
-                vexpand: true;
-                margin-top: 12;
-                margin-start: 12;
-                margin-end: 12;
-
-                Box map_container {
+                child: Box list_container {
                   hexpand: true;
                   vexpand: true;
-                  styles ["card", "map-card"]
-                }
-              };
-            }
-          }
-        }
+                  margin-top: 48;
+                  margin-start: 12;
+                  margin-end: 12;
+                };
+              }
 
-        [bottom]
-        $StatusBar status_bar {
-          hexpand: true;
-          margin-top: 0;
-          margin-bottom: 0;
-        }
+              Adw.ViewStackPage {
+                name: "map";
+                title: _("Map");
+                icon-name: "map-symbolic";
+
+                child: Box map_container {
+                  hexpand: true;
+                  vexpand: true;
+                };
+              }
+            }
+          };
+
+          [bottom]
+          $StatusBar status_bar {
+            hexpand: true;
+            margin-top: 0;
+            margin-bottom: 0;
+          }
+
+          [bottom]
+          Adw.ViewSwitcherBar switcher_bar {
+            stack: views;
+            reveal: false;
+          }
+        };
       }
 
       [sidebar]
@@ -252,6 +269,11 @@ menu menu_app {
     item {
       label: _("Help");
       action: "app.help";
+    }
+
+    item {
+      label: _("Keyboard Shortcuts");
+      action: "app.shortcuts";
     }
 
     item {

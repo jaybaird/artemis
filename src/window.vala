@@ -27,13 +27,25 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private unowned Adw.ToastOverlay toast_overlay;
 
     [GtkChild]
-    public unowned Adw.ViewStack band_stack;
+    private unowned BandView band_view;
 
-    [GtkChild]
-    public unowned Gtk.Widget loading_spinner;
+    //[GtkChild]
+    //public unowned Gtk.Widget loading_spinner;
 
     [GtkChild]
     public unowned Gtk.SearchEntry search_entry;
+
+    [GtkChild]
+    private unowned Gtk.SearchBar search_bar;
+
+    [GtkChild]
+    private unowned Gtk.ToggleButton search_button;
+
+    [GtkChild]
+    private unowned Adw.ViewStack views;
+
+    [GtkChild]
+    private unowned Adw.HeaderBar main_header;
 
     [GtkChild]
     public unowned Gtk.Box map_container;
@@ -46,6 +58,12 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
     [GtkChild]
     private unowned Gtk.ToggleButton refresh_toggle;
+
+    [GtkChild]
+    private unowned Adw.Clamp collapsed_sidebar_controls;
+
+    [GtkChild]
+    private unowned Gtk.Button header_add_spot_button;
 
     [GtkChild]
     private unowned Adw.OverlaySplitView sidebar_split;
@@ -73,7 +91,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
     private uint current_ticks = 0;
     private bool update_paused = false;
-    private ArrayList<Adw.ViewStackPage> band_pages;
     private MapView map_view;
     private SpotListView list_view;
     private bool radio_connect_inflight = false;
@@ -85,14 +102,31 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private ulong radio_error_handler = 0;
     private bool syncing_inspector_toggle = false;
     private bool restoring_window_state = false;
+    private Adw.TimedAnimation? search_margin_animation = null;
 
     private static Gee.HashSet<string> active_error_keys;
+    private const int CONTENT_TOP_MARGIN = 48;
+    private const int SEARCH_TOP_MARGIN = 96;
+    private const uint SEARCH_MARGIN_ANIMATION_DURATION = 250;
 
     public AppWindow (Gtk.Application app) {
         Object (application: app);
     }
 
     construct {
+        var toggle_sidebar_action = new SimpleAction ("toggle-sidebar", null);
+        toggle_sidebar_action.activate.connect (() => {
+            set_sidebar_visible (!sidebar_split.show_sidebar);
+        });
+        add_action (toggle_sidebar_action);
+
+        var search_action = new SimpleAction ("search", null);
+        search_action.activate.connect (() => {
+            search_bar.search_mode_enabled = true;
+            search_entry.grab_focus ();
+        });
+        add_action (search_action);
+
         restore_window_state ();
 
         active_error_keys = new Gee.HashSet<string> ();
@@ -103,6 +137,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
         astronomy_button.clicked.connect (on_astronomy_button_clicked);
         refresh_toggle.clicked.connect (on_refresh_button_clicked);
+        header_add_spot_button.clicked.connect (on_add_button_clicked);
 
         left_sidebar.add_requested.connect (on_add_button_clicked);
         left_sidebar.sidebar_visibility_changed.connect ((visible) => {
@@ -119,9 +154,15 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
         astronomy_window = null;
 
-        search_entry.set_key_capture_widget (this);
-
-        band_pages = new ArrayList<Adw.ViewStackPage> ();
+        search_bar.set_key_capture_widget (this);
+        search_bar.bind_property (
+            "search-mode-enabled",
+            search_button,
+            "active",
+            BindingFlags.BIDIRECTIONAL | BindingFlags.SYNC_CREATE
+        );
+        search_bar.notify["search-mode-enabled"].connect (animate_search_content_margins);
+        views.notify["visible-child-name"].connect (update_detail_action_buttons);
 
         Application.settings.changed["update-interval"].connect (() => {
             setup_spot_updates ();
@@ -132,7 +173,8 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
 
         search_entry.search_changed.connect (() => {
-            Application.current_search_text = search_entry.text;
+            var text = search_entry.text.strip ();
+            Application.current_search_text = text != "" ? text : null;
             refresh_spot_views ();
         });
 
@@ -143,14 +185,16 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         sidebar_toggle.toggled.connect (() => {
             set_sidebar_visible (sidebar_toggle.active);
         });
+        sidebar_split.notify["collapsed"].connect (update_collapsed_sidebar_controls);
+        sidebar_split.notify["show-sidebar"].connect (update_collapsed_sidebar_controls);
 
         notify["default-width"].connect (save_window_geometry);
         notify["default-height"].connect (save_window_geometry);
         notify["maximized"].connect (save_window_maximized_state);
 
-        Application.spot_repo.busy_changed.connect ((busy) => {
-            loading_spinner.visible = busy;
-        });
+        //Application.spot_repo.busy_changed.connect ((busy) => {
+        //    loading_spinner.visible = busy;
+        //});
 
         Application.spot_repo.refreshed.connect ((spots_updated) => {
             if (!initial_band_applied && Application.current_mode_filter == null) {
@@ -231,24 +275,16 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             });
         });
 
-        setup_spot_updates ();
-        build_band_stack ();
-
         pending_initial_band = Application.settings.get_string ("default-band");
-        band_stack.set_visible_child_name ("All");
-        Application.current_band_filter = band_stack.visible_child_name;
+        Application.current_band_filter = "All";
         Application.current_mode_filter = null;
         Application.current_program_filter = null;
         Application.current_search_text = null;
-
-        band_stack.notify["visible-child-name"].connect (() => {
-            Application.current_band_filter = band_stack.visible_child_name;
-            left_sidebar.set_selected_band (band_stack.visible_child_name);
-            refresh_spot_views ();
-        });
+        band_view.set_band_filter (Application.current_band_filter);
+        setup_spot_updates ();
 
         left_sidebar.band_selected.connect ((band) => {
-            band_stack.set_visible_child_name (band);
+            set_current_band_filter (band);
         });
 
         left_sidebar.mode_changed.connect ((mode) => {
@@ -289,16 +325,51 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             list_view.set_row_actions_visible (!inspector_split.show_sidebar);
         });
 
-        spot_detail.set_action_buttons_visible (true);
+        update_detail_action_buttons ();
 
         set_refresh_button_state (update_paused);
 
         set_sidebar_visible (true);
+        update_collapsed_sidebar_controls ();
         set_inspector_visible (false);
 
         Application.settings.changed["hide-qrt"].connect (refresh_spot_views);
         Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
         Application.settings.changed["hide-older-than"].connect (refresh_spot_views);
+    }
+
+    private void set_search_content_margin (int margin) {
+        band_view.margin_top = margin;
+        list_container.margin_top = margin;
+    }
+
+    private void animate_search_content_margins () {
+        var target_margin = search_bar.search_mode_enabled ? SEARCH_TOP_MARGIN : CONTENT_TOP_MARGIN;
+        var current_margin = band_view.margin_top;
+
+        if (current_margin == target_margin)
+            return;
+
+        if (search_margin_animation != null)
+            search_margin_animation.pause ();
+
+        var target = new Adw.CallbackAnimationTarget ((value) => {
+            set_search_content_margin ((int) Math.round (value));
+        });
+
+        search_margin_animation = new Adw.TimedAnimation (
+            this,
+            current_margin,
+            target_margin,
+            SEARCH_MARGIN_ANIMATION_DURATION,
+            target
+        );
+        search_margin_animation.easing = Adw.Easing.EASE_OUT_CUBIC;
+        search_margin_animation.done.connect (() => {
+            set_search_content_margin (target_margin);
+            search_margin_animation = null;
+        });
+        search_margin_animation.play ();
     }
 
     private void on_astronomy_button_clicked () {
@@ -314,22 +385,24 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     private void on_spot_selected (Quark spot_hash) {
+        sync_selected_spot (spot_hash, true);
+    }
+
+    private void sync_selected_spot (Quark spot_hash, bool reveal_inspector) {
         var spot = Application.spot_repo.get_spot (spot_hash);
         spot_detail.set_spot (spot);
 
         if (spot == null) {
             set_inspector_visible (false);
             map_centered_spot_hash = BLANK_HASH;
-            foreach (var page in band_pages) {
-                var band_view = page.get_child () as BandView;
-                band_view.set_current_spot (BLANK_HASH);
-            }
+            band_view.set_current_spot (BLANK_HASH);
             if (list_view != null)
                 list_view.set_current_spot (BLANK_HASH);
             return;
         }
 
-        set_inspector_visible (true);
+        if (reveal_inspector)
+            set_inspector_visible (true);
 
         if ((map_view != null) && (spot_hash != map_centered_spot_hash)) {
             map_view.go_to_spot (spot);
@@ -343,6 +416,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
     private void set_inspector_visible (bool visible) {
         if (visible == inspector_split.show_sidebar) {
+            update_inspector_title_buttons (visible);
             syncing_inspector_toggle = true;
             inspector_toggle.active = visible;
             syncing_inspector_toggle = false;
@@ -354,6 +428,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
         inspector_split.show_sidebar = visible;
         spot_detail.sensitive = visible;
+        update_inspector_title_buttons (visible);
 
         syncing_inspector_toggle = true;
         inspector_toggle.active = visible;
@@ -363,24 +438,38 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             list_view.set_row_actions_visible (!visible);
     }
 
+    private void update_inspector_title_buttons (bool inspector_visible) {
+        main_header.show_end_title_buttons = !inspector_visible;
+        spot_detail.set_end_title_buttons_visible (inspector_visible);
+    }
+
     private void set_sidebar_visible (bool visible) {
         left_sidebar.set_sidebar_visible_state (visible);
 
         if (visible == sidebar_split.show_sidebar) {
             sidebar_toggle.active = visible;
             sidebar_toggle.tooltip_text = visible ? _("Hide Sidebar") : _("Show Sidebar");
+            update_collapsed_sidebar_controls ();
             return;
         }
 
         sidebar_split.show_sidebar = visible;
         sidebar_toggle.active = visible;
         sidebar_toggle.tooltip_text = visible ? _("Hide Sidebar") : _("Show Sidebar");
+        update_collapsed_sidebar_controls ();
+    }
+
+    private void update_collapsed_sidebar_controls () {
+        collapsed_sidebar_controls.visible = sidebar_split.collapsed ||
+            !sidebar_split.show_sidebar;
+    }
+
+    private void update_detail_action_buttons () {
+        spot_detail.set_action_buttons_visible (views.visible_child_name != "cards");
     }
 
     private void sync_band_view_to_spot (Quark spot_hash, Spot spot) {
-        var band_view = band_stack.get_visible_child () as BandView;
-        if (band_view != null)
-            band_view.set_current_spot (spot_hash);
+        band_view.set_current_spot (spot_hash);
     }
 
     private void update_status_bar () {
@@ -466,10 +555,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         if (list_view != null)
             list_view.bounce_filter ();
 
-        foreach (var page in band_pages) {
-            var band_view = page.get_child () as BandView;
-            band_view.bounce_filter ();
-        }
+        band_view.bounce_filter ();
 
         if (Application.current_spot_hash != BLANK_HASH &&
             !current_spot_matches_filters ()) {
@@ -499,19 +585,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         initial_update ();
     }
 
-    private void build_band_stack () {
-        for (uint i = 0; i < RadioConstants.BANDS.length; i++) {
-            var band = RadioConstants.BANDS[i];
-            var band_view = new BandView (band, @"band-$band");
-
-            var page = band_stack.add_titled_with_icon (band_view, band, band,
-                @"band-$band");
-            band_view.page = page;
-            band_pages.add (page);
-
-        }
-    }
-
     private string get_initial_sidebar_band () {
         if (initial_band_applied)
             return Application.current_band_filter ?? "All";
@@ -533,7 +606,14 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         var initial_band = get_initial_sidebar_band ();
         initial_band_applied = true;
         pending_initial_band = null;
-        band_stack.set_visible_child_name (initial_band);
+        set_current_band_filter (initial_band);
+    }
+
+    private void set_current_band_filter (string band) {
+        Application.current_band_filter = band;
+        left_sidebar.set_selected_band (band);
+        band_view.set_band_filter (band);
+        refresh_spot_views ();
     }
 
     private void power_off_radio () {
@@ -599,11 +679,13 @@ public sealed class AppWindow : Adw.ApplicationWindow {
                     left_sidebar.set_power_button_active (true);
                     left_sidebar.set_power_button_text (_("Disconnect"));
                     disconnect_radio_handlers ();
-                    radio_status_handler = Application.radio_control.radio_status.connect ((freq, mode) => {
+                    radio_status_handler = Application.radio_control.radio_status.connect ((freq, mode, tx_active) => {
                         if (freq > 0 && mode != 0) {
                             left_sidebar.set_mode_visible (true);
                             left_sidebar.set_vfo_animated (freq);
                             left_sidebar.set_mode_text (RadioControl.mode_string (mode));
+                            left_sidebar.set_tx_active (tx_active);
+                            left_sidebar.set_rx_active (!tx_active);
                             left_sidebar.set_power_button_tooltip (_("Disconnect from radio"));
                             left_sidebar.set_power_button_text (_("Disconnect"));
                             left_sidebar.set_power_button_active (true);
@@ -666,7 +748,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
                 yield Application.spot_repo.update_spots ();
 
                 Idle.add (() => {
-                    on_spot_selected (Application.current_spot_hash);
+                    sync_selected_spot (Application.current_spot_hash, false);
                     return Source.REMOVE;
                 });
             }

@@ -217,12 +217,37 @@ public sealed class PotaClient : Object {
         hydrate_location_lookup_from_json (json_text);
     }
 
-    public async void post_spot (Spot spot) throws Error {
+    public async void post_spot (
+        string activator,
+        string spotter,
+        string reference,
+        string frequency,
+        string mode,
+        string comment
+    ) throws Error {
         var message = new Soup.Message ("POST", "%s/spot".printf (POTA_BASE_URL));
         size_t len = 0;
+        var builder = new Json.Builder ();
         var generator = new Json.Generator ();
 
-        generator.set_root (spot.to_json ());
+        builder.begin_object ();
+        builder.set_member_name ("activator");
+        builder.add_string_value (activator);
+        builder.set_member_name ("spotter");
+        builder.add_string_value (spotter);
+        builder.set_member_name ("reference");
+        builder.add_string_value (reference);
+        builder.set_member_name ("frequency");
+        builder.add_string_value (frequency);
+        builder.set_member_name ("mode");
+        builder.add_string_value (mode);
+        builder.set_member_name ("comments");
+        builder.add_string_value (comment);
+        builder.set_member_name ("source");
+        builder.add_string_value (Build.NAME);
+        builder.end_object ();
+
+        generator.set_root (builder.get_root ());
         var payload = generator.to_data (out len);
         var bytes = new GLib.Bytes (payload.data);
         message.set_request_body_from_bytes ("application/json", bytes);

@@ -23,6 +23,7 @@ namespace Artemis.Wsjtx {
         const int MAX_DATAGRAM_SIZE = 65536;
 
         private Socket? socket;
+        private SocketAddress? last_remote_address = null;
         private PacketParser parser;
 
         private Dex.Future? receive_loop;
@@ -187,6 +188,7 @@ namespace Artemis.Wsjtx {
                     if (received <= 0)
                         break;
 
+                    last_remote_address = remote_address;
                     var datagram = buffer[0: (int)received];
                     var packet = parser.parse (datagram);
                     packet_received (packet, format_sender (remote_address));
@@ -196,6 +198,13 @@ namespace Artemis.Wsjtx {
                     throw err;
                 }
             }
+        }
+
+        public void send_to_last_sender (uint8[] datagram) throws Error {
+            if (socket == null || last_remote_address == null)
+                return;
+
+            socket.send_to (last_remote_address, datagram, null);
         }
 
         private string format_sender (SocketAddress? address) {

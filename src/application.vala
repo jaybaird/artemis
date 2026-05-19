@@ -69,6 +69,7 @@ public sealed class Application : Adw.Application {
     private const GLib.ActionEntry[] APP_ENTRIES = {
         { "add-spot", on_add_button_clicked },
         { "help", on_help_action },
+        { "shortcuts", shortcuts_activated },
         { "about", about_activated },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
@@ -85,9 +86,12 @@ public sealed class Application : Adw.Application {
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
         set_accels_for_action ("app.help", { "F1" });
+        set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
         set_accels_for_action ("app.quit", { "<primary>q" });
+        set_accels_for_action ("win.search", { "<Ctrl>F" });
+        set_accels_for_action ("win.toggle-sidebar", { "F9" });
         add_action_entries (APP_ENTRIES, this);
 
         settings = new Settings (Build.DOMAIN);
@@ -224,6 +228,26 @@ public sealed class Application : Adw.Application {
         //dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
         if (Build.DONATE_WEBSITE != "")
             dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
+
+        dialog.present (win);
+    }
+
+    private void shortcuts_activated () {
+        var dialog = new Adw.ShortcutsDialog ();
+
+        var general = new Adw.ShortcutsSection (_("General"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Add Spot"), "app.add-spot"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
+        dialog.add (general);
+
+        var application = new Adw.ShortcutsSection (_("Application"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Help"), "app.help"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Keyboard Shortcuts"), "app.shortcuts"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Preferences"), "app.preferences"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Quit"), "app.quit"));
+        dialog.add (application);
 
         dialog.present (win);
     }

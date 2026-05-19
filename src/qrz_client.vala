@@ -212,7 +212,7 @@ public sealed class QrzClient : Object {
         if (park_ref != "") {
             record.set ("SIG", "POTA");
             record.set ("SIG_INFO", park_ref);
-            record.set ("POTAREF", park_ref);
+            record.set ("POTA_REF", park_ref);
             record.set ("NOTES", "POTA - %s".printf (park_ref));
         }
 

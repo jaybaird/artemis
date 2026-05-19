@@ -29,10 +29,9 @@ template $SpotListRow : Box {
   margin-end: 12;
 
   $BandStrip band_marker {
-    width-request: 4;
-    height-request: 34;
     valign: center;
     margin-end: 4;
+    styles ["band-strip-list"]
   }
 
   Box {
@@ -98,7 +97,7 @@ template $SpotListRow : Box {
       tooltip-text: _("Tune your radio to this frequency");
       valign: center;
       visible: false;
-      styles ["flat"]
+      styles ["flat", "spot-list-icon-button"]
     }
 
     Button spot_button {
@@ -106,7 +105,7 @@ template $SpotListRow : Box {
       tooltip-text: _("Add your spot for this park");
       valign: center;
       visible: false;
-      styles ["suggested-action"]
+      styles ["suggested-action", "spot-list-icon-button"]
     }
   }
 }

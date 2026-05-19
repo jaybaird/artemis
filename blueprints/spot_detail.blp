@@ -24,6 +24,12 @@ using Adw 1;
 template $SpotDetail : Box {
   orientation: vertical;
 
+  Adw.HeaderBar detail_header {
+    show-title: false;
+    show-start-title-buttons: false;
+    show-end-title-buttons: false;
+  }
+
   Stack detail_stack {
     vexpand: true;
     hexpand: true;
@@ -51,7 +57,7 @@ template $SpotDetail : Box {
             Box {
               orientation: vertical;
               spacing: 24;
-              margin-top: 24;
+              margin-top: 48;
               margin-bottom: 24;
               margin-start: 12;
               margin-end: 12;
@@ -90,8 +96,8 @@ template $SpotDetail : Box {
 
                 Image wx_conditions {
                   icon-name: "storm-outline-symbolic";
-                  pixel-size: 20;
                   valign: baseline;
+                  styles ["weather-summary-icon"]
                   accessibility {
                     label: _("Weather Conditions");
                     role-description: _("icon");
@@ -106,8 +112,8 @@ template $SpotDetail : Box {
 
                 Image {
                   icon-name: "thermometer-symbolic";
-                  pixel-size: 20;
                   valign: baseline;
+                  styles ["weather-summary-icon"]
                   accessibility {
                     label: _("Temperature");
                     role-description: _("icon");
@@ -121,8 +127,8 @@ template $SpotDetail : Box {
 
                 Image {
                   icon-name: "drop-hollow-symbolic";
-                  pixel-size: 20;
                   valign: baseline;
+                  styles ["weather-summary-icon"]
                   accessibility {
                     label: _("Relative Humidity");
                     role-description: _("icon");

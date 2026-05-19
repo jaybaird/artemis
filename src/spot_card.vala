@@ -126,12 +126,15 @@ public sealed class AddSpot : Adw.Dialog {
         submit_button.clicked.connect (() => {
             bool enable_logging = Application.settings.get_boolean ("enable-logging");
             string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
+            string selected_mode = ((Gtk.StringList) mode.get_model ()).get_string (
+                mode.selected
+            );
             var spot = new Spot.from_add_spot (
                 activator_callsign.text,
                 park_ref.text,
                 new DateTime.now_utc (),
                 frequency.text,
-                ((Gtk.StringList)mode.get_model ()).get_string (mode.selected),
+                selected_mode,
                 spotter_callsign.text,
                 spotter_comments.text,
                 rst_sent.text,
@@ -139,36 +142,44 @@ public sealed class AddSpot : Adw.Dialog {
 
             this.close ();
 
-            Application.pota_client.post_spot.begin (spot, (obj, res) => {
-                try {
-                    Error? err = null;
-                    Application.pota_client.post_spot.end (res);
-                    Application.show_toast (_("Spot posted"));
-                    Application.spot_database.add_qso_from_spot (spot, out err);
-                    if (err != null) {
-                        warning ("Unable to save qso: %s".printf (err.message));
-                    }
+            Application.pota_client.post_spot.begin (
+                activator_callsign.text,
+                spotter_callsign.text,
+                park_ref.text,
+                frequency.text,
+                selected_mode,
+                spotter_comments.text,
+                (obj, res) => {
+                    try {
+                        Error? err = null;
+                        Application.pota_client.post_spot.end (res);
+                        Application.show_toast (_("Spot posted"));
+                        Application.spot_database.add_qso_from_spot (spot, out err);
+                        if (err != null) {
+                            warning ("Unable to save qso: %s".printf (err.message));
+                        }
 
-                    if (enable_logging && (qrz_api_key != "")) {
-                        Application.qrz_client.upload_spot_qso.begin (spot, (
-                            qrz_obj,
-                            qrz_res
-                        ) => {
-                            try {
-                                Application.qrz_client.upload_spot_qso.end (qrz_res);
-                                Application.show_toast (_("Uploaded QSO to QRZ"));
-                            } catch (Error qrz_err) {
-                                warning ("Unable to upload QSO to QRZ: %s",
-                                    qrz_err.message);
-                                present_qrz_error (qrz_err.message);
-                            }
-                        });
+                        if (enable_logging && (qrz_api_key != "")) {
+                            Application.qrz_client.upload_spot_qso.begin (spot, (
+                                qrz_obj,
+                                qrz_res
+                            ) => {
+                                try {
+                                    Application.qrz_client.upload_spot_qso.end (qrz_res);
+                                    Application.show_toast (_("Uploaded QSO to QRZ"));
+                                } catch (Error qrz_err) {
+                                    warning ("Unable to upload QSO to QRZ: %s",
+                                        qrz_err.message);
+                                    present_qrz_error (qrz_err.message);
+                                }
+                            });
+                        }
+                    } catch (Error err) {
+                        var errmsg = err.message;
+                        warning (@"Unable to post spot: $errmsg");
                     }
-                } catch (Error err) {
-                    var errmsg = err.message;
-                    warning (@"Unable to post spot: $errmsg");
                 }
-            });
+            );
         });
     }
 
@@ -236,6 +247,8 @@ public sealed class SpotCard : Gtk.Box {
     private uint avatar_retry_id = 0;
     private uint avatar_fetch_attempt = 0;
     private bool disposed = false;
+    private ulong avatar_font_name_handler = 0;
+    private ulong avatar_xft_dpi_handler = 0;
 
     private Gdk.Texture? activator_avatar_texture {
         set {
@@ -264,6 +277,20 @@ public sealed class SpotCard : Gtk.Box {
 
     public SpotCard () {
         Object ();
+    }
+
+    construct {
+        update_avatar_size ();
+
+        var gtk_settings = Gtk.Settings.get_default ();
+        if (gtk_settings != null) {
+            avatar_font_name_handler = gtk_settings.notify["gtk-font-name"].connect (() => {
+                update_avatar_size ();
+            });
+            avatar_xft_dpi_handler = gtk_settings.notify["gtk-xft-dpi"].connect (() => {
+                update_avatar_size ();
+            });
+        }
     }
 
     public SpotCard.from_spot (Spot spot) {
@@ -305,6 +332,10 @@ public sealed class SpotCard : Gtk.Box {
         radio_connection_state_handler = Application.app.radio_connection_state_changed.connect (() => {
             update_tune_button_state ();
         });
+    }
+
+    private void update_avatar_size () {
+        activator_avatar.size = scaled_avatar_size (32);
     }
 
     private void update_tune_button_state () {
@@ -393,6 +424,22 @@ public sealed class SpotCard : Gtk.Box {
     ~SpotCard () {
         disposed = true;
         cancel_avatar_retry ();
+        if (avatar_font_name_handler != 0) {
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null &&
+                SignalHandler.is_connected (gtk_settings, avatar_font_name_handler)) {
+                SignalHandler.disconnect (gtk_settings, avatar_font_name_handler);
+            }
+            avatar_font_name_handler = 0;
+        }
+        if (avatar_xft_dpi_handler != 0) {
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null &&
+                SignalHandler.is_connected (gtk_settings, avatar_xft_dpi_handler)) {
+                SignalHandler.disconnect (gtk_settings, avatar_xft_dpi_handler);
+            }
+            avatar_xft_dpi_handler = 0;
+        }
         if (callsign_cache_updated_handler != 0) {
             if (SignalHandler.is_connected (Application.callsign_cache, callsign_cache_updated_handler))
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_updated_handler);

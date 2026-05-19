@@ -33,8 +33,8 @@ private SpotCard create_spot_card (Spot spot) {
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/band_view.ui")]
 public sealed class BandView : Gtk.Box {
-    public string band_label { get; construct; }
-    public string icon_name { get; construct; }
+    public string band_label { get; set; default = "All"; }
+    public string icon_name { get; set; default = "band-All"; }
     [GtkChild]
     public unowned Gtk.FlowBox band_spot_cards;
 
@@ -44,7 +44,6 @@ public sealed class BandView : Gtk.Box {
     [GtkChild]
     public unowned Adw.StatusPage status_page;
 
-    public unowned Adw.ViewStackPage ? page;
     public signal void count_changed (uint count);
 
     private Gtk.Filter filter;
@@ -67,7 +66,9 @@ public sealed class BandView : Gtk.Box {
             var spot = item as Spot;
             if (spot == null)
                 return false;
-            return spot_matches_current_filters (spot, band_label);
+
+            var band_filter = Application.current_band_filter ?? "All";
+            return spot_matches_current_filters (spot, band_filter);
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
@@ -124,35 +125,11 @@ public sealed class BandView : Gtk.Box {
         });
 
         sorted.items_changed.connect ((position, removed, added) => {
-            var items = sorted.get_n_items ();
-
-            band_spot_cards.visible = (items > 0);
-            status_page.visible = (items == 0);
-
-            if (items == 0) {
-                int raw_count = (band_label == "All")
-                    ? (int)Application.spot_repo.store.get_n_items ()
-                    : Application.spot_repo.get_band_count (band_label);
-                if (raw_count > 0)
-                    status_page.description = _("No spots on %s match your current filters").printf (band_label);
-                else
-                    status_page.description = _("There are no spots currently on %s").printf (band_label);
-            }
-
-            if (page != null)
-                page.badge_number = sorted.get_n_items ();
-            count_changed (items);
+            update_visible_state ();
+            count_changed (sorted.get_n_items ());
         });
 
-        var items = sorted.get_n_items ();
-        band_spot_cards.visible = (items > 0);
-        status_page.visible = (items == 0);
-        status_page.title = band_label;
-        status_page.description = _("There are no spots currently on %s").printf (band_label);
-        status_page.icon_name = icon_name;
-
-        if (page != null)
-            page.badge_number = sorted.get_n_items ();
+        update_visible_state ();
 
         settings.changed["hide-qrt"].connect (bounce_filter);
         settings.changed["hide-hunted"].connect (bounce_filter);
@@ -223,7 +200,37 @@ public sealed class BandView : Gtk.Box {
         return sorted.get_n_items ();
     }
 
+    public void set_band_filter (string band) {
+        band_label = band;
+        icon_name = @"band-$band";
+        bounce_filter ();
+        update_visible_state ();
+    }
+
     public void bounce_filter (string? key = null) {
         filter.changed (Gtk.FilterChange.DIFFERENT);
+    }
+
+    private void update_visible_state () {
+        var items = sorted.get_n_items ();
+        var band = Application.current_band_filter ?? "All";
+        band_label = band;
+        icon_name = @"band-$band";
+
+        band_spot_cards.visible = (items > 0);
+        status_page.visible = (items == 0);
+        status_page.title = band_label;
+        status_page.icon_name = icon_name;
+
+        if (items > 0)
+            return;
+
+        int raw_count = (band_label == "All")
+            ? (int)Application.spot_repo.store.get_n_items ()
+            : Application.spot_repo.get_band_count (band_label);
+        if (raw_count > 0)
+            status_page.description = _("No spots on %s match your current filters").printf (band_label);
+        else
+            status_page.description = _("There are no spots currently on %s").printf (band_label);
     }
 } /* class BandView */

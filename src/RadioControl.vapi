@@ -83,7 +83,7 @@ public class RadioControl : GLib.Object {
     public signal void radio_disconnected ();
 
     [CCode (cname = "radio-status")]
-    public signal void radio_status (double frequency, RadioMode mode);
+    public signal void radio_status (double frequency, RadioMode mode, bool tx_active);
 
     [CCode (cname = "radio-error")]
     public signal void radio_error (GLib.Error error);

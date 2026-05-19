@@ -153,9 +153,9 @@ public sealed class DetailTimePairRow : Gtk.ListBoxRow {
         };
 
         var icon = new Gtk.Image.from_icon_name (icon_name) {
-            pixel_size = 16,
             valign = Gtk.Align.CENTER
         };
+        icon.add_css_class ("detail-time-icon");
         icon.add_css_class ("dim-label");
         pair.append (icon);
 
@@ -201,6 +201,9 @@ public sealed class DetailLinkRow : Gtk.ListBoxRow {
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_detail.ui")]
 public sealed class SpotDetail : Gtk.Box {
+    [GtkChild]
+    private unowned Adw.HeaderBar detail_header;
+
     [GtkChild]
     private unowned Gtk.Stack detail_stack;
 
@@ -255,6 +258,8 @@ public sealed class SpotDetail : Gtk.Box {
     private ulong radio_disconnected_handler = 0;
     private ulong radio_error_handler = 0;
     private uint weather_request_serial = 0;
+    private ulong avatar_font_name_handler = 0;
+    private ulong avatar_xft_dpi_handler = 0;
 
     private DetailFieldRow detail_operator_name_row;
     private DetailFieldRow detail_operator_qth_row;
@@ -280,7 +285,23 @@ public sealed class SpotDetail : Gtk.Box {
         Object ();
     }
 
+    public void set_end_title_buttons_visible (bool visible) {
+        detail_header.show_end_title_buttons = visible;
+    }
+
     construct {
+        update_avatar_size ();
+
+        var gtk_settings = Gtk.Settings.get_default ();
+        if (gtk_settings != null) {
+            avatar_font_name_handler = gtk_settings.notify["gtk-font-name"].connect (() => {
+                update_avatar_size ();
+            });
+            avatar_xft_dpi_handler = gtk_settings.notify["gtk-xft-dpi"].connect (() => {
+                update_avatar_size ();
+            });
+        }
+
         build_detail_lists ();
         detail_tune_button.clicked.connect (on_tune_clicked);
         detail_spot_button.clicked.connect (on_spot_clicked);
@@ -309,6 +330,10 @@ public sealed class SpotDetail : Gtk.Box {
         radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
             update_tune_button_state ();
         });
+    }
+
+    private void update_avatar_size () {
+        detail_avatar.size = scaled_avatar_size (72);
     }
 
     private void build_detail_lists () {
@@ -672,6 +697,20 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     ~SpotDetail () {
+        if (avatar_font_name_handler != 0) {
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null &&
+                SignalHandler.is_connected (gtk_settings, avatar_font_name_handler))
+                SignalHandler.disconnect (gtk_settings, avatar_font_name_handler);
+            avatar_font_name_handler = 0;
+        }
+        if (avatar_xft_dpi_handler != 0) {
+            var gtk_settings = Gtk.Settings.get_default ();
+            if (gtk_settings != null &&
+                SignalHandler.is_connected (gtk_settings, avatar_xft_dpi_handler))
+                SignalHandler.disconnect (gtk_settings, avatar_xft_dpi_handler);
+            avatar_xft_dpi_handler = 0;
+        }
         if (callsign_cache_handler != 0 &&
             SignalHandler.is_connected (Application.callsign_cache, callsign_cache_handler))
             SignalHandler.disconnect (Application.callsign_cache, callsign_cache_handler);

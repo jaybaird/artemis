@@ -21,19 +21,17 @@
 using Gee;
 using Gdk;
 
-public class CallsignCacheEntry : Object {
-    public Activator activator { get; construct; }
-    public uint64 expires_at { get; construct; }
+public class CallsignCacheEntry {
+    public Activator activator { get; }
+    public uint64 expires_at { get; }
     public Gdk.Texture ? avatar { get; set; default = null; }
     public CallsignCacheEntry (Activator activator, uint64 expires_at) {
-        Object (
-            activator : activator,
-            expires_at: expires_at
-        );
+        _activator = activator;
+        _expires_at = expires_at;
     }
 }
 
-public class CallsignCache : Object {
+public sealed class CallsignCache : Object {
     private HashTable<string, CallsignCacheEntry> ham_cache;
     private HashMap<string, HashSet<string>> profile_aliases;
     private HashSet<string> avatar_fetch_inflight;
@@ -249,6 +247,56 @@ public sealed class SpotRepo : Object {
         }
 
         return null;
+    }
+
+    public Spot? get_spot_for_callsign (string callsign) {
+        var normalized_exact = callsign.strip ().up ();
+        var normalized_profile = pota_profile_callsign (callsign).strip ().up ();
+        if ((normalized_exact == "") && (normalized_profile == ""))
+            return null;
+
+        Spot? profile_match = null;
+        for (uint i = 0 ; i < store.get_n_items () ; i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            var spot_exact = spot.callsign.strip ().up ();
+            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            if (spot_exact == normalized_exact)
+                return spot;
+
+            if ((profile_match == null) && (spot_profile == normalized_profile))
+                profile_match = spot;
+        }
+
+        return profile_match;
+    }
+
+    public Spot? get_spot_for_decode_text (string decode_text) {
+        var normalized_decode = decode_text.strip ().up ();
+        if (normalized_decode == "")
+            return null;
+
+        Spot? profile_match = null;
+        for (uint i = 0 ; i < store.get_n_items () ; i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            var spot_exact = spot.callsign.strip ().up ();
+            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            if ((spot_exact != "") && normalized_decode.contains (spot_exact))
+                return spot;
+
+            if ((profile_match == null) &&
+                (spot_profile != "") &&
+                normalized_decode.contains (spot_profile)) {
+                profile_match = spot;
+            }
+        }
+
+        return profile_match;
     }
 
     public int get_band_count (string band) {

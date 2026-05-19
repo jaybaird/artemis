@@ -64,6 +64,12 @@ public sealed class LeftSidebar : Gtk.Box {
     private unowned Gtk.Label radio_vfo;
 
     [GtkChild]
+    private unowned Gtk.Image tx_light;
+
+    [GtkChild]
+    private unowned Gtk.Image rx_light;
+
+    [GtkChild]
     private unowned Gtk.Label radio_mode;
 
     private Gtk.ToggleButton? band_group_leader = null;
@@ -211,6 +217,20 @@ public sealed class LeftSidebar : Gtk.Box {
         radio_mode.label = mode;
     }
 
+    public void set_tx_active (bool active) {
+        if (active)
+            tx_light.add_css_class ("active");
+        else
+            tx_light.remove_css_class ("active");
+    }
+
+    public void set_rx_active (bool active) {
+        if (active)
+            rx_light.add_css_class ("active");
+        else
+            rx_light.remove_css_class ("active");
+    }
+
     public void set_power_button_active (bool active) {
         radio_power_button.active = active;
     }
@@ -285,6 +305,8 @@ public sealed class LeftSidebar : Gtk.Box {
         stop_vfo_animation ();
         has_displayed_radio_vfo = false;
         radio_vfo.label = "";
+        set_tx_active (false);
+        set_rx_active (false);
     }
 
     private Gtk.ToggleButton make_band_button (string band, int count, bool active) {

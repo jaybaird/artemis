@@ -154,6 +154,21 @@ public class BoundingBox : Object {
 } /* class BoundingBox */
 
 public class MapMarkerDot : Gtk.DrawingArea {
+    private bool _selected = false;
+
+    public bool selected {
+        get {
+            return _selected;
+        }
+        set {
+            if (_selected == value)
+                return;
+
+            _selected = value;
+            queue_draw ();
+        }
+    }
+
     public MapMarkerDot (string band) {
         width_request = 28;
         height_request = 28;
@@ -172,11 +187,16 @@ public class MapMarkerDot : Gtk.DrawingArea {
 
             cr.arc (center_x, center_y, radius, 0, 2.0 * Math.PI);
             Gdk.cairo_set_source_rgba (cr, color);
-            cr.fill_preserve ();
+            if (selected)
+                cr.fill_preserve ();
+            else
+                cr.fill ();
 
-            cr.set_line_width (2.0);
-            cr.set_source_rgba (0.98, 0.98, 0.98, 0.98);
-            cr.stroke ();
+            if (selected) {
+                cr.set_line_width (2.0);
+                cr.set_source_rgba (0.98, 0.98, 0.98, 0.98);
+                cr.stroke ();
+            }
         });
     }
 }
@@ -200,8 +220,10 @@ public class MapView : Gtk.Box {
     private MarkerLayer marker_layer;
     private MarkerLayer astronomy_marker_layer;
     private HashMap<Quark, Marker> markers;
+    private HashMap<Quark, MapMarkerDot> marker_dots;
     private HashMap<Quark, ulong> marker_notify_handlers;
     private Marker? selected_marker = null;
+    private Quark selected_marker_hash = BLANK_HASH;
     private Marker? sun_marker = null;
     private Marker? moon_marker = null;
     private uint astronomy_refresh_timeout_id = 0;
@@ -211,6 +233,7 @@ public class MapView : Gtk.Box {
     private bool has_qth_coordinate = false;
     private bool user_has_adjusted_view = false;
     private bool current_map_is_dark = false;
+    private bool loaded_after_map = false;
 
     private Gtk.Overlay overlay;
 
@@ -231,7 +254,8 @@ public class MapView : Gtk.Box {
             vexpand = true,
             hexpand = true
         };
-        map_widget.add_css_class ("card");
+        map_widget.set_map_source (map_source);
+
         install_map_interaction_tracking ();
 
         var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
@@ -299,6 +323,7 @@ public class MapView : Gtk.Box {
         });
         bbox = new BoundingBox ();
         markers = new HashMap<Quark, Marker> ();
+        marker_dots = new HashMap<Quark, MapMarkerDot> ();
         marker_notify_handlers = new HashMap<Quark, ulong> ();
 
         rebuild_base_map_layer ();
@@ -334,7 +359,13 @@ public class MapView : Gtk.Box {
             }
         );
 
-        load_spots ();
+        map_widget.map.connect (() => {
+            if (loaded_after_map)
+                return;
+
+            loaded_after_map = true;
+            load_spots ();
+        });
     }
 
     ~MapView () {
@@ -501,7 +532,9 @@ public class MapView : Gtk.Box {
         sync_marker_heard_state (marker, marker_content, heard_icon, spot);
         if (spot.hash == Application.current_spot_hash) {
             marker.add_css_class ("selected");
+            dot.selected = true;
             selected_marker = marker;
+            selected_marker_hash = spot.hash;
         }
 
         var click = new Gtk.GestureClick ();
@@ -523,6 +556,7 @@ public class MapView : Gtk.Box {
 
         marker_layer.add_marker (marker);
         markers.set (spot.hash, marker);
+        marker_dots.set (spot.hash, dot);
         marker_notify_handlers.set (spot.hash, spot.notify["heard-recently"].connect (() => {
             sync_marker_heard_state (marker, marker_content, heard_icon, spot);
         }));
@@ -551,6 +585,13 @@ public class MapView : Gtk.Box {
             selected_marker = null;
         }
 
+        if (selected_marker_hash != BLANK_HASH) {
+            var dot = marker_dots.get (selected_marker_hash);
+            if (dot != null)
+                dot.selected = false;
+            selected_marker_hash = BLANK_HASH;
+        }
+
         if (spot_hash == BLANK_HASH)
             return;
 
@@ -559,7 +600,11 @@ public class MapView : Gtk.Box {
             return;
 
         marker.add_css_class ("selected");
+        var dot = marker_dots.get (spot_hash);
+        if (dot != null)
+            dot.selected = true;
         selected_marker = marker;
+        selected_marker_hash = spot_hash;
     }
 
     public void go_to_spot (Spot? spot) {
@@ -708,6 +753,9 @@ public class MapView : Gtk.Box {
     }
 
     private void load_spots () {
+        if (!map_widget.get_mapped ())
+            return;
+
         bbox.clear ();
 
         foreach (var entry in marker_notify_handlers.entries) {
@@ -724,7 +772,9 @@ public class MapView : Gtk.Box {
 
         marker_layer = new MarkerLayer (viewport);
         markers.clear ();
+        marker_dots.clear ();
         selected_marker = null;
+        selected_marker_hash = BLANK_HASH;
 
         uint spot_count = 0;
         var valid_hashes = new HashSet<GLib.Quark> ();

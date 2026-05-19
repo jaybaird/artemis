@@ -462,9 +462,10 @@ radio_control_class_init(RadioControlClass *klass)
     NULL, NULL,
     NULL,
     G_TYPE_NONE,
-    2,
+    3,
     G_TYPE_DOUBLE,
-    G_TYPE_INT
+    G_TYPE_INT,
+    G_TYPE_BOOLEAN
   );
 
   signals[SIG_ERROR] = g_signal_new("radio-error",
@@ -557,6 +558,7 @@ typedef struct {
   RadioControl            *radio;
   double                  frequency; // in kHz
   enum RadioMode          mode;
+  gboolean                tx_active;
   enum RadioStatusSignal  status;
   GError                  *error;
 } _RadioStatus;
@@ -575,7 +577,7 @@ send_status(gpointer user_data)
   _RadioStatus *status = (_RadioStatus *)user_data;
   if (status->status == SIG_STATUS)
   {
-    g_signal_emit(status->radio, signals[SIG_STATUS], 0, status->frequency, status->mode);
+    g_signal_emit(status->radio, signals[SIG_STATUS], 0, status->frequency, status->mode, status->tx_active);
     goto status_finished;
   }
   
@@ -984,9 +986,11 @@ watcher_iteration(DexFuture *_, gpointer user_data)
   powerstat_t pwr_stat;
   split_t _st;
   int satmode;
+  ptt_t ptt = RIG_PTT_OFF;
   
   int r_f = rig_get_vfo_info(self->rig, RIG_VFO_CURR, &freq, &mode, &width, &_st, &satmode);
   int r_ps = rig_get_powerstat(self->rig, &pwr_stat);
+  int r_ptt = rig_get_ptt(self->rig, RIG_VFO_CURR, &ptt);
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
   status->radio = g_object_ref(self);
@@ -997,6 +1001,7 @@ watcher_iteration(DexFuture *_, gpointer user_data)
     status->status = SIG_STATUS;
     status->frequency = ((double)freq) / 1000.0;
     status->mode = map_hamlib_mode(mode);
+    status->tx_active = (r_ptt == RIG_OK && ptt != RIG_PTT_OFF);
 
     self->frequency_khz = ((double)freq) / 1000.0;
     self->mode = map_hamlib_mode(mode);

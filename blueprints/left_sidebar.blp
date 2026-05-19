@@ -28,6 +28,8 @@ template $LeftSidebar : Box {
     [top]
     Adw.HeaderBar {
       show-title: false;
+      show-start-title-buttons: false;
+      show-end-title-buttons: false;
 
       Button add_spot_button {
         icon-name: "list-add-symbolic";
@@ -50,37 +52,44 @@ template $LeftSidebar : Box {
       }
     }
 
-    content: ScrolledWindow {
-      hscrollbar-policy: never;
+    content: Box {
+      orientation: vertical;
+      spacing: 12;
       vexpand: true;
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
 
-      child: Box {
+      Box {
         orientation: vertical;
-        spacing: 12;
-        margin-top: 12;
-        margin-bottom: 12;
-        margin-start: 12;
-        margin-end: 12;
+        spacing: 2;
+        vexpand: true;
 
-        Box {
-          orientation: vertical;
-          spacing: 2;
-
-          Label {
-            label: _("Band");
-            xalign: 0;
-            margin-start: 8;
-            margin-bottom: 4;
-            styles ["heading", "dim-label"]
-          }
-
-          Box band_buttons_box {
-            orientation: vertical;
-            spacing: 2;
-          }
+        Label {
+          label: _("Band");
+          xalign: 0;
+          margin-start: 8;
+          margin-bottom: 4;
+          styles ["heading", "dim-label"]
         }
 
-        Separator {}
+        ScrolledWindow {
+          hscrollbar-policy: never;
+          vexpand: true;
+
+          child: Box band_buttons_box {
+            orientation: vertical;
+            spacing: 2;
+          };
+        }
+      }
+
+      Separator {}
+
+      Box {
+        orientation: vertical;
+        spacing: 12;
 
         Box {
           orientation: vertical;
@@ -142,13 +151,61 @@ template $LeftSidebar : Box {
               styles ["numeric", "title-1", "frequency-display"]
             }
 
-            Label radio_mode {
-              xalign: 0.5;
-              label: "USB-D";
-              halign: center;
-              justify: center;
+            Box {
+              orientation: horizontal;
+              spacing: 8;
               styles ["card", "pill", "caption", "mode-display"]
-              visible: false;
+
+              Box tx_indicator {
+                orientation: horizontal;
+                spacing: 2;
+
+                Image tx_light {
+                  valign: center;
+                  icon-name: "big-dot-symbolic";
+                  styles ["radio-activity-light", "tx-light"]
+                  accessibility {
+                    label: _("Transmit Active");
+                    role-description: _("Indicator");
+                  }
+                }
+
+                Label {
+                  label: _("TX");
+                }
+              }
+
+              Box rx_indicator {
+                orientation: horizontal;
+                spacing: 2;
+
+                Image rx_light {
+                  valign: center;
+                  icon-name: "big-dot-symbolic";
+                  styles ["radio-activity-light", "rx-light"]
+                  accessibility {
+                    label: _("Receive Active");
+                    role-description: _("Indicator");
+                  }
+                }
+
+                Label {
+                  label: _("RX");
+                }
+              }
+
+              Box {
+                hexpand: true;
+              }
+
+              Label radio_mode {
+                xalign: 1.0;
+                label: "USB-D";
+                hexpand: false;
+                halign: end;
+                justify: fill;               
+                visible: false;
+              }
             }
           }
 
@@ -162,7 +219,7 @@ template $LeftSidebar : Box {
             }
           }
         }
-      };
+      }
     };
   }
 }
