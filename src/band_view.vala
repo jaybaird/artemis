@@ -67,7 +67,7 @@ public sealed class BandView : Gtk.Box {
             if (spot == null)
                 return false;
 
-            var band_filter = Application.current_band_filter ?? "All";
+            var band_filter = Application.state.current_band_filter ?? "All";
             return spot_matches_current_filters (spot, band_filter);
         });
 
@@ -98,8 +98,8 @@ public sealed class BandView : Gtk.Box {
             var spot_card = child.get_child () as SpotCard;
             if ((spot_card != null) &&
                 !just_selected &&
-                (spot_card.spot.hash == Application.current_spot_hash)) {
-                Application.current_spot_hash = BLANK_HASH;
+                (spot_card.spot.hash == Application.state.current_spot_hash)) {
+                Application.state.current_spot_hash = BLANK_HASH;
                 band_spot_cards.unselect_all ();
             }
             if (just_selected) {
@@ -116,8 +116,8 @@ public sealed class BandView : Gtk.Box {
                 var spot_card = child.get_child () as SpotCard;
                 if (spot_card != null) {
                     var spot_hash = spot_card.spot.hash;
-                    if (spot_hash != Application.current_spot_hash) {
-                        Application.current_spot_hash = spot_hash;
+                    if (spot_hash != Application.state.current_spot_hash) {
+                        Application.state.current_spot_hash = spot_hash;
                         just_selected = true;
                     }
                 }
@@ -213,7 +213,7 @@ public sealed class BandView : Gtk.Box {
 
     private void update_visible_state () {
         var items = sorted.get_n_items ();
-        var band = Application.current_band_filter ?? "All";
+        var band = Application.state.current_band_filter ?? "All";
         band_label = band;
         icon_name = @"band-$band";
 

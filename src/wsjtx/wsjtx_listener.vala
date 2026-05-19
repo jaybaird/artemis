@@ -190,8 +190,12 @@ namespace Artemis.Wsjtx {
 
                     last_remote_address = remote_address;
                     var datagram = buffer[0: (int)received];
-                    var packet = parser.parse (datagram);
-                    packet_received (packet, format_sender (remote_address));
+                    try {
+                        var packet = parser.parse (datagram);
+                        packet_received (packet, format_sender (remote_address));
+                    } catch (PacketError err) {
+                        receive_error (err);
+                    }
                 } catch (Error err) {
                     if (err is IOError.WOULD_BLOCK)
                         break;

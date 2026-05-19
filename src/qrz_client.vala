@@ -44,18 +44,6 @@ public sealed class QrzClient : Object {
         return GLib.Uri.escape_string (value, null, false);
     }
 
-    private static string format_frequency_mhz (double frequency_khz) {
-        var formatted = "%.6f".printf (frequency_khz / 1000.0);
-
-        while (formatted.has_suffix ("0")) {
-            formatted = formatted.substring (0, formatted.length - 1);
-        }
-        if (formatted.has_suffix ("."))
-            formatted = formatted.substring (0, formatted.length - 1);
-
-        return formatted;
-    }
-
     private static string? lookup_response_value (
         GLib.HashTable<string, string> params,
         string key
@@ -207,7 +195,7 @@ public sealed class QrzClient : Object {
         record.set ("MODE", mode);
 
         if (spot.frequency_khz > 0)
-            record.set ("FREQ", format_frequency_mhz (spot.frequency_khz));
+            record.set ("FREQ", format_frequency_mhz_from_khz (spot.frequency_khz));
 
         if (park_ref != "") {
             record.set ("SIG", "POTA");

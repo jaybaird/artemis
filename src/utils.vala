@@ -54,20 +54,6 @@ public static string format_vfo (double freq_khz) {
     return "%lu.%03lu.%02lu".printf ((ulong)mhz, (ulong)khz, (ulong)(hz / 10));
 }
 
-public static string format_frequency_khz (double frequency_khz) {
-    if (Math.fabs (frequency_khz - Math.round (frequency_khz)) < 0.0005)
-        return "%.0f".printf (frequency_khz);
-
-    var formatted = "%.3f".printf (frequency_khz);
-    while (formatted.has_suffix ("0")) {
-        formatted = formatted.substring (0, formatted.length - 1);
-    }
-    if (formatted.has_suffix ("."))
-        formatted = formatted.substring (0, formatted.length - 1);
-
-    return formatted;
-}
-
 public static int scaled_avatar_size (int base_size) {
     var settings = Gtk.Settings.get_default ();
     if (settings == null)
@@ -200,16 +186,16 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
     if (now.compare (expires) > 0)
         return false;
 
-    if ((Application.current_program_filter != null) &&
-        !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
+    if ((Application.state.current_program_filter != null) &&
+        !spot.park_ref.down ().has_prefix (Application.state.current_program_filter.down ()))
         return false;
 
-    if ((Application.current_mode_filter != null) &&
-        !spot.mode.down ().contains (Application.current_mode_filter.down ()))
+    if ((Application.state.current_mode_filter != null) &&
+        !spot.mode.down ().contains (Application.state.current_mode_filter.down ()))
         return false;
 
-    if (Application.current_search_text != null) {
-        var needle = Application.current_search_text.down ();
+    if (Application.state.current_search_text != null) {
+        var needle = Application.state.current_search_text.down ();
         if (!(spot.callsign.down ().contains (needle) ||
               spot.park_ref.down ().contains (needle) ||
               spot.park_name.down ().contains (needle))) {

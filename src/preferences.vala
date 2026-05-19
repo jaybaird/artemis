@@ -660,6 +660,21 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
                     return _strip_quotes (column);
                 }));
 
+                if (columns.size < 7) {
+                    throw new IOError.INVALID_DATA (
+                        "CSV row has %d columns; expected at least 7".printf (columns.size)
+                    );
+                }
+
+                int qso_count = 0;
+                unowned string unparsed;
+                if (!int.try_parse (columns.get (6), out qso_count, out unparsed) ||
+                    unparsed != "") {
+                    throw new IOError.INVALID_DATA (
+                        "CSV row has invalid QSO count '%s'".printf (columns.get (6))
+                    );
+                }
+
                 db.add_park (
                     columns.get (3),
                     columns.get (4),
@@ -667,8 +682,11 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
                     columns.get (1),
                     columns.get (2),
                     columns.get (5),
-                    int.parse (columns.get (6)),
+                    qso_count,
                     out error);
+                if (error != null) {
+                    throw new IOError.FAILED (error.message);
+                }
                 num_parks++;
             }
             description = ngettext ("Successfully imported one park",
@@ -676,7 +694,7 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
         } catch (Error err) {
             description = _(
                 "Unable to import hunted parks. Please check your CSV file and try again.");
-            error (err.message);
+            warning ("Unable to import hunted parks: %s", err.message);
         }
 
         import_file_row.subtitle = "";

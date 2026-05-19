@@ -22,17 +22,14 @@ public sealed class Application : Adw.Application {
     public signal void radio_connection_state_changed ();
     public signal void toast_requested (string message);
 
-    private static Quark _current_spot_hash = 0;
+    public static AppState state { get; private set; }
+    public static LoggingService logging_service { get; private set; }
+
     public static Quark current_spot_hash {
         get {
-            return _current_spot_hash;
+            return state.current_spot_hash;
         } set {
-            if (_current_spot_hash == value)
-                return;
-            _current_spot_hash = value;
-            if (_spot_repo != null) {
-                _spot_repo.current_spot_changed (value);
-            }
+            state.current_spot_hash = value;
         }
     }
     public static CallsignCache callsign_cache { get; private set; }
@@ -52,10 +49,22 @@ public sealed class Application : Adw.Application {
     public static Application app;
     public static Gtk.Window win;
 
-    public static string? current_mode_filter { get; set; }
-    public static string? current_program_filter { get; set; }
-    public static string? current_search_text { get; set; }
-    public static string? current_band_filter { get; set; }
+    public static string? current_mode_filter {
+        get { return state.current_mode_filter; }
+        set { state.current_mode_filter = value; }
+    }
+    public static string? current_program_filter {
+        get { return state.current_program_filter; }
+        set { state.current_program_filter = value; }
+    }
+    public static string? current_search_text {
+        get { return state.current_search_text; }
+        set { state.current_search_text = value; }
+    }
+    public static string? current_band_filter {
+        get { return state.current_band_filter; }
+        set { state.current_band_filter = value ?? "All"; }
+    }
 #if ARTEMIS_WINDOWS
     private static string? windows_bundle_root = null;
 #endif
@@ -94,6 +103,12 @@ public sealed class Application : Adw.Application {
         set_accels_for_action ("win.toggle-sidebar", { "F9" });
         add_action_entries (APP_ENTRIES, this);
 
+        state = new AppState ();
+        state.current_spot_changed.connect ((spot_hash) => {
+            if (spot_repo != null)
+                spot_repo.current_spot_changed (spot_hash);
+        });
+
         settings = new Settings (Build.DOMAIN);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
@@ -106,6 +121,7 @@ public sealed class Application : Adw.Application {
         }
 
         callsign_cache = new CallsignCache (3600);
+        logging_service = new LoggingService ();
         weather_cache = new WeatherCache ();
         solar_conditions = new SolarConditionsService ();
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();

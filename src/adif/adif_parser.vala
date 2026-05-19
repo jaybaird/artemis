@@ -19,6 +19,47 @@
  */
 
 namespace Artemis.Adif {
+    public DateTime? parse_qso_datetime_utc (string qso_date, string time_on) {
+        if ((qso_date.length != 8) || (time_on.length < 4))
+            return null;
+
+        int year;
+        int month;
+        int day;
+        int hour;
+        int minute;
+        int second = 0;
+        unowned string unparsed;
+
+        if (!int.try_parse (qso_date.substring (0, 4), out year, out unparsed) ||
+            (unparsed != "")) {
+            return null;
+        }
+        if (!int.try_parse (qso_date.substring (4, 2), out month, out unparsed) ||
+            (unparsed != "")) {
+            return null;
+        }
+        if (!int.try_parse (qso_date.substring (6, 2), out day, out unparsed) ||
+            (unparsed != "")) {
+            return null;
+        }
+        if (!int.try_parse (time_on.substring (0, 2), out hour, out unparsed) ||
+            (unparsed != "")) {
+            return null;
+        }
+        if (!int.try_parse (time_on.substring (2, 2), out minute, out unparsed) ||
+            (unparsed != "")) {
+            return null;
+        }
+        if ((time_on.length >= 6) &&
+            (!int.try_parse (time_on.substring (4, 2), out second, out unparsed) ||
+             (unparsed != ""))) {
+            return null;
+        }
+
+        return new DateTime.utc (year, month, day, hour, minute, (double) second);
+    }
+
     public sealed class Parser : Object {
         public static Document from_string (string input) throws Error {
             return new Parser ().parse (input);
@@ -29,6 +70,8 @@ namespace Artemis.Adif {
             int position = 0;
 
             if (input.length > 0 && input[0] != '<')
+                position = parse_header (input, document.header);
+            else if (input.length > 0 && starts_with_empty_header_marker (input))
                 position = parse_header (input, document.header);
 
             parse_records (input, position, document);
@@ -71,6 +114,11 @@ namespace Artemis.Adif {
             throw new Error.INVALID_FORMAT (
                 "Header started with text but did not terminate with <EOH>"
             );
+        }
+
+        private bool starts_with_empty_header_marker (string input) throws Error {
+            var tag = read_tag (input, 0);
+            return is_end_tag (tag.contents, "EOH");
         }
 
         private void parse_records (

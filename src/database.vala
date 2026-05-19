@@ -286,23 +286,46 @@ public class SpotDb : Object {
             return false;
         }
 
+        var created_utc = iso8601_from_borrowed_utc (spot.spot_time);
         const string QSO_SQL =
             """
             INSERT INTO qsos(
             park_ref, callsign, mode, frequency_khz, created_utc,
             spotter, spotter_comment, activator_comment
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            )
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM qsos
+                WHERE park_ref = ?
+                  AND callsign = ?
+                  AND IFNULL(mode, '') = IFNULL(?, '')
+                  AND ABS(IFNULL(frequency_khz, 0) - ?) < 0.0005
+                  AND created_utc = ?
+                  AND IFNULL(spotter, '') = IFNULL(?, '')
+            );
             """;
-        db.prepare_v2 (QSO_SQL, -1, out st);
+        if (db.prepare_v2 (QSO_SQL, -1, out st) != Sqlite.OK) {
+            db.exec ("ROLLBACK;");
+            error = new DatabaseError.SQLITE_FAILED ("Failed to prepare QSO insert: %s".printf (
+                db.errmsg ()));
+            return false;
+        }
 
         st.bind_text (1, spot.park_ref);
         st.bind_text (2, spot.callsign);
         st.bind_text (3, spot.mode);
         st.bind_double (4, spot.frequency_khz);
-        st.bind_text (5, iso8601_from_borrowed_utc (spot.spot_time));
+        st.bind_text (5, created_utc);
         st.bind_text (6, spot.spotter);
         st.bind_text (7, spot.spotter_comment);
         st.bind_text (8, spot.activator_comment);
+        st.bind_text (9, spot.park_ref);
+        st.bind_text (10, spot.callsign);
+        st.bind_text (11, spot.mode);
+        st.bind_double (12, spot.frequency_khz);
+        st.bind_text (13, created_utc);
+        st.bind_text (14, spot.spotter);
 
         if (st.step () != Sqlite.DONE) {
             db.exec ("ROLLBACK;");

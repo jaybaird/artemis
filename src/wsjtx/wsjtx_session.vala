@@ -32,7 +32,6 @@ namespace Artemis.Wsjtx {
         private string last_error_message = "";
         private string last_highlighted_callsign = "";
         private string last_selected_tx_callsign = "";
-        private HashSet<string> processed_logged_adif_keys = new HashSet<string> ();
 
         public bool listening { get; private set; default = false; }
         public bool connected { get; private set; default = false; }
@@ -209,6 +208,10 @@ namespace Artemis.Wsjtx {
                     highlight_active_spot_decode (decode);
                     decode_received (decode);
                     break;
+                case MessageType.CLEAR:
+                    dx_call = "";
+                    last_selected_tx_callsign = "";
+                    break;
                 case MessageType.LOGGED_ADIF:
                     var logged_adif = packet.get_logged_adif ();
                     logged_adif_received (logged_adif);
@@ -313,7 +316,7 @@ namespace Artemis.Wsjtx {
             if (spot == null)
                 return;
 
-            Application.current_spot_hash = spot.hash;
+            Application.state.current_spot_hash = spot.hash;
             last_selected_tx_callsign = callsign;
         }
 
@@ -360,10 +363,8 @@ namespace Artemis.Wsjtx {
                 mode
             );
 
-            if (processed_logged_adif_keys.contains (dedupe_key))
+            if (Application.logging_service.has_completed_logged_adif (dedupe_key))
                 return;
-
-            processed_logged_adif_keys.add (dedupe_key);
 
             if ((mode == "") || (frequency_khz <= 0.0) ||
                 (parsed.station_callsign == "") || (parsed.spot_time == null)) {
@@ -385,32 +386,15 @@ namespace Artemis.Wsjtx {
             );
 
             try {
-                if (park_ref != "") {
-                    yield Application.pota_client.post_spot (
-                        parsed.call,
-                        parsed.station_callsign,
-                        park_ref,
-                        "%.3f".printf (frequency_khz),
-                        mode,
-                        parsed.comment
-                    );
-                }
-
-                Error? db_error = null;
-                Application.spot_database.add_qso_from_spot (spot, out db_error);
-                if (db_error != null) {
-                    warning ("Unable to save WSJT-X auto-spotted QSO: %s", db_error.message);
-                }
-
-                bool enable_logging = Application.settings.get_boolean ("enable-logging");
-                string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
-                if (enable_logging && (qrz_api_key != "")) {
-                    try {
-                        yield Application.qrz_client.upload_spot_qso (spot);
-                    } catch (Error err) {
-                        warning ("Unable to upload WSJT-X ADIF to QRZ: %s", err.message);
-                    }
-                }
+                var result = yield Application.logging_service.submit_spot_qso (
+                    spot,
+                    park_ref != ""
+                );
+                Application.logging_service.mark_logged_adif_completed (dedupe_key);
+                if (result.pota_error != null)
+                    Application.show_toast (_("WSJT-X QSO saved locally; POTA spot failed"));
+                if (result.qrz_error != null)
+                    Application.show_toast (_("WSJT-X QSO saved locally; QRZ upload failed"));
             } catch (Error err) {
                 warning ("Unable to auto spot WSJT-X POTA contact %s: %s",
                     parsed.call,
@@ -444,7 +428,7 @@ namespace Artemis.Wsjtx {
                 return null;
 
             var mode = map_record_value (record, "MODE").up ();
-            var frequency_khz = parse_frequency_khz (map_record_value (record, "FREQ"));
+            var frequency_khz = parse_mhz_to_khz_or_zero (map_record_value (record, "FREQ"));
             var station_callsign = first_non_empty (
                 map_record_value (record, "STATION_CALLSIGN"),
                 Application.settings.get_string ("callsign").strip ()
@@ -468,7 +452,7 @@ namespace Artemis.Wsjtx {
             parsed.rst_sent = map_record_value (record, "RST_SENT");
             parsed.rst_rcvd = map_record_value (record, "RST_RCVD");
             parsed.comment = comment;
-            parsed.spot_time = parse_adif_datetime (qso_date, time_on);
+            parsed.spot_time = Artemis.Adif.parse_qso_datetime_utc (qso_date, time_on);
             parsed.dedupe_key = "%s|%s|%s|%s".printf (
                 call,
                 "",
@@ -490,48 +474,6 @@ namespace Artemis.Wsjtx {
             if (second.strip () != "")
                 return second.strip ();
             return third.strip ();
-        }
-
-        private double parse_frequency_khz (string mhz_text) {
-            if (mhz_text.strip () == "")
-                return 0.0;
-
-            double mhz = 0.0;
-            unowned string unparsed;
-            if (!double.try_parse (mhz_text.strip (), out mhz, out unparsed) || (unparsed != ""))
-                return 0.0;
-
-            return mhz * 1000.0;
-        }
-
-        private DateTime? parse_adif_datetime (string qso_date, string time_on) {
-            if ((qso_date.length != 8) || (time_on.length < 4))
-                return null;
-
-            int year;
-            int month;
-            int day;
-            int hour;
-            int minute;
-            int second = 0;
-            unowned string unparsed;
-
-            if (!int.try_parse (qso_date.substring (0, 4), out year, out unparsed) || (unparsed != ""))
-                return null;
-            if (!int.try_parse (qso_date.substring (4, 2), out month, out unparsed) || (unparsed != ""))
-                return null;
-            if (!int.try_parse (qso_date.substring (6, 2), out day, out unparsed) || (unparsed != ""))
-                return null;
-            if (!int.try_parse (time_on.substring (0, 2), out hour, out unparsed) || (unparsed != ""))
-                return null;
-            if (!int.try_parse (time_on.substring (2, 2), out minute, out unparsed) || (unparsed != ""))
-                return null;
-            if ((time_on.length >= 6) &&
-                (!int.try_parse (time_on.substring (4, 2), out second, out unparsed) || (unparsed != ""))) {
-                return null;
-            }
-
-            return new DateTime.utc (year, month, day, hour, minute, (double) second);
         }
 
         private void set_status (

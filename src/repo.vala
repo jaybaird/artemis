@@ -307,6 +307,47 @@ public sealed class SpotRepo : Object {
         return 0;
     }
 
+    private void annotate_spot_log_status (Spot spot) {
+        Error? error = null;
+        bool was_hunted_today = Application.spot_database.had_qso_with_park_on_utc_day (
+            spot.park_ref,
+            new DateTime.now_utc (),
+            out error
+        );
+        if (error != null) {
+            warning ("Unable to check whether %s was hunted today: %s",
+                spot.park_ref, error.message);
+            error = null;
+        }
+
+        bool is_new_park = !Application.spot_database.is_park_hunted (
+            spot.park_ref,
+            out error
+        );
+        if (error != null) {
+            warning ("Unable to check whether %s was hunted before: %s",
+                spot.park_ref, error.message);
+            error = null;
+            is_new_park = false;
+        }
+
+        bool is_new_band = false;
+        if (!is_new_park) {
+            is_new_band = !Application.spot_database.had_qso_with_park_on_band (
+                spot.park_ref,
+                spot.band,
+                out error
+            );
+            if (error != null) {
+                warning ("Unable to check whether %s was hunted on %s: %s",
+                    spot.park_ref, spot.band, error.message);
+                is_new_band = false;
+            }
+        }
+
+        spot.set_log_status (was_hunted_today, is_new_park, is_new_band);
+    }
+
     public async void update_spots () {
         if (update_in_progress) {
             update_pending = true;
@@ -336,6 +377,7 @@ public sealed class SpotRepo : Object {
                         try {
                             var element = spots_array.get_element (i).get_object ();
                             var spot = new Spot.from_json (element);
+                            annotate_spot_log_status (spot);
 
                             unique_callsigns.add (spot.callsign);
                             unique_callsigns.add (spot.spotter);
@@ -390,7 +432,6 @@ public sealed class SpotRepo : Object {
                     modes_sorted.add (mode);
                 }
 
-                store.remove_all ();
                 band_counts.clear ();
                 foreach (var entry in parsed_band_counts.entries) {
                     band_counts[entry.key] = entry.value;
@@ -399,9 +440,10 @@ public sealed class SpotRepo : Object {
                 var new_program_model = new Gtk.StringList ({});
                 var new_mode_model = new Gtk.StringList ({});
 
-                foreach (var spot in parsed_spots) {
-                    store.append (spot);
-                }
+                GLib.Object[] additions = new GLib.Object[parsed_spots.size];
+                for (int i = 0; i < parsed_spots.size; i++)
+                    additions[i] = parsed_spots[i];
+                store.splice (0, store.get_n_items (), additions);
                 spots_updated = parsed_spots.size;
 
                 new_program_model.append (_("All"));

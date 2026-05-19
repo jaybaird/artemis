@@ -234,6 +234,7 @@ public class MapView : Gtk.Box {
     private bool user_has_adjusted_view = false;
     private bool current_map_is_dark = false;
     private bool loaded_after_map = false;
+    private uint load_spots_idle_id = 0;
 
     private Gtk.Overlay overlay;
 
@@ -340,14 +341,16 @@ public class MapView : Gtk.Box {
                 return false;
             return spot_matches_current_filters (
                 spot,
-                Application.current_band_filter ?? "All"
+                Application.state.current_band_filter ?? "All"
             );
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store,
             filter);
 
-        Application.spot_repo.refreshed.connect (load_spots);
+        Application.spot_repo.refreshed.connect (() => {
+            queue_load_spots ();
+        });
         Application.spot_repo.current_spot_changed.connect (sync_marker_selection);
 
         update_astronomy_overlays ();
@@ -364,11 +367,15 @@ public class MapView : Gtk.Box {
                 return;
 
             loaded_after_map = true;
-            load_spots ();
+            queue_load_spots ();
         });
     }
 
     ~MapView () {
+        if (load_spots_idle_id != 0) {
+            Source.remove (load_spots_idle_id);
+            load_spots_idle_id = 0;
+        }
         if (astronomy_refresh_timeout_id != 0) {
             Source.remove (astronomy_refresh_timeout_id);
             astronomy_refresh_timeout_id = 0;
@@ -530,7 +537,7 @@ public class MapView : Gtk.Box {
         };
         marker.add_css_class ("marker");
         sync_marker_heard_state (marker, marker_content, heard_icon, spot);
-        if (spot.hash == Application.current_spot_hash) {
+        if (spot.hash == Application.state.current_spot_hash) {
             marker.add_css_class ("selected");
             dot.selected = true;
             selected_marker = marker;
@@ -539,7 +546,7 @@ public class MapView : Gtk.Box {
 
         var click = new Gtk.GestureClick ();
         click.pressed.connect (() => {
-            Application.current_spot_hash = spot.hash;
+            Application.state.current_spot_hash = spot.hash;
         });
         marker.add_controller (click);
 
@@ -620,7 +627,18 @@ public class MapView : Gtk.Box {
 
     public void bounce_filter () {
         filter.changed (Gtk.FilterChange.DIFFERENT);
-        load_spots ();
+        queue_load_spots ();
+    }
+
+    private void queue_load_spots () {
+        if (load_spots_idle_id != 0)
+            return;
+
+        load_spots_idle_id = Idle.add (() => {
+            load_spots_idle_id = 0;
+            load_spots ();
+            return Source.REMOVE;
+        });
     }
 
     private PathLayer create_grayline_layer () {
@@ -796,10 +814,10 @@ public class MapView : Gtk.Box {
         map_widget.insert_layer_above (grayline_layer, map_layer);
         map_widget.insert_layer_above (marker_layer, grayline_layer);
         map_widget.insert_layer_above (astronomy_marker_layer, marker_layer);
-        sync_marker_selection (Application.current_spot_hash);
+        sync_marker_selection (Application.state.current_spot_hash);
 
-        if (Application.current_spot_hash == BLANK_HASH ||
-            !valid_hashes.contains (Application.current_spot_hash)) {
+        if (Application.state.current_spot_hash == BLANK_HASH ||
+            !valid_hashes.contains (Application.state.current_spot_hash)) {
             if (user_has_adjusted_view) {
                 return;
             }

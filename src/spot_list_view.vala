@@ -41,11 +41,11 @@ public sealed class SpotListRow : Gtk.Box {
         });
         time_label.label = humanize_ago_compact (spot.spot_time);
         tune_button.clicked.connect (() => {
-            Application.current_spot_hash = spot.hash;
+            Application.state.current_spot_hash = spot.hash;
             Application.radio_control.tune_to_spot (spot);
         });
         spot_button.clicked.connect (() => {
-            Application.current_spot_hash = spot.hash;
+            Application.state.current_spot_hash = spot.hash;
             new AddSpot.from_spot (spot).present (get_root ());
         });
     }
@@ -100,7 +100,7 @@ public sealed class SpotListView : Gtk.Box {
             if (spot == null)
                 return false;
 
-            var band_filter = Application.current_band_filter ?? "All";
+            var band_filter = Application.state.current_band_filter ?? "All";
             return spot_matches_current_filters (spot, band_filter);
         });
 
@@ -133,8 +133,8 @@ public sealed class SpotListView : Gtk.Box {
             var list_row = row.get_child () as SpotListRow;
             if ((list_row != null) &&
                 !just_selected &&
-                (list_row.spot.hash == Application.current_spot_hash)) {
-                Application.current_spot_hash = BLANK_HASH;
+                (list_row.spot.hash == Application.state.current_spot_hash)) {
+                Application.state.current_spot_hash = BLANK_HASH;
                 spot_list.unselect_all ();
             }
             if (just_selected) {
@@ -154,8 +154,8 @@ public sealed class SpotListView : Gtk.Box {
             if (list_row == null)
                 return;
 
-            if (list_row.spot.hash != Application.current_spot_hash) {
-                Application.current_spot_hash = list_row.spot.hash;
+            if (list_row.spot.hash != Application.state.current_spot_hash) {
+                Application.state.current_spot_hash = list_row.spot.hash;
                 just_selected = true;
             }
         });

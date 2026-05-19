@@ -96,6 +96,15 @@ public sealed class AddSpot : Adw.Dialog {
         alert.present (Application.win);
     }
 
+    private void present_logging_error (string message) {
+        var alert = new Adw.AlertDialog (_("Unable to Log QSO"), null);
+        alert.format_body ("%s", message);
+        alert.add_response ("ok", _("OK"));
+        alert.set_default_response ("ok");
+        alert.set_close_response ("ok");
+        alert.present (get_root ());
+    }
+
     public AddSpot.from_spot (Spot spot) {
         Object ();
 
@@ -124,8 +133,6 @@ public sealed class AddSpot : Adw.Dialog {
         });
 
         submit_button.clicked.connect (() => {
-            bool enable_logging = Application.settings.get_boolean ("enable-logging");
-            string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
             string selected_mode = ((Gtk.StringList) mode.get_model ()).get_string (
                 mode.selected
             );
@@ -140,46 +147,27 @@ public sealed class AddSpot : Adw.Dialog {
                 rst_sent.text,
                 rst_received.text);
 
-            this.close ();
-
-            Application.pota_client.post_spot.begin (
-                activator_callsign.text,
-                spotter_callsign.text,
-                park_ref.text,
-                frequency.text,
-                selected_mode,
-                spotter_comments.text,
-                (obj, res) => {
-                    try {
-                        Error? err = null;
-                        Application.pota_client.post_spot.end (res);
+            submit_button.sensitive = false;
+            Application.logging_service.submit_spot_qso.begin (spot, true, (obj, res) => {
+                try {
+                    var result = Application.logging_service.submit_spot_qso.end (res);
+                    this.close ();
+                    Application.show_toast (_("QSO saved"));
+                    if (result.pota_posted)
                         Application.show_toast (_("Spot posted"));
-                        Application.spot_database.add_qso_from_spot (spot, out err);
-                        if (err != null) {
-                            warning ("Unable to save qso: %s".printf (err.message));
-                        }
+                    else if (result.pota_error != null)
+                        Application.show_toast (_("QSO saved locally; POTA spot failed"));
 
-                        if (enable_logging && (qrz_api_key != "")) {
-                            Application.qrz_client.upload_spot_qso.begin (spot, (
-                                qrz_obj,
-                                qrz_res
-                            ) => {
-                                try {
-                                    Application.qrz_client.upload_spot_qso.end (qrz_res);
-                                    Application.show_toast (_("Uploaded QSO to QRZ"));
-                                } catch (Error qrz_err) {
-                                    warning ("Unable to upload QSO to QRZ: %s",
-                                        qrz_err.message);
-                                    present_qrz_error (qrz_err.message);
-                                }
-                            });
-                        }
-                    } catch (Error err) {
-                        var errmsg = err.message;
-                        warning (@"Unable to post spot: $errmsg");
-                    }
+                    if (result.qrz_uploaded)
+                        Application.show_toast (_("Uploaded QSO to QRZ"));
+                    else if (result.qrz_error != null)
+                        present_qrz_error (result.qrz_error);
+                } catch (Error err) {
+                    submit_button.sensitive = true;
+                    warning ("Unable to log QSO: %s", err.message);
+                    present_logging_error (err.message);
                 }
-            );
+            });
         });
     }
 
@@ -344,7 +332,7 @@ public sealed class SpotCard : Gtk.Box {
     }
 
     private void on_tune_clicked () {
-        Application.current_spot_hash = spot.hash;
+        Application.state.current_spot_hash = spot.hash;
         Application.radio_control.tune_to_spot (spot);
     }
 
@@ -476,6 +464,8 @@ public sealed class SpotCard : Gtk.Box {
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/park_log_dialog.ui")]
 public class ParkLogDialog : Adw.Dialog {
     [GtkChild]
+    public unowned Adw.WindowTitle title_widget;
+    [GtkChild]
     public unowned Gtk.ScrolledWindow qso_scroll;
     [GtkChild]
     public unowned Gtk.ListBox qso_list;
@@ -485,17 +475,81 @@ public class ParkLogDialog : Adw.Dialog {
         Object (
             park_ref: spot.park_ref
         );
+        title_widget.title = "%s %s".printf (_("Park Logbook"), spot.park_ref);
     }
 
     construct {
-        Error error = null;
-        var park = Application.spot_database.get_park_by_ref (park_ref, out error);
-        var all_qsos = Application.spot_database.all_qsos_for_park (park_ref, out
-            error);
-        foreach (var qso in all_qsos) {
-            // var row = create_qso_row (qso);
-            // qso_list.append (row);
+        Error? error = null;
+        var all_qsos = Application.spot_database.all_qsos_for_park (park_ref, out error);
+        if (error != null) {
+            qso_list.append (create_qso_message_row (error.message));
+            qso_scroll.visible = true;
+            return;
         }
+
+        if (all_qsos == null || all_qsos.size == 0) {
+            qso_list.append (create_qso_message_row (_("No QSOs logged for this park yet.")));
+            qso_scroll.visible = true;
+            return;
+        }
+
+        foreach (var qso in all_qsos)
+            qso_list.append (create_qso_row (qso));
+
+        qso_scroll.visible = true;
+    }
+
+    private Gtk.Widget create_qso_message_row (string message) {
+        var row = new Gtk.ListBoxRow ();
+        row.set_child (new Gtk.Label (message) {
+            margin_top = 12,
+            margin_bottom = 12,
+            margin_start = 12,
+            margin_end = 12,
+            wrap = true,
+            xalign = 0
+        });
+        return row;
+    }
+
+    private Gtk.Widget create_qso_row (QsoRow qso) {
+        var row = new Gtk.ListBoxRow ();
+        var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 4) {
+            margin_top = 10,
+            margin_bottom = 10,
+            margin_start = 12,
+            margin_end = 12
+        };
+
+        var title = new Gtk.Label ("%s  %s  %s kHz".printf (
+            qso.callsign ?? _("Unknown"),
+            qso.mode ?? "",
+            format_frequency_khz (qso.frequency_khz)
+        )) {
+            xalign = 0
+        };
+        title.add_css_class ("heading");
+        box.append (title);
+
+        var detail = new Gtk.Label ("%s  %s".printf (
+            qso.created_utc ?? "",
+            qso.spotter ?? ""
+        )) {
+            xalign = 0
+        };
+        detail.add_css_class ("caption");
+        detail.add_css_class ("dim-label");
+        box.append (detail);
+
+        if ((qso.spotter_comment ?? "").strip () != "") {
+            box.append (new Gtk.Label (qso.spotter_comment) {
+                xalign = 0,
+                wrap = true
+            });
+        }
+
+        row.set_child (box);
+        return row;
     }
 } /* class ParkLogDialog */
 

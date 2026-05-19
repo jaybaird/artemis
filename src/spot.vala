@@ -88,9 +88,9 @@ public sealed class Spot : Object {
     public double bearing { get; construct; }
     public Coordinate coordinate { get; construct; }
     public Quark hash { get; construct; default = BLANK_HASH; }
-    public bool is_new_park { get; construct; }
-    public bool was_hunted_today { get; construct; }
-    public bool is_new_band { get; construct; }
+    public bool is_new_park { get; private set; default = false; }
+    public bool was_hunted_today { get; private set; default = false; }
+    public bool is_new_band { get; private set; default = false; }
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
     public bool heard_recently { get; private set; default = false; }
@@ -140,7 +140,7 @@ public sealed class Spot : Object {
             callsign: callsign,
             park_ref: park_ref,
             spot_time: spot_time,
-            frequency_khz: parse_frequency_input_khz (frequency_khz),
+            frequency_khz: parse_khz_or_zero (frequency_khz),
             mode: mode,
             spotter: spotter,
             spotter_comment: spotter_comment,
@@ -169,31 +169,15 @@ public sealed class Spot : Object {
         return value;
     }
 
-    private static double parse_frequency_input_khz (string value) {
-        double frequency_khz = 0;
-        unowned string unparsed;
-
-        if (double.try_parse (value.strip (), out frequency_khz, out unparsed) &&
-            (unparsed == "")) {
-            return frequency_khz;
-        }
-
-        return 0;
-    }
-
     private static double parse_frequency_khz (Json.Object object) throws Error {
         var value = object.get_string_member_with_default ("frequency", "0").strip ();
-        double frequency_khz = 0;
-        unowned string unparsed;
-
-        if (!double.try_parse (value, out frequency_khz, out unparsed) ||
-            (unparsed != "")) {
+        try {
+            return parse_frequency (value, FrequencyUnit.KHZ, FrequencyUnit.KHZ);
+        } catch (FrequencyError error) {
             throw new IOError.INVALID_DATA (
                 "Spot has invalid frequency '%s'".printf (value)
             );
         }
-
-        return frequency_khz;
     }
 
     private static DateTime parse_spot_time (Json.Object object) throws Error {
@@ -240,14 +224,6 @@ public sealed class Spot : Object {
         hash = GLib.Quark.from_string (key);
         if (hash == BLANK_HASH)
             hash = hash - 1;
-
-        Error error = null;
-        was_hunted_today = Application.spot_database.had_qso_with_park_on_utc_day (
-            park_ref, new DateTime.now_utc (), out error);
-        is_new_park = !Application.spot_database.is_park_hunted (park_ref, out
-            error);
-        is_new_band = !is_new_park && !Application.spot_database.had_qso_with_park_on_band (
-            park_ref, band, out error);
 
         coordinate = null;
         distance = -1.0;
@@ -331,6 +307,25 @@ public sealed class Spot : Object {
             }
             return Source.REMOVE;
         });
+    }
+
+    public void set_log_status (
+        bool was_hunted_today,
+        bool is_new_park,
+        bool is_new_band
+    ) {
+        if (this.was_hunted_today != was_hunted_today) {
+            this.was_hunted_today = was_hunted_today;
+            notify_property ("was-hunted-today");
+        }
+        if (this.is_new_park != is_new_park) {
+            this.is_new_park = is_new_park;
+            notify_property ("is-new-park");
+        }
+        if (this.is_new_band != is_new_band) {
+            this.is_new_band = is_new_band;
+            notify_property ("is-new-band");
+        }
     }
 
     ~Spot () {
