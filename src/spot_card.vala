@@ -18,10 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#if ARTEMIS_UNIX
-using WebKit;
-#endif
-
 public string humanize_ago (GLib.DateTime dt) {
     var now = new GLib.DateTime.now_utc ();
     int64 span_us = now.difference (dt);
@@ -72,18 +68,19 @@ public string bearing_to_compass (double bearing) {
     return directions[index];
 }
 
+ [GtkTemplate (ui = "/com/k0vcz/artemis/ui/add_spot_page.ui")]
 public sealed class AddSpot : Adw.Dialog {
-    private Adw.EntryRow activator_callsign;
-    private Adw.EntryRow spotter_callsign;
-    private Adw.EntryRow frequency;
-    private Adw.ComboRow mode;
-    private Adw.EntryRow park_ref;
-    private Adw.EntryRow rst_sent;
-    private Adw.EntryRow rst_received;
-    private Adw.EntryRow spotter_comments;
+    [GtkChild] private unowned Adw.EntryRow activator_callsign;
+    [GtkChild] private unowned Adw.EntryRow spotter_callsign;
+    [GtkChild] private unowned Adw.EntryRow frequency;
+    [GtkChild] private unowned Adw.ComboRow mode;
+    [GtkChild] private unowned Adw.EntryRow park_ref;
+    [GtkChild] private unowned Adw.EntryRow rst_sent;
+    [GtkChild] private unowned Adw.EntryRow rst_received;
+    [GtkChild] private unowned Adw.EntryRow spotter_comments;
 
-    private Gtk.Button cancel_button;
-    private Gtk.Button submit_button;
+    [GtkChild] private unowned Gtk.Button cancel_button;
+    [GtkChild] private unowned Gtk.Button submit_button;
 
     public AddSpot () {
         Object ();
@@ -117,32 +114,15 @@ public sealed class AddSpot : Adw.Dialog {
     }
 
     construct {
-        Gtk.Builder builder = new Gtk.Builder.from_resource (
-            "/com/k0vcz/artemis/ui/add_spot_page.ui");
-
-        var content = builder.get_object ("add_spot_content") as Gtk.Widget;
-        this.set_child (content);
-
-        activator_callsign = builder.get_object ("activator_callsign") as Adw.EntryRow;
-        spotter_callsign = builder.get_object ("spotter_callsign") as Adw.EntryRow;
-        frequency = builder.get_object ("frequency") as Adw.EntryRow;
-        mode = builder.get_object ("mode") as Adw.ComboRow;
-        park_ref = builder.get_object ("park_ref") as Adw.EntryRow;
-        rst_sent = builder.get_object ("rst_sent") as Adw.EntryRow;
-        rst_received = builder.get_object ("rst_received") as Adw.EntryRow;
-        spotter_comments = builder.get_object ("spotter_comments") as Adw. EntryRow;
-
         var settings = Application.settings;
         spotter_callsign.text = settings.get_string ("callsign");
         spotter_comments.text = settings.get_string ("spot-message");
         select_mode (settings.get_string ("default-mode"));
 
-        cancel_button = builder.get_object ("cancel_button") as Gtk.Button;
         cancel_button.clicked.connect (() => {
             this.close ();
         });
 
-        submit_button = builder.get_object ("submit_button") as Gtk.Button;
         submit_button.clicked.connect (() => {
             bool enable_logging = Application.settings.get_boolean ("enable-logging");
             string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
@@ -163,6 +143,7 @@ public sealed class AddSpot : Adw.Dialog {
                 try {
                     Error? err = null;
                     Application.pota_client.post_spot.end (res);
+                    Application.show_toast (_("Spot posted"));
                     Application.spot_database.add_qso_from_spot (spot, out err);
                     if (err != null) {
                         warning ("Unable to save qso: %s".printf (err.message));
@@ -175,6 +156,7 @@ public sealed class AddSpot : Adw.Dialog {
                         ) => {
                             try {
                                 Application.qrz_client.upload_spot_qso.end (qrz_res);
+                                Application.show_toast (_("Uploaded QSO to QRZ"));
                             } catch (Error qrz_err) {
                                 warning ("Unable to upload QSO to QRZ: %s",
                                     qrz_err.message);
@@ -249,6 +231,8 @@ public sealed class SpotCard : Gtk.Box {
     public Spot spot { get; construct; }
     private ulong callsign_cache_updated_handler = 0;
     private ulong radio_connection_state_handler = 0;
+    private ulong wsjtx_decode_handler = 0;
+    private ulong heard_recently_notify_handler = 0;
     private uint avatar_retry_id = 0;
     private uint avatar_fetch_attempt = 0;
     private bool disposed = false;
@@ -304,6 +288,15 @@ public sealed class SpotCard : Gtk.Box {
         start_avatar_fetch ();
 
         refresh_highlight ();
+
+        heard_recently_notify_handler = spot.notify["heard-recently"].connect (() => {
+            refresh_highlight ();
+        });
+
+        wsjtx_decode_handler = Application.wsjtx_session.decode_received.connect ((decode) => {
+            if (decode_matches_spot (decode))
+                spot.mark_heard_recently ();
+        });
 
         update_tune_button_state ();
         tune_button.clicked.connect (on_tune_clicked);
@@ -387,6 +380,16 @@ public sealed class SpotCard : Gtk.Box {
         }
     }
 
+    private bool decode_matches_spot (Artemis.Wsjtx.DecodePacket decode) {
+        var decoded_text = decode.text.strip ().up ();
+        var callsign = spot.callsign.strip ().up ();
+
+        if ((decoded_text == "") || (callsign == ""))
+            return false;
+
+        return decoded_text.contains (callsign);
+    }
+
     ~SpotCard () {
         disposed = true;
         cancel_avatar_retry ();
@@ -399,6 +402,16 @@ public sealed class SpotCard : Gtk.Box {
             if (SignalHandler.is_connected (Application.app, radio_connection_state_handler))
                 SignalHandler.disconnect (Application.app, radio_connection_state_handler);
             radio_connection_state_handler = 0;
+        }
+        if (wsjtx_decode_handler != 0) {
+            if (SignalHandler.is_connected (Application.wsjtx_session, wsjtx_decode_handler))
+                SignalHandler.disconnect (Application.wsjtx_session, wsjtx_decode_handler);
+            wsjtx_decode_handler = 0;
+        }
+        if (heard_recently_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, heard_recently_notify_handler))
+                SignalHandler.disconnect (spot, heard_recently_notify_handler);
+            heard_recently_notify_handler = 0;
         }
     }
 
@@ -558,39 +571,3 @@ public class SpotHistoryDialog : Adw.Dialog {
         error_page.visible = false;
     }
 } /* class SpotHistoryDialog */
-
-#if ARTEMIS_UNIX
-public class ParkDetailsView : Adw.Dialog {
-    private WebKit.WebView webview;
-    private Adw.WindowTitle title_widget;
-
-    public ParkDetailsView (string title, string url) {
-        Object (
-            content_width: 800,
-            content_height: 600
-        );
-
-        var toolbar_view = new Adw.ToolbarView ();
-
-        var headerbar = new Adw.HeaderBar ();
-        title_widget = new Adw.WindowTitle (title, "");
-        headerbar.set_title_widget (title_widget);
-
-        toolbar_view.add_top_bar (headerbar);
-
-        var scrolled = new Gtk.ScrolledWindow () {
-            hexpand = true,
-            vexpand = true
-        };
-
-        webview = new WebKit.WebView ();
-        webview.load_uri (url);
-
-        scrolled.set_child (webview);
-        toolbar_view.set_content (scrolled);
-
-        // Set main child
-        this.set_child (toolbar_view);
-    }
-} /* class ParkDetailsView */
-#endif

@@ -186,5 +186,35 @@
         <summary>Enable automatic logging</summary>
         <description>Automatically log QSOs when spotting.</description>
         </key>
+
+        <key name="window-width" type="i">
+        <default>1280</default>
+        <summary>Window width</summary>
+        <description>The last saved width of the main window.</description>
+        </key>
+
+        <key name="window-height" type="i">
+        <default>720</default>
+        <summary>Window height</summary>
+        <description>The last saved height of the main window.</description>
+        </key>
+
+        <key name="window-maximized" type="b">
+        <default>false</default>
+        <summary>Window maximized</summary>
+        <description>Whether the main window was maximized.</description>
+        </key>
+
+        <key name="main-pane-position" type="i">
+        <default>220</default>
+        <summary>Main pane position</summary>
+        <description>The sidebar split position in the main window.</description>
+        </key>
+
+        <key name="content-pane-position" type="i">
+        <default>920</default>
+        <summary>Content pane position</summary>
+        <description>The inspector split position in the main window.</description>
+        </key>
 	</schema>
 </schemalist>

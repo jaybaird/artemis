@@ -18,16 +18,12 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-public enum QrzLogbookError {
+public errordomain QrzLogbookError {
     INVALID_REQUEST,
     HTTP_FAILED,
     AUTH_FAILED,
     API_FAILED,
     PARSE_FAILED
-}
-
-public static GLib.Quark qrz_logbook_error_quark () {
-    return GLib.Quark.from_string ("qrz-logbook-error");
 }
 
 public sealed class QrzClient : Object {
@@ -46,10 +42,6 @@ public sealed class QrzClient : Object {
 
     private static string encode_form_value (string value) {
         return GLib.Uri.escape_string (value, null, false);
-    }
-
-    private static string adif_field (string name, string value) {
-        return "<%s:%u>%s".printf (name, value.length, value);
     }
 
     private static string format_frequency_mhz (double frequency_khz) {
@@ -92,91 +84,32 @@ public sealed class QrzClient : Object {
         return params;
     }
 
-    private string build_adif_record (Spot spot) throws Error {
-        var station_callsign = (spot.spotter ?? "").strip ();
-        var contacted_callsign = (spot.callsign ?? "").strip ();
-        var band = (spot.band ?? "").strip ();
-        var mode = (spot.mode ?? "").strip ().up ();
-        var park_ref = (spot.park_ref ?? "").strip ();
-
-        if (station_callsign == "") {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.INVALID_REQUEST,
-                "Spotter callsign is required for QRZ upload"
-            );
-        }
-
-        if (contacted_callsign == "") {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.INVALID_REQUEST,
-                "Activator callsign is required for QRZ upload"
-            );
-        }
-
-        if ((band == "") || (band == "All") || (band == "Other")) {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.INVALID_REQUEST,
-                "A valid amateur band is required for QRZ upload"
-            );
-        }
-
-        if (mode == "") {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.INVALID_REQUEST,
-                "Mode is required for QRZ upload"
-            );
-        }
-
-        var qso_time = spot.spot_time.to_utc ();
-        var adif = new StringBuilder ();
-        adif.append (adif_field ("station_callsign", station_callsign));
-        adif.append (adif_field ("call", contacted_callsign));
-        adif.append (adif_field ("qso_date", qso_time.format ("%Y%m%d")));
-        adif.append (adif_field ("time_on", qso_time.format ("%H%M")));
-        adif.append (adif_field ("band", band));
-        adif.append (adif_field ("mode", mode));
-
-        if (spot.frequency_khz > 0)
-            adif.append (adif_field ("freq", format_frequency_mhz (spot.frequency_khz)));
-
-        if (park_ref != "") {
-            adif.append (adif_field ("sig", "POTA"));
-            adif.append (adif_field ("sig_info", park_ref));
-            adif.append (adif_field ("POTARef", park_ref));
-            adif.append (adif_field ("notes", "POTA - %s".printf (park_ref)));
-        }
-
-        if ((spot.rst_sent ?? "").strip () != "")
-            adif.append (adif_field ("rst_sent", spot.rst_sent.strip ()));
-        if ((spot.rst_rcvd ?? "").strip () != "")
-            adif.append (adif_field ("rst_rcvd", spot.rst_rcvd.strip ()));
-
-        var comment = (spot.spotter_comment ?? "").strip ();
-        if (comment != "")
-            adif.append (adif_field ("comment", comment));
-
-        adif.append ("<eor>");
-
-        return adif.str;
-    }
-
-    public async void upload_spot_qso (Spot spot) throws Error {
+    private async void upload_adif_payload (string adif) throws Error {
         var api_key = Application.settings.get_string ("qrz-api-key").strip ();
         if (api_key == "") {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.INVALID_REQUEST,
-                "QRZ API key is not configured"
+            throw new QrzLogbookError.INVALID_REQUEST ("QRZ API key is not configured");
+        }
+
+        var normalized_adif = adif.strip ();
+        if (normalized_adif == "") {
+            throw new QrzLogbookError.INVALID_REQUEST ("ADIF record is required for QRZ upload");
+        }
+
+        if (!normalized_adif.down ().contains ("<eor>"))
+            normalized_adif += "<eor>";
+
+        try {
+            var document = Artemis.Adif.Parser.from_string (normalized_adif);
+            normalized_adif = Artemis.Adif.Generator.to_string (document);
+        } catch (Artemis.Adif.Error error) {
+            throw new QrzLogbookError.INVALID_REQUEST (
+                "Invalid ADIF record for QRZ upload: %s".printf (error.message)
             );
         }
 
         var form_body = "KEY=%s&ACTION=INSERT&ADIF=%s".printf (
             encode_form_value (api_key),
-            encode_form_value (build_adif_record (spot))
+            encode_form_value (normalized_adif)
         );
 
         var message = new Soup.Message ("POST", QRZ_LOGBOOK_API_URL);
@@ -195,9 +128,7 @@ public sealed class QrzClient : Object {
         );
 
         if (message.status_code != Soup.Status.OK) {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.HTTP_FAILED,
+            throw new QrzLogbookError.HTTP_FAILED (
                 "QRZ log upload failed: %u %s".printf (
                     message.status_code,
                     message.reason_phrase
@@ -213,9 +144,7 @@ public sealed class QrzClient : Object {
         var result = lookup_response_value (params, "RESULT");
 
         if ((result == null) || (result == "")) {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.PARSE_FAILED,
+            throw new QrzLogbookError.PARSE_FAILED (
                 "QRZ log upload returned an unexpected response"
             );
         }
@@ -232,17 +161,79 @@ public sealed class QrzClient : Object {
         }
 
         if (result == "AUTH") {
-            throw new Error (
-                qrz_logbook_error_quark (),
-                QrzLogbookError.AUTH_FAILED,
-                reason
+            throw new QrzLogbookError.AUTH_FAILED (reason);
+        }
+
+        throw new QrzLogbookError.API_FAILED (reason);
+    }
+
+    private string build_adif_record (Spot spot) throws Error {
+        var station_callsign = (spot.spotter ?? "").strip ();
+        var contacted_callsign = (spot.callsign ?? "").strip ();
+        var band = (spot.band ?? "").strip ();
+        var mode = (spot.mode ?? "").strip ().up ();
+        var park_ref = (spot.park_ref ?? "").strip ();
+
+        if (station_callsign == "") {
+            throw new QrzLogbookError.INVALID_REQUEST (
+                "Spotter callsign is required for QRZ upload"
             );
         }
 
-        throw new Error (
-            qrz_logbook_error_quark (),
-            QrzLogbookError.API_FAILED,
-            reason
-        );
+        if (contacted_callsign == "") {
+            throw new QrzLogbookError.INVALID_REQUEST (
+                "Activator callsign is required for QRZ upload"
+            );
+        }
+
+        if ((band == "") || (band == "All") || (band == "Other")) {
+            throw new QrzLogbookError.INVALID_REQUEST (
+                "A valid amateur band is required for QRZ upload"
+            );
+        }
+
+        if (mode == "") {
+            throw new QrzLogbookError.INVALID_REQUEST ("Mode is required for QRZ upload");
+        }
+
+        var qso_time = spot.spot_time.to_utc ();
+        var document = new Artemis.Adif.Document ();
+        var record = new Artemis.Adif.Record ();
+        record.set ("STATION_CALLSIGN", station_callsign);
+        record.set ("CALL", contacted_callsign);
+        record.set ("QSO_DATE", qso_time.format ("%Y%m%d"));
+        record.set ("TIME_ON", qso_time.format ("%H%M"));
+        record.set ("BAND", band);
+        record.set ("MODE", mode);
+
+        if (spot.frequency_khz > 0)
+            record.set ("FREQ", format_frequency_mhz (spot.frequency_khz));
+
+        if (park_ref != "") {
+            record.set ("SIG", "POTA");
+            record.set ("SIG_INFO", park_ref);
+            record.set ("POTAREF", park_ref);
+            record.set ("NOTES", "POTA - %s".printf (park_ref));
+        }
+
+        if ((spot.rst_sent ?? "").strip () != "")
+            record.set ("RST_SENT", spot.rst_sent.strip ());
+        if ((spot.rst_rcvd ?? "").strip () != "")
+            record.set ("RST_RCVD", spot.rst_rcvd.strip ());
+
+        var comment = (spot.spotter_comment ?? "").strip ();
+        if (comment != "")
+            record.set ("COMMENT", comment);
+
+        document.records.add (record);
+        return Artemis.Adif.Generator.to_string (document);
+    }
+
+    public async void upload_spot_qso (Spot spot) throws Error {
+        yield upload_adif_payload (build_adif_record (spot));
+    }
+
+    public async void upload_adif_record (string adif) throws Error {
+        yield upload_adif_payload (adif);
     }
 }

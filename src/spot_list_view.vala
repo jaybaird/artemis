@@ -1,128 +1,61 @@
+ [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_list_row.ui")]
 public sealed class SpotListRow : Gtk.Box {
     public Spot spot { get; construct; }
 
-    private BandStrip band_marker;
-    private Gtk.Label callsign_label;
-    private Gtk.Label park_label;
-    private Gtk.Label location_label;
-    private Gtk.Label frequency_label;
-    private Gtk.Label mode_label;
-    private Gtk.Box badge_box;
-    private Gtk.Label time_label;
-    private Gtk.Button tune_button;
-    private Gtk.Button spot_button;
+    [GtkChild]
+    private unowned BandStrip band_marker;
+    [GtkChild]
+    private unowned Gtk.Label callsign_label;
+    [GtkChild]
+    private unowned Gtk.Label park_label;
+    [GtkChild]
+    private unowned Gtk.Label location_label;
+    [GtkChild]
+    private unowned Gtk.Label frequency_label;
+    [GtkChild]
+    private unowned Gtk.Label mode_label;
+    [GtkChild]
+    private unowned Gtk.Box badge_box;
+    [GtkChild]
+    private unowned Gtk.Label time_label;
+    [GtkChild]
+    private unowned Gtk.Button tune_button;
+    [GtkChild]
+    private unowned Gtk.Button spot_button;
+    private ulong heard_recently_notify_handler = 0;
 
     public SpotListRow (Spot spot) {
         Object (spot: spot);
     }
 
     construct {
-        orientation = Gtk.Orientation.HORIZONTAL;
-        spacing = 12;
-        margin_top = 6;
-        margin_bottom = 6;
-        margin_start = 8;
-        margin_end = 12;
-
-        band_marker = new BandStrip (spot.band) {
-            width_request = 4,
-            height_request = 34,
-            valign = Gtk.Align.CENTER,
-            margin_end = 4
-        };
-        append (band_marker);
-
-        var text_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2) {
-            hexpand = true,
-            valign = Gtk.Align.CENTER
-        };
-
-        callsign_label = new Gtk.Label ("%s @ %s".printf (spot.callsign, spot.park_ref)) {
-            hexpand = true,
-            xalign = 0.0f,
-            ellipsize = Pango.EllipsizeMode.END
-        };
-        callsign_label.add_css_class ("heading");
-        text_box.append (callsign_label);
-
-        park_label = new Gtk.Label (spot.park_name) {
-            hexpand = true,
-            xalign = 0.0f,
-            ellipsize = Pango.EllipsizeMode.END
-        };
-        park_label.add_css_class ("dim-label");
-        text_box.append (park_label);
-
-        append (text_box);
-
-        var trailing_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
-            halign = Gtk.Align.END,
-            valign = Gtk.Align.CENTER,
-            hexpand = false
-        };
-
-        location_label = new Gtk.Label (spot.location_desc) {
-            xalign = 1.0f,
-            justify = Gtk.Justification.RIGHT,
-            ellipsize = Pango.EllipsizeMode.END
-        };
-        location_label.add_css_class ("dim-label");
-        location_label.width_chars = 8;
-        location_label.max_width_chars = 12;
-        trailing_box.append (location_label);
-
-        frequency_label = new Gtk.Label (
-            "%s kHz".printf (format_frequency_khz (spot.frequency_khz))
-        ) {
-            xalign = 1.0f
-        };
-        frequency_label.add_css_class ("numeric");
-        trailing_box.append (frequency_label);
-
-        mode_label = new Gtk.Label (spot.mode) {
-            xalign = 0.5f
-        };
-        mode_label.add_css_class ("pill");
-        mode_label.add_css_class ("caption");
-        trailing_box.append (mode_label);
-
-        badge_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
-            valign = Gtk.Align.CENTER
-        };
+        band_marker.band = spot.band;
+        callsign_label.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
+        park_label.label = spot.park_name;
+        location_label.label = spot.location_desc;
+        frequency_label.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));
+        mode_label.label = spot.mode;
         populate_spot_badges (badge_box, spot);
-        trailing_box.append (badge_box);
-
-        time_label = new Gtk.Label (humanize_ago_compact (spot.spot_time)) {
-            xalign = 1.0f
-        };
-        time_label.add_css_class ("dim-label");
-        trailing_box.append (time_label);
-
-        tune_button = new Gtk.Button.from_icon_name ("encoder-knob-symbolic") {
-            tooltip_text = _("Tune your radio to this frequency"),
-            valign = Gtk.Align.CENTER,
-            visible = false
-        };
-        tune_button.add_css_class ("flat");
+        heard_recently_notify_handler = spot.notify["heard-recently"].connect (() => {
+            populate_spot_badges (badge_box, spot);
+        });
+        time_label.label = humanize_ago_compact (spot.spot_time);
         tune_button.clicked.connect (() => {
             Application.current_spot_hash = spot.hash;
             Application.radio_control.tune_to_spot (spot);
         });
-        trailing_box.append (tune_button);
-
-        spot_button = new Gtk.Button.from_icon_name ("bullseye-symbolic") {
-            tooltip_text = _("Add your spot for this park"),
-            valign = Gtk.Align.CENTER,
-            visible = false
-        };
-        spot_button.add_css_class ("suggested-action");
         spot_button.clicked.connect (() => {
             Application.current_spot_hash = spot.hash;
             new AddSpot.from_spot (spot).present (get_root ());
         });
-        trailing_box.append (spot_button);
+    }
 
-        append (trailing_box);
+    ~SpotListRow () {
+        if (heard_recently_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, heard_recently_notify_handler))
+                SignalHandler.disconnect (spot, heard_recently_notify_handler);
+            heard_recently_notify_handler = 0;
+        }
     }
 
     public void set_actions_visible (bool visible) {
@@ -139,12 +72,14 @@ private Gtk.Widget create_spot_list_row (Object item) {
     return new SpotListRow (spot);
 }
 
+ [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_list_view.ui")]
 public sealed class SpotListView : Gtk.Box {
-    private const int BOTTOM_INSET = 72;
-
-    private Gtk.ScrolledWindow scroll_window;
-    private Gtk.ListBox spot_list;
-    private Adw.StatusPage status_page;
+    [GtkChild]
+    private unowned Gtk.ScrolledWindow scroll_window;
+    [GtkChild]
+    private unowned Gtk.ListBox spot_list;
+    [GtkChild]
+    private unowned Adw.StatusPage status_page;
 
     private Gtk.Filter filter;
     private Gtk.CustomSorter sorter;
@@ -160,34 +95,6 @@ public sealed class SpotListView : Gtk.Box {
     }
 
     construct {
-        orientation = Gtk.Orientation.VERTICAL;
-        hexpand = true;
-        vexpand = true;
-
-        scroll_window = new Gtk.ScrolledWindow () {
-            hexpand = true,
-            vexpand = true,
-            hscrollbar_policy = Gtk.PolicyType.NEVER
-        };
-
-        spot_list = new Gtk.ListBox () {
-            selection_mode = Gtk.SelectionMode.SINGLE,
-            margin_bottom = BOTTOM_INSET
-        };
-        spot_list.add_css_class ("boxed-list");
-        scroll_window.set_child (spot_list);
-        append (scroll_window);
-
-        status_page = new Adw.StatusPage () {
-            visible = false,
-            title = _("No Spots Match"),
-            description = _("Adjust your filters to see more activations."),
-            icon_name = "view-list-symbolic",
-            hexpand = true,
-            vexpand = true
-        };
-        append (status_page);
-
         filter = new Gtk.CustomFilter ((item) => {
             var spot = item as Spot;
             if (spot == null)

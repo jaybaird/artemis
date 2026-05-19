@@ -153,54 +153,86 @@ public class BoundingBox : Object {
     }
 } /* class BoundingBox */
 
+public class MapMarkerDot : Gtk.DrawingArea {
+    public MapMarkerDot (string band) {
+        width_request = 28;
+        height_request = 28;
+        halign = Gtk.Align.CENTER;
+        valign = Gtk.Align.CENTER;
+
+        add_css_class ("map-marker-dot");
+        add_css_class ("map-marker-%s".printf (band));
+
+        set_draw_func ((area, cr, width, height) => {
+            var color = area.get_color ();
+            double size = (double) int.min (width, height);
+            double center_x = width / 2.0;
+            double center_y = height / 2.0;
+            double radius = (size / 2.0) - 1.5;
+
+            cr.arc (center_x, center_y, radius, 0, 2.0 * Math.PI);
+            Gdk.cairo_set_source_rgba (cr, color);
+            cr.fill_preserve ();
+
+            cr.set_line_width (2.0);
+            cr.set_source_rgba (0.98, 0.98, 0.98, 0.98);
+            cr.stroke ();
+        });
+    }
+}
+
 public class MapView : Gtk.Box {
+    private const uint ASTRONOMY_REFRESH_INTERVAL_SECONDS = 60;
+    private const double GRAYLINE_LONGITUDE_STEP_DEGREES = 2.0;
+    private const double DEFAULT_QTH_ZOOM_LEVEL = 6.0;
+    private const string MAPBOX_LICENSE = "© Mapbox © OpenStreetMap";
+    private const string MAPBOX_LICENSE_URI = "https://www.mapbox.com/about/maps/";
+
     private Viewport viewport;
     private MapSourceRegistry registry;
     private MapSource map_source;
     private Shumate.Map map_widget;
 
     private Scale map_scale;
-    private Layer map_layer;
+    private Shumate.License map_license;
+    private MapLayer map_layer;
+    private PathLayer grayline_layer;
     private MarkerLayer marker_layer;
+    private MarkerLayer astronomy_marker_layer;
     private HashMap<Quark, Marker> markers;
+    private HashMap<Quark, ulong> marker_notify_handlers;
     private Marker? selected_marker = null;
+    private Marker? sun_marker = null;
+    private Marker? moon_marker = null;
+    private uint astronomy_refresh_timeout_id = 0;
 
     private BoundingBox bbox;
     private Coordinate qth_coordinate;
+    private bool has_qth_coordinate = false;
+    private bool user_has_adjusted_view = false;
+    private bool current_map_is_dark = false;
 
     private Gtk.Overlay overlay;
 
     Gtk.Filter filter;
     Gtk.FilterListModel filtered;
 
-    public MapView () {
-        Object ();
-        add_css_class ("card");
-    }
-
     construct {
         registry = new MapSourceRegistry.with_defaults ();
 
-        const string API_KEY = "78418e148d9b4447ae11c25d30a735e5";
-        string url_template =
-            "https://tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey=%s".printf (API_KEY);
-        map_source = new Shumate.RasterRenderer.full_from_url (
-            "thunderforest-outdoors",
-            "Thunderforest Outdoors",
-            "© Thunderforest",
-            "https://www.thunderforest.com",
-            0u,
-            19u,
-            256u,
-            Shumate.MapProjection.MERCATOR,
-            url_template
-            );
+        if (Build.MAPBOX_ACCESS_TOKEN == "") {
+            warning ("Mapbox access token is empty; map tiles will fail to load until mapbox_access_token is set at build time");
+        }
+
+        current_map_is_dark = Adw.StyleManager.get_default ().dark;
+        map_source = create_map_source (current_map_is_dark);
 
         map_widget = new Shumate.Map () {
             vexpand = true,
             hexpand = true
         };
         map_widget.add_css_class ("card");
+        install_map_interaction_tracking ();
 
         var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
             vexpand = true,
@@ -216,10 +248,14 @@ public class MapView : Gtk.Box {
         overlay.set_child (box);
         this.append (overlay);
 
+        Adw.StyleManager.get_default ().notify["dark"].connect (() => {
+            update_map_source_for_theme ();
+        });
+
         viewport = map_widget.get_viewport ();
         viewport.set_reference_map_source (map_source);
         viewport.set_max_zoom_level (19);
-        viewport.set_min_zoom_level (0);
+        viewport.set_min_zoom_level (2);
 
         map_scale = new Scale (viewport) {
             visible = Application.settings.get_boolean ("show-map-scale"),
@@ -244,33 +280,34 @@ public class MapView : Gtk.Box {
 
         overlay.add_overlay (map_scale);
 
+        map_license = new Shumate.License () {
+            halign = Gtk.Align.END,
+            valign = Gtk.Align.END,
+            margin_start = 6,
+            margin_end = 6,
+            margin_top = 6,
+            margin_bottom = 6
+        };
+        map_license.xalign = 1.0f;
+        map_license.append_map_source (map_source);
+        overlay.add_overlay (map_license);
+
         qth_coordinate = new Coordinate ();
-        var grid = Application.settings.get_string ("location");
-        if (grid != "") {
-            try {
-                qth_coordinate = Distance.maidenhead_to_latlon (grid);
-            } catch (Error err) {
-                warning ("Failed to parse maidenhead location %s: %s", grid, err
-                    .message);
-            }
-        }
+        update_qth_coordinate ();
+        Application.settings.changed["location"].connect (() => {
+            update_qth_coordinate ();
+        });
         bbox = new BoundingBox ();
         markers = new HashMap<Quark, Marker> ();
+        marker_notify_handlers = new HashMap<Quark, ulong> ();
 
-        var layer = new MapLayer (map_source, viewport);
-        if (layer != null) {
-            map_widget.add_layer (layer);
-            layer.tile_error.connect ((layer, tile, err) => {
-                warning ("Failed top load tile %u/%u/%u: %s", tile.zoom_level,
-                    tile.x, tile.y, err.message);
-            });
-            layer.map_loaded.connect ((layer, errors) => {
-                print ("Map loaded%s".printf ((errors) ? " with errors" : ""));
-            });
-            map_layer = layer;
-        } else {
-            warning ("Base map layer is null!");
-        }
+        rebuild_base_map_layer ();
+
+        grayline_layer = create_grayline_layer ();
+        map_widget.insert_layer_above (grayline_layer, map_layer);
+
+        astronomy_marker_layer = new MarkerLayer (viewport);
+        map_widget.insert_layer_above (astronomy_marker_layer, grayline_layer);
 
         filter = new Gtk.CustomFilter ((item) => {
             var spot = item as Spot;
@@ -288,7 +325,84 @@ public class MapView : Gtk.Box {
         Application.spot_repo.refreshed.connect (load_spots);
         Application.spot_repo.current_spot_changed.connect (sync_marker_selection);
 
+        update_astronomy_overlays ();
+        astronomy_refresh_timeout_id = Timeout.add_seconds (
+            ASTRONOMY_REFRESH_INTERVAL_SECONDS,
+            () => {
+                update_astronomy_overlays ();
+                return true;
+            }
+        );
+
         load_spots ();
+    }
+
+    ~MapView () {
+        if (astronomy_refresh_timeout_id != 0) {
+            Source.remove (astronomy_refresh_timeout_id);
+            astronomy_refresh_timeout_id = 0;
+        }
+    }
+
+    private MapSource create_map_source (bool dark) {
+        string style_id = dark ? Build.MAPBOX_DARK_STYLE_ID : Build.MAPBOX_LIGHT_STYLE_ID;
+        string variant = dark ? "dark" : "light";
+        string url_template =
+            "https://api.mapbox.com/styles/v1/%s/%s/tiles/256/{z}/{x}/{y}@2x?access_token=%s".printf (
+                Build.MAPBOX_STYLE_OWNER,
+                style_id,
+                Build.MAPBOX_ACCESS_TOKEN
+            );
+
+        return new Shumate.RasterRenderer.full_from_url (
+            "mapbox-artemis-%s".printf (variant),
+            "Mapbox Artemis %s".printf (variant),
+            MAPBOX_LICENSE,
+            MAPBOX_LICENSE_URI,
+            0u,
+            19u,
+            256u,
+            Shumate.MapProjection.MERCATOR,
+            url_template
+        );
+    }
+
+    private void update_map_source_for_theme () {
+        bool dark = Adw.StyleManager.get_default ().dark;
+        if (dark == current_map_is_dark)
+            return;
+
+        current_map_is_dark = dark;
+        map_license.remove_map_source (map_source);
+        map_source = create_map_source (current_map_is_dark);
+        map_license.append_map_source (map_source);
+        viewport.set_reference_map_source (map_source);
+        map_widget.set_map_source (map_source);
+        rebuild_base_map_layer ();
+    }
+
+    private void rebuild_base_map_layer () {
+        if (map_layer != null)
+            map_widget.remove_layer (map_layer);
+
+        var layer = new MapLayer (map_source, viewport);
+        map_widget.add_layer (layer);
+        layer.tile_error.connect ((layer, tile, err) => {
+            warning ("Failed top load tile %u/%u/%u: %s", tile.zoom_level,
+                tile.x, tile.y, err.message);
+        });
+        map_layer = layer;
+
+        if (grayline_layer != null)
+            map_widget.insert_layer_above (grayline_layer, map_layer);
+        if (marker_layer != null)
+            map_widget.insert_layer_above (marker_layer, grayline_layer);
+        if (astronomy_marker_layer != null) {
+            if (marker_layer != null)
+                map_widget.insert_layer_above (astronomy_marker_layer, marker_layer);
+            else
+                map_widget.insert_layer_above (astronomy_marker_layer, grayline_layer);
+        }
     }
 
     // pulled straight from https://gitlab.gnome.org/GNOME/gnome-maps/-/blob/main/src/mapView.js; thanks!
@@ -325,23 +439,66 @@ public class MapView : Gtk.Box {
         return zoom_level;
     } /* get_zoom_level_fitting_bounds */
 
-    private void _create_marker (Spot spot) {
-        var image = new Gtk.Image.from_icon_name ("big-dot-symbolic") {
-            pixel_size = 32
-        };
+    private void install_map_interaction_tracking () {
+        var drag = new Gtk.GestureDrag ();
+        drag.propagation_phase = Gtk.PropagationPhase.CAPTURE;
+        drag.drag_begin.connect ((start_x, start_y) => {
+            user_has_adjusted_view = true;
+        });
+        map_widget.add_controller (drag);
 
-        image.add_css_class ("map-marker-%s".printf (spot.band));
+        var scroll = new Gtk.EventControllerScroll (
+            Gtk.EventControllerScrollFlags.VERTICAL |
+            Gtk.EventControllerScrollFlags.HORIZONTAL |
+            Gtk.EventControllerScrollFlags.DISCRETE
+        );
+        scroll.propagation_phase = Gtk.PropagationPhase.CAPTURE;
+        scroll.scroll.connect ((dx, dy) => {
+            user_has_adjusted_view = true;
+            return false;
+        });
+        map_widget.add_controller (scroll);
+
+        var zoom = new Gtk.GestureZoom ();
+        zoom.propagation_phase = Gtk.PropagationPhase.CAPTURE;
+        zoom.begin.connect ((sequence) => {
+            user_has_adjusted_view = true;
+        });
+        map_widget.add_controller (zoom);
+    }
+
+    private void _create_marker (Spot spot) {
+        var marker_content = new Gtk.Overlay () {
+            width_request = 28,
+            height_request = 28,
+            halign = Gtk.Align.CENTER,
+            valign = Gtk.Align.CENTER
+        };
+        marker_content.add_css_class ("map-marker-content");
+
+        var dot = new MapMarkerDot (spot.band);
+        marker_content.set_child (dot);
+
+        var heard_icon = new Gtk.Image.from_icon_name ("headphones-symbolic") {
+            pixel_size = 12,
+            halign = Gtk.Align.CENTER,
+            valign = Gtk.Align.CENTER,
+            visible = spot.heard_recently
+        };
+        heard_icon.add_css_class ("map-marker-heard-icon");
+        marker_content.add_overlay (heard_icon);
 
         var coordinate = spot.coordinate;
         if (coordinate == null)
             return;
 
         var marker = new Marker () {
-            child = image,
+            child = marker_content,
             latitude = coordinate.latitude,
             longitude = coordinate.longitude
         };
         marker.add_css_class ("marker");
+        sync_marker_heard_state (marker, marker_content, heard_icon, spot);
         if (spot.hash == Application.current_spot_hash) {
             marker.add_css_class ("selected");
             selected_marker = marker;
@@ -366,7 +523,27 @@ public class MapView : Gtk.Box {
 
         marker_layer.add_marker (marker);
         markers.set (spot.hash, marker);
+        marker_notify_handlers.set (spot.hash, spot.notify["heard-recently"].connect (() => {
+            sync_marker_heard_state (marker, marker_content, heard_icon, spot);
+        }));
     } /* _create_marker */
+
+    private void sync_marker_heard_state (
+        Marker marker,
+        Gtk.Widget marker_content,
+        Gtk.Widget heard_icon,
+        Spot spot
+    ) {
+        if (spot.heard_recently) {
+            marker.add_css_class ("marker-heard-recently");
+            marker_content.add_css_class ("map-marker-heard-recently");
+            heard_icon.visible = true;
+        } else {
+            marker.remove_css_class ("marker-heard-recently");
+            marker_content.remove_css_class ("map-marker-heard-recently");
+            heard_icon.visible = false;
+        }
+    }
 
     private void sync_marker_selection (Quark spot_hash) {
         if (selected_marker != null) {
@@ -391,7 +568,7 @@ public class MapView : Gtk.Box {
         var coordinate = spot.coordinate;
         if (coordinate == null)
             return;
-        const double TARGET_ZOOM = 10.0;
+        const double TARGET_ZOOM = 9.0;
         var zoom = double.max (viewport.zoom_level, TARGET_ZOOM);
         map_widget.go_to_full (coordinate.latitude, coordinate.longitude, zoom);
     }
@@ -401,8 +578,144 @@ public class MapView : Gtk.Box {
         load_spots ();
     }
 
+    private PathLayer create_grayline_layer () {
+        var layer = new PathLayer (viewport);
+        layer.closed = true;
+        layer.fill = true;
+        layer.stroke = true;
+        layer.stroke_width = 1.5;
+        layer.outline_width = 0.0;
+        layer.fill_color = rgba (0.05, 0.08, 0.16, 0.22);
+        layer.stroke_color = rgba (1.0, 1.0, 1.0, 0.35);
+        return layer;
+    }
+
+    private void rebuild_grayline_layer (DateTime now) {
+        bool close_to_north_pole = !Astronomy.is_sunlit (
+            now,
+            new Coordinate.full (89.9, 0.0)
+        );
+        double closure_latitude = close_to_north_pole ? 90.0 : -90.0;
+
+        grayline_layer.remove_all ();
+
+        double longitude = -180.0;
+        while (longitude <= 180.0) {
+            grayline_layer.add_node (new Coordinate.full (
+                Astronomy.solar_terminator_latitude (now, longitude),
+                longitude
+            ));
+            longitude += GRAYLINE_LONGITUDE_STEP_DEGREES;
+        }
+
+        if (longitude - GRAYLINE_LONGITUDE_STEP_DEGREES < 180.0) {
+            grayline_layer.add_node (new Coordinate.full (
+                Astronomy.solar_terminator_latitude (now, 180.0),
+                180.0
+            ));
+        }
+
+        grayline_layer.add_node (new Coordinate.full (closure_latitude, 180.0));
+        grayline_layer.add_node (new Coordinate.full (closure_latitude, -180.0));
+    }
+
+    private void update_astronomy_overlays () {
+        var now = new DateTime.now_utc ();
+        var bodies = Astronomy.body_markers (now);
+        var sun_coordinate = bodies.sun.coordinate;
+        var moon_coordinate = bodies.moon.coordinate;
+        rebuild_grayline_layer (now);
+
+        ensure_body_marker (
+            ref sun_marker,
+            sun_coordinate,
+            "sun-outline-symbolic",
+            _("Sun"),
+            "astronomy-marker",
+            "astronomy-marker-sun"
+        );
+        ensure_body_marker (
+            ref moon_marker,
+            moon_coordinate,
+            "moon-outline-symbolic",
+            _("Moon"),
+            "astronomy-marker",
+            "astronomy-marker-moon"
+        );
+
+        var moon_tooltip = "%s\n%s".printf (
+            _("Moon"),
+            Astronomy.moon_phase_display_name (bodies.moon_phase)
+        );
+        if (moon_marker != null && moon_marker.child != null)
+            moon_marker.child.tooltip_text = moon_tooltip;
+    }
+
+    private void ensure_body_marker (
+        ref Marker? marker,
+        Coordinate coordinate,
+        string icon_name,
+        string tooltip_text,
+        string base_css_class,
+        string accent_css_class
+    ) {
+        if (marker == null) {
+            var icon = new Gtk.Image.from_icon_name (icon_name) {
+                pixel_size = 18,
+                tooltip_text = tooltip_text
+            };
+            icon.add_css_class (base_css_class);
+            icon.add_css_class (accent_css_class);
+
+            marker = new Marker () {
+                child = icon,
+                selectable = false
+            };
+            marker.add_css_class ("astronomy-map-marker");
+            marker.x_hotspot = 0.5;
+            marker.y_hotspot = 0.5;
+            astronomy_marker_layer.add_marker (marker);
+        } else if (marker.child != null) {
+            marker.child.tooltip_text = tooltip_text;
+        }
+
+        marker.latitude = coordinate.latitude;
+        marker.longitude = coordinate.longitude;
+    }
+
+    private Gdk.RGBA rgba (double red, double green, double blue, double alpha) {
+        var color = Gdk.RGBA ();
+        color.red = (float) red;
+        color.green = (float) green;
+        color.blue = (float) blue;
+        color.alpha = (float) alpha;
+        return color;
+    }
+
+    private void update_qth_coordinate () {
+        has_qth_coordinate = false;
+
+        var grid = Application.settings.get_string ("location").strip ();
+        if (grid == "")
+            return;
+
+        try {
+            qth_coordinate = Distance.maidenhead_to_latlon (grid);
+            has_qth_coordinate = true;
+        } catch (Error err) {
+            warning ("Failed to parse maidenhead location %s: %s", grid, err.message);
+        }
+    }
+
     private void load_spots () {
         bbox.clear ();
+
+        foreach (var entry in marker_notify_handlers.entries) {
+            var spot = Application.spot_repo.get_spot (entry.key);
+            if ((spot != null) && SignalHandler.is_connected (spot, entry.value))
+                SignalHandler.disconnect (spot, entry.value);
+        }
+        marker_notify_handlers.clear ();
 
         if (marker_layer != null) {
             map_widget.remove_layer (marker_layer);
@@ -430,18 +743,30 @@ public class MapView : Gtk.Box {
         }
         bbox.expand ();
 
-        map_widget.insert_layer_above (marker_layer, map_layer);
+        map_widget.insert_layer_above (grayline_layer, map_layer);
+        map_widget.insert_layer_above (marker_layer, grayline_layer);
+        map_widget.insert_layer_above (astronomy_marker_layer, marker_layer);
         sync_marker_selection (Application.current_spot_hash);
 
         if (Application.current_spot_hash == BLANK_HASH ||
             !valid_hashes.contains (Application.current_spot_hash)) {
-            if ((spot_count > 0) && bbox.is_valid ()) {
+            if (user_has_adjusted_view) {
+                return;
+            }
+
+            if (has_qth_coordinate) {
+                map_widget.go_to_full (
+                    qth_coordinate.latitude,
+                    qth_coordinate.longitude,
+                    DEFAULT_QTH_ZOOM_LEVEL
+                );
+            } else if ((spot_count > 0) && bbox.is_valid ()) {
                 var center = bbox.center ();
                 var zoom_level = get_zoom_level_fitting_bounds (bbox);
 
                 map_widget.go_to_full (center.latitude, center.longitude, zoom_level);
             } else {
-                map_widget.go_to_full (qth_coordinate.latitude, qth_coordinate.longitude, 4);
+                map_widget.go_to_full (0.0, 0.0, 2.0);
             }
         }
 

@@ -26,209 +26,212 @@ template $AppWindow : Adw.ApplicationWindow {
   default-width: 1280;
   default-height: 720;
 
-  Adw.ToastOverlay toast_overlay {
-    child: Adw.ToolbarView {
-      [top]
-      Adw.HeaderBar {
-        title-widget: Adw.ViewSwitcher {
-          halign: center;
-          stack: views;
-          policy: wide;
-        };
+  Adw.OverlaySplitView sidebar_split {
+    collapsed: false;
+    show-sidebar: true;
+    enable-show-gesture: true;
+    enable-hide-gesture: true;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.2;
+    sidebar-width-unit: sp;
+    sidebar-position: start;
+    
+    [sidebar]
+    $LeftSidebar left_sidebar {
+      width-request: 220;
+      hexpand: false;
+    }
 
-        Button add_spot {
-          icon-name: "list-add-symbolic";
-          tooltip-text: _("Add Spot");
-          clicked => $on_add_button_clicked();
-          accessibility {
-            label: _("Add Spot");
-            role-description: _("button");
+    [content]
+    Adw.OverlaySplitView inspector_split {
+      enable-show-gesture: true;
+      enable-hide-gesture: true;
+      min-sidebar-width: 320;
+      max-sidebar-width: 360;
+      sidebar-width-fraction: 0.28;
+      sidebar-width-unit: sp;
+      sidebar-position: end;
+
+      [content] 
+      Adw.ToolbarView {
+        [top]
+        Adw.HeaderBar {
+          title-widget: Adw.ViewSwitcher {
+            halign: center;
+            stack: views;
+            policy: wide;
+          };
+
+          [start]
+          Box {
+            orientation: horizontal;
+            spacing: 4;
+
+            Button astronomy_button {
+              icon-name: "sun-outline-symbolic";
+              tooltip-text: _("Astronomy");
+              accessibility {
+                label: _("Astronomy");
+                role-description: _("button");
+              }
+            }
+
+            ToggleButton refresh_toggle {
+              icon-name: "media-playback-pause-symbolic";
+              tooltip-text: _("Pause");
+              accessibility {
+                label: _("Pause Updates");
+                role-description: _("toggle button");
+              }
+            }
+          }
+
+          [end]
+          Box {
+            orientation: horizontal;
+            spacing: 4;
+
+            ToggleButton sidebar_toggle {
+              icon-name: "sidebar-show-symbolic";
+              tooltip-text: _("Hide Sidebar");
+              active: true;
+              accessibility {
+                label: _("Show Sidebar");
+                role-description: _("toggle button");
+              }
+            }
+
+            SearchEntry search_entry {
+              width-request: 250;
+              input-hints: no_spellcheck;
+              placeholder-text: _("Search for Park or Callsign");
+              accessibility {
+                label: _("Search for Park or Callsign");
+                role-description: _("search entry");
+              }
+            }
+
+            ToggleButton inspector_toggle {
+              icon-name: "dock-right-symbolic";
+              tooltip-text: _("Show Inspector");
+              active: true;
+              accessibility {
+                label: _("Show Inspector");
+                role-description: _("toggle button");
+              }
+            }
+
+            MenuButton button_menu {
+              menu-model: menu_app;
+              icon-name: "open-menu-symbolic";
+              accessibility {
+                label: _("Application Menu");
+                role-description: _("menu button");
+              }
+            }
           }
         }
 
-        Button astronomy_button {
-          icon-name: "sun-outline-symbolic";
-          tooltip-text: _("Astronomy");
-          clicked => $on_astronomy_button_clicked();
-          accessibility {
-            label: _("Astronomy");
-            role-description: _("button");
+        [content]
+        Adw.ToastOverlay toast_overlay {
+          width-request: 800;
+          hexpand: true;
+          vexpand: true;
+          
+          Adw.ViewStack views {
+            enable-transitions: true;
+            
+            Adw.ViewStackPage {
+              title: _("Cards");
+              icon-name: "grid-filled-symbolic";
+
+              child: Adw.Bin {
+                hexpand: true;
+                vexpand: true;
+                margin-top: 12;
+                margin-start: 12;
+                margin-end: 12;
+
+                Overlay {
+                  hexpand: true;
+                  vexpand: true;
+
+                  child:
+                    Adw.Bin root {
+                      hexpand: true;
+                      vexpand: true;
+                      Adw.ViewStack band_stack {
+                        enable-transitions: true;
+                        hexpand: true;
+                        vexpand: true;
+                      }
+                    };
+
+                  [overlay]
+                  Adw.Bin loading_spinner {
+                    halign: center;
+                    valign: center;
+                    visible: false;
+
+                    Adw.Spinner {
+                      width-request: 64;
+                      height-request: 64;
+                    }
+                  }
+                }
+              };
+            }
+
+            Adw.ViewStackPage {
+              title: _("List");
+              icon-name: "view-list-symbolic";
+
+              child: Box list_container {
+                hexpand: true;
+                vexpand: true;
+                margin-top: 12;
+                margin-start: 12;
+                margin-end: 12;
+                styles ["card"]
+              };
+            }
+
+            Adw.ViewStackPage {
+              title: _("Map");
+              icon-name: "map-symbolic";
+
+              child: Adw.Bin {
+                hexpand: true;
+                vexpand: true;
+                margin-top: 12;
+                margin-start: 12;
+                margin-end: 12;
+
+                Box map_container {
+                  hexpand: true;
+                  vexpand: true;
+                  styles ["card", "map-card"]
+                }
+              };
+            }
           }
         }
 
-        ToggleButton refresh_toggle {
-          icon-name: "media-playback-pause-symbolic";
-          tooltip-text: _("Pause");
-          accessibility {
-            label: _("Pause Updates");
-            role-description: _("toggle button");
-          }
-        }
-
-        [end]
-        Box {
-          orientation: horizontal;
-          spacing: 4;
-
-          ToggleButton sidebar_toggle {
-            icon-name: "sidebar-show-symbolic";
-            tooltip-text: _("Hide Sidebar");
-            active: true;
-            accessibility {
-              label: _("Show Sidebar");
-              role-description: _("toggle button");
-            }
-          }
-
-          SearchEntry search_entry {
-            width-request: 250;
-            input-hints: no_spellcheck;
-            placeholder-text: _("Search for Park or Callsign");
-            accessibility {
-              label: _("Search for Park or Callsign");
-              role-description: _("search entry");
-            }
-          }
-
-          ToggleButton inspector_toggle {
-            icon-name: "dock-right-symbolic";
-            tooltip-text: _("Show Inspector");
-            active: true;
-            accessibility {
-              label: _("Show Inspector");
-              role-description: _("toggle button");
-            }
-          }
-
-          MenuButton button_menu {
-            menu-model: menu_app;
-            icon-name: "open-menu-symbolic";
-            accessibility {
-              label: _("Application Menu");
-              role-description: _("menu button");
-            }
-          }
+        [bottom]
+        $StatusBar status_bar {
+          hexpand: true;
+          margin-top: 0;
+          margin-bottom: 0;
         }
       }
 
-      content: Adw.OverlaySplitView sidebar_split {
-        show-sidebar: true;
-        enable-show-gesture: true;
-        enable-hide-gesture: true;
-        min-sidebar-width: 220;
-        max-sidebar-width: 260;
-        sidebar-width-fraction: 0.2;
-        sidebar-width-unit: sp;
-        sidebar-position: start;
-
-        content: Adw.OverlaySplitView inspector_split {
-          show-sidebar: true;
-          enable-show-gesture: true;
-          enable-hide-gesture: true;
-          min-sidebar-width: 320;
-          max-sidebar-width: 360;
-          sidebar-width-fraction: 0.28;
-          sidebar-width-unit: sp;
-          sidebar-position: end;
-
-          content: Adw.ToolbarView {
-            hexpand: true;
-            vexpand: true;
-
-            content: Adw.Bin {
-              hexpand: true;
-
-              child: Adw.ViewStack views {
-                vexpand: true;
-
-                Adw.ViewStackPage {
-                  title: _("Cards");
-                  icon-name: "grid-filled-symbolic";
-
-                  child: Adw.Bin {
-                    margin-top: 12;
-                    margin-start: 12;
-                    margin-end: 12;
-
-                    Overlay {
-                      hexpand: true;
-                      vexpand: true;
-
-                      child:
-                        Adw.Bin root {
-
-                          Adw.ViewStack band_stack {
-                            enable-transitions: true;
-                            hexpand: true;
-                            vexpand: true;
-                          }
-                        };
-
-                      [overlay]
-                      Adw.Bin loading_spinner {
-                        halign: center;
-                        valign: center;
-                        visible: false;
-
-                        Adw.Spinner {
-                          width-request: 64;
-                          height-request: 64;
-                        }
-                      }
-                    }
-                  };
-                }
-
-                Adw.ViewStackPage {
-                  title: _("List");
-                  icon-name: "view-list-symbolic";
-
-                  child: Box list_container {
-                    margin-top: 12;
-                    margin-start: 12;
-                    margin-end: 12;
-                    orientation: vertical;
-                    styles ["card"]
-                  };
-                }
-
-                Adw.ViewStackPage {
-                  title: _("Map");
-                  icon-name: "map-symbolic";
-
-                  child: Adw.Bin {
-                    margin-top: 12;
-                    margin-start: 12;
-                    margin-end: 12;
-
-                    child: Box map_container {
-                      orientation: vertical;
-                      styles ["card", "map-card"]
-                    };
-                  };
-                }
-              };
-            };
-
-            [bottom]
-            $StatusBar status_bar {
-              hexpand: true;
-              margin-top: 0;
-              margin-bottom: 0;
-            }
-          };
-
-          sidebar: $SpotDetail spot_detail {
-            width-request: 360;
-            hexpand: false;
-          };
-        };
-
-        sidebar: $LeftSidebar left_sidebar {
-          width-request: 220;
-        };
-      };
-    };
+      [sidebar]
+      $SpotDetail spot_detail {
+          width-request: 360;
+          hexpand: false;
+      }
+    }
   }
 }
 

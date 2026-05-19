@@ -34,7 +34,7 @@ public struct RadioModel {
     public unowned string display_name;
 }
 
-[CCode (cname = "RadioControl", cheader_filename="../src/radio_control.h")]
+[CCode (cname = "RadioControl", cheader_filename="radio_control.h")]
 public class RadioControl : GLib.Object {
     // Constructor
     public RadioControl ();

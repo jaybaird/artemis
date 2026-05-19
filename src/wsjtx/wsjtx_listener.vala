@@ -143,9 +143,9 @@ namespace Artemis.Wsjtx {
                     wait_for_packet (socket, cancellable).await ();
                     drain_ready_packets (socket);
                 } catch (Error err) {
-                    if (err is IOError.CANCELLED) 
+                    if (err is IOError.CANCELLED)
                         break;
-                    
+
                     receive_error (err);
                     break;
                 }
@@ -186,8 +186,8 @@ namespace Artemis.Wsjtx {
                     var received = socket.receive_from (out remote_address, buffer, cancellable);
                     if (received <= 0)
                         break;
-                    
-                    var datagram = buffer[0:(int) received];
+
+                    var datagram = buffer[0: (int)received];
                     var packet = parser.parse (datagram);
                     packet_received (packet, format_sender (remote_address));
                 } catch (Error err) {

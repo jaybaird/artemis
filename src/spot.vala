@@ -67,6 +67,9 @@ public string band_from_khz (double khz) {
 } /* band_from_khz */
 
 public sealed class Spot : Object {
+    public const uint HEARD_RECENTLY_TIMEOUT_SECONDS = 90;
+    private uint heard_recently_timeout_id = 0;
+
     public string callsign { get; construct; }
     public string park_ref { get; construct; }
     public string park_name { get; construct; }
@@ -90,6 +93,7 @@ public sealed class Spot : Object {
     public bool is_new_band { get; construct; }
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
+    public bool heard_recently { get; private set; default = false; }
 
     public Spot (string callsign,
                  string park_ref,
@@ -308,6 +312,32 @@ public sealed class Spot : Object {
     public string to_string () {
         return
             @"Spot(activator: $callsign\nspotter: $spotter\npark: $park_ref\nfrequency: $frequency_khz)";
+    }
+
+    public void mark_heard_recently (uint timeout_seconds = HEARD_RECENTLY_TIMEOUT_SECONDS) {
+        heard_recently = true;
+        notify_property ("heard-recently");
+
+        if (heard_recently_timeout_id != 0) {
+            Source.remove (heard_recently_timeout_id);
+            heard_recently_timeout_id = 0;
+        }
+
+        heard_recently_timeout_id = Timeout.add_seconds (timeout_seconds, () => {
+            heard_recently_timeout_id = 0;
+            if (heard_recently) {
+                heard_recently = false;
+                notify_property ("heard-recently");
+            }
+            return Source.REMOVE;
+        });
+    }
+
+    ~Spot () {
+        if (heard_recently_timeout_id != 0) {
+            Source.remove (heard_recently_timeout_id);
+            heard_recently_timeout_id = 0;
+        }
     }
 } /* class Spot */
 

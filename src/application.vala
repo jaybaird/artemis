@@ -20,6 +20,7 @@
 
 public sealed class Application : Adw.Application {
     public signal void radio_connection_state_changed ();
+    public signal void toast_requested (string message);
 
     private static Quark _current_spot_hash = 0;
     public static Quark current_spot_hash {
@@ -42,7 +43,8 @@ public sealed class Application : Adw.Application {
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
     public static SolarConditionsService solar_conditions { get; private set; }
-    public static Artemis.Wsjtx.UdpService wsjtx_udp { get; private set; }
+    public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
+    private HelpWindow? help_window = null;
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -66,6 +68,7 @@ public sealed class Application : Adw.Application {
 
     private const GLib.ActionEntry[] APP_ENTRIES = {
         { "add-spot", on_add_button_clicked },
+        { "help", on_help_action },
         { "about", about_activated },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
@@ -81,7 +84,7 @@ public sealed class Application : Adw.Application {
 
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
-        set_accels_for_action ("app.about", { "F1" });
+        set_accels_for_action ("app.help", { "F1" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
         set_accels_for_action ("app.quit", { "<primary>q" });
@@ -101,7 +104,7 @@ public sealed class Application : Adw.Application {
         callsign_cache = new CallsignCache (3600);
         weather_cache = new WeatherCache ();
         solar_conditions = new SolarConditionsService ();
-        wsjtx_udp = new Artemis.Wsjtx.UdpService ();
+        wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
         radio_control = new RadioControl ();
         radio_control.radio_connected.connect (() => {
             is_radio_connected = true;
@@ -115,6 +118,14 @@ public sealed class Application : Adw.Application {
             is_radio_connected = false;
             radio_connection_state_changed ();
         });
+        app = this;
+    }
+
+    public static void show_toast (string message) {
+        if ((app == null) || (message.strip () == ""))
+            return;
+
+        app.toast_requested (message);
     }
 
     public override void activate () {
@@ -154,6 +165,23 @@ public sealed class Application : Adw.Application {
         win.present ();
     }
 
+    private void on_help_action () {
+        try {
+            if (help_window == null) {
+                help_window = new HelpWindow (this);
+                help_window.set_transient_for (win);
+                help_window.close_request.connect (() => {
+                    help_window = null;
+                    return false;
+                });
+            }
+
+            help_window.present ();
+        } catch (Error error) {
+            warning ("Unable to open help: %s", error.message);
+        }
+    }
+
     private void about_activated () {
         const string[] ARTISTS = {
         };
@@ -181,9 +209,21 @@ public sealed class Application : Adw.Application {
         };
 
         dialog.add_acknowledgement_section (_("Contributors"), CONTRIBUTORS);
+        dialog.add_legal_section (
+            _("Hamlib"),
+            RadioControl.hamlib_copyright (),
+            Gtk.License.LGPL_2_1, null
+        );
+        dialog.add_legal_section (
+            _("Map Tiles"),
+            "© Mapbox © OpenStreetMap contributors",
+            Gtk.License.CUSTOM,
+            null
+        );
 
         //dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
-        //dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
+        if (Build.DONATE_WEBSITE != "")
+            dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
 
         dialog.present (win);
     }

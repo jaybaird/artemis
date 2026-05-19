@@ -25,6 +25,7 @@ if meson.get_compiler ('c').get_id () == 'clang'
 endif
 
 devel = get_option('debug')
+valgrind_friendly = get_option('valgrind_friendly')
 
 # Setup configuration file
 config = configuration_data()
@@ -39,10 +40,14 @@ config.set('RESOURCES', '/' + '/'.join(meson.project_name().split('.')) + '/')
 config.set('VERSION', meson.project_version())
 config.set('PREFIX', get_option('prefix'))
 config.set('NAME', 'Artemis')
-config.set('WEBSITE', '')
-config.set('DONATE_WEBSITE', '')
+config.set('WEBSITE', 'https://artemispota.app')
+config.set('DONATE_WEBSITE', 'https://buymeacoffee.com/k0vcz')
 config.set('TRANSLATE_WEBSITE', '')
 config.set('OPENWEATHER_API_KEY', get_option('openweather_api_key'))
+config.set('MAPBOX_ACCESS_TOKEN', get_option('mapbox_access_token'))
+config.set('MAPBOX_STYLE_OWNER', get_option('mapbox_style_owner'))
+config.set('MAPBOX_LIGHT_STYLE_ID', get_option('mapbox_light_style_id'))
+config.set('MAPBOX_DARK_STYLE_ID', get_option('mapbox_dark_style_id'))
 config.set('PROFILE', devel ? 'development' : 'release')
 
 if devel
@@ -57,10 +62,24 @@ endif
 
 add_project_arguments('-DGETTEXT_PACKAGE="' + meson.project_name() + '"', language: 'c')
 
+if valgrind_friendly
+  add_project_arguments(
+    [
+      '-O0',
+      '-fno-omit-frame-pointer',
+      '-fno-inline',
+      '-fno-inline-functions',
+      '-fno-inline-small-functions'
+    ],
+    language: 'c'
+  )
+endif
+
 subdir('blueprints')
 subdir('data')
 subdir('src')
 subdir('po')
+subdir('tests')
 
 win_sources = []
 windows_exe_link_args = []
@@ -91,6 +110,7 @@ endif
 executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
   dependencies: artemis_vala_deps,
   vala_args: vala_args,
+  include_directories: src_inc,
   link_with: link_deps,
   link_args: windows_exe_link_args,
   win_subsystem: is_windows ? 'windows' : 'console',

@@ -19,6 +19,7 @@
  */
 
 using Shumate;
+using Gee;
 
 namespace Astronomy {
     private enum BodyKind {
@@ -130,6 +131,55 @@ namespace Astronomy {
 
     public static Coordinate lunar_sublunar_point (DateTime date) {
         return subpoint (lunar_equatorial_coordinates (date), date);
+    }
+
+    public static double solar_terminator_latitude (DateTime date, double longitude) {
+        var subsolar = solar_subsolar_point (date);
+        var declination_radians = subsolar.latitude * Math.PI / 180.0;
+        var tangent = Math.tan (declination_radians);
+
+        if (Math.fabs (tangent) < 1e-6)
+            tangent = (tangent < 0.0) ? -1e-6 : 1e-6;
+
+        var hour_angle_radians = (longitude - subsolar.longitude) * Math.PI / 180.0;
+        return Math.atan (-Math.cos (hour_angle_radians) / tangent) * 180.0 / Math.PI;
+    }
+
+    public static bool is_sunlit (DateTime date, Coordinate coordinate) {
+        return altitude_radians (
+            solar_equatorial_coordinates (date),
+            date,
+            coordinate
+        ) > 0.0;
+    }
+
+    public static ArrayList<Coordinate> solar_terminator_points (
+        DateTime date,
+        double longitude_step_degrees = 2.0
+    ) {
+        var points = new ArrayList<Coordinate> ();
+        var subsolar = solar_subsolar_point (date);
+        var declination_radians = subsolar.latitude * Math.PI / 180.0;
+        var tangent = Math.tan (declination_radians);
+
+        if (Math.fabs (tangent) < 1e-6)
+            tangent = (tangent < 0.0) ? -1e-6 : 1e-6;
+
+        for (double longitude = -180.0; longitude <= 180.0; longitude += longitude_step_degrees) {
+            points.add (new Coordinate.full (
+                solar_terminator_latitude (date, longitude),
+                longitude
+            ));
+        }
+
+        if (points.size == 0 || points[points.size - 1].longitude < 180.0) {
+            points.add (new Coordinate.full (
+                solar_terminator_latitude (date, 180.0),
+                180.0
+            ));
+        }
+
+        return points;
     }
 
     public static double moon_illuminated_fraction (DateTime date) {

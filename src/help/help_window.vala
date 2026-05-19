@@ -91,45 +91,24 @@ private sealed class HelpArticleRow : Gtk.ListBoxRow {
     }
 }
 
-public sealed class HelpWindow : Gtk.Window {
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/help_window.ui")]
+public sealed class HelpWindow : Adw.Window {
     private HelpDocument document;
-    private Gtk.SearchEntry search_entry;
-    private Gtk.ListBox article_list;
-    private Gtk.Box article_body;
+    [GtkChild]
+    private unowned Gtk.SearchEntry search_entry;
+    [GtkChild]
+    private unowned Gtk.ListBox article_list;
+    [GtkChild]
+    private unowned Gtk.Box article_body;
     private HelpArticle? current_article = null;
 
     public HelpWindow (Gtk.Application app) throws Error {
-        Object (application: app, title: _("Artemis Help"));
+        Object (application: app);
         document = HelpDocument.from_resource ("/com/k0vcz/artemis/help/help.json");
-        build_ui ();
+        setup_ui ();
     }
 
-    private void build_ui () {
-        default_width = 1080;
-        default_height = 760;
-
-        var header = new Adw.HeaderBar ();
-        var title = new Adw.WindowTitle (_("Artemis Help"), "");
-        header.set_title_widget (title);
-        set_titlebar (header);
-
-        search_entry = new Gtk.SearchEntry () {
-            width_request = 320,
-            placeholder_text = _("Search Help")
-        };
-        header.pack_end (search_entry);
-
-        var paned = new Gtk.Paned (Gtk.Orientation.HORIZONTAL) {
-            vexpand = true,
-            shrink_start_child = false,
-            shrink_end_child = false,
-            position = 360,
-            wide_handle = true
-        };
-
-        article_list = new Gtk.ListBox () {
-            selection_mode = Gtk.SelectionMode.BROWSE
-        };
+    private void setup_ui () {
         article_list.row_activated.connect ((row) => {
             if (row is HelpArticleRow)
                 show_article (((HelpArticleRow) row).article);
@@ -139,36 +118,6 @@ public sealed class HelpWindow : Gtk.Window {
             if (row is HelpArticleRow)
                 show_article (((HelpArticleRow) row).article);
         });
-
-        var sidebar_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
-            vexpand = true
-        };
-        sidebar_box.add_css_class ("sidebar");
-
-        var article_list_scroll = new Gtk.ScrolledWindow () {
-            hscrollbar_policy = Gtk.PolicyType.NEVER,
-            min_content_width = 320,
-            vexpand = true
-        };
-        article_list_scroll.set_child (article_list);
-        sidebar_box.append (article_list_scroll);
-        paned.set_start_child (sidebar_box);
-
-        article_body = new Gtk.Box (Gtk.Orientation.VERTICAL, 16) {
-            margin_top = 24,
-            margin_bottom = 24,
-            margin_start = 24,
-            margin_end = 24
-        };
-
-        var article_scroll = new Gtk.ScrolledWindow () {
-            hscrollbar_policy = Gtk.PolicyType.NEVER,
-            vexpand = true
-        };
-        article_scroll.set_child (article_body);
-        paned.set_end_child (article_scroll);
-
-        set_child (paned);
 
         search_entry.search_changed.connect (rebuild_article_list);
         rebuild_article_list ();

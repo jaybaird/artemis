@@ -19,14 +19,18 @@
  */
 
 using Gee;
+using Adw;
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/main_window.ui")]
-public sealed class AppWindow : Gtk.Window {
+public sealed class AppWindow : Adw.ApplicationWindow {
+    [GtkChild]
+    private unowned Adw.ToastOverlay toast_overlay;
+
     [GtkChild]
     public unowned Adw.ViewStack band_stack;
 
     [GtkChild]
-    public unowned Gtk.Box loading_spinner;
+    public unowned Gtk.Widget loading_spinner;
 
     [GtkChild]
     public unowned Gtk.SearchEntry search_entry;
@@ -38,10 +42,19 @@ public sealed class AppWindow : Gtk.Window {
     public unowned Gtk.Box list_container;
 
     [GtkChild]
+    private unowned Gtk.Button astronomy_button;
+
+    [GtkChild]
     private unowned Gtk.ToggleButton refresh_toggle;
 
     [GtkChild]
-    private unowned Gtk.Paned content_paned;
+    private unowned Adw.OverlaySplitView sidebar_split;
+
+    [GtkChild]
+    private unowned Gtk.ToggleButton sidebar_toggle;
+
+    [GtkChild]
+    private unowned Adw.OverlaySplitView inspector_split;
 
     [GtkChild]
     private unowned Gtk.ToggleButton inspector_toggle;
@@ -65,10 +78,13 @@ public sealed class AppWindow : Gtk.Window {
     private SpotListView list_view;
     private bool radio_connect_inflight = false;
     private Quark map_centered_spot_hash = BLANK_HASH;
+    private string? pending_initial_band = null;
+    private bool initial_band_applied = false;
 
     private ulong radio_status_handler = 0;
     private ulong radio_error_handler = 0;
     private bool syncing_inspector_toggle = false;
+    private bool restoring_window_state = false;
 
     private static Gee.HashSet<string> active_error_keys;
 
@@ -77,11 +93,21 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     construct {
+        restore_window_state ();
+
         active_error_keys = new Gee.HashSet<string> ();
         left_sidebar.set_mode_visible (Application.is_radio_configured);
         if (Application.is_radio_configured) {
             start_radio ();
         }
+
+        astronomy_button.clicked.connect (on_astronomy_button_clicked);
+        refresh_toggle.clicked.connect (on_refresh_button_clicked);
+
+        left_sidebar.add_requested.connect (on_add_button_clicked);
+        left_sidebar.sidebar_visibility_changed.connect ((visible) => {
+            set_sidebar_visible (visible);
+        });
         left_sidebar.power_clicked.connect (() => {
             if (radio_connect_inflight)
                 return;
@@ -91,7 +117,6 @@ public sealed class AppWindow : Gtk.Window {
                 start_radio ();
             }
         });
-        refresh_toggle.clicked.connect (on_refresh_button_clicked);
         astronomy_window = null;
 
         search_entry.set_key_capture_widget (this);
@@ -100,6 +125,10 @@ public sealed class AppWindow : Gtk.Window {
 
         Application.settings.changed["update-interval"].connect (() => {
             setup_spot_updates ();
+        });
+
+        Application.app.toast_requested.connect ((message) => {
+            toast_overlay.add_toast (new Adw.Toast (message));
         });
 
         search_entry.search_changed.connect (() => {
@@ -111,12 +140,25 @@ public sealed class AppWindow : Gtk.Window {
             if (!syncing_inspector_toggle)
                 set_inspector_visible (inspector_toggle.active);
         });
+        sidebar_toggle.toggled.connect (() => {
+            set_sidebar_visible (sidebar_toggle.active);
+        });
+
+        notify["default-width"].connect (save_window_geometry);
+        notify["default-height"].connect (save_window_geometry);
+        notify["maximized"].connect (save_window_maximized_state);
 
         Application.spot_repo.busy_changed.connect ((busy) => {
             loading_spinner.visible = busy;
         });
 
         Application.spot_repo.refreshed.connect ((spots_updated) => {
+            if (!initial_band_applied && Application.current_mode_filter == null) {
+                var preferred_mode = Application.settings.get_string ("default-mode");
+                if (preferred_mode != "" && preferred_mode != "All")
+                    Application.current_mode_filter = preferred_mode;
+            }
+
             if ((Application.current_mode_filter != null) &&
                 !string_list_contains (
                     Application.spot_repo.mode_model,
@@ -127,8 +169,9 @@ public sealed class AppWindow : Gtk.Window {
 
             left_sidebar.update_bands (
                 Application.spot_repo.band_counts,
-                Application.current_band_filter ?? "All"
+                get_initial_sidebar_band ()
             );
+            apply_initial_band_selection_if_needed ();
             left_sidebar.update_mode_model (
                 Application.spot_repo.mode_model,
                 Application.current_mode_filter
@@ -191,8 +234,10 @@ public sealed class AppWindow : Gtk.Window {
         setup_spot_updates ();
         build_band_stack ();
 
-        band_stack.set_visible_child_name (Application.settings.get_string ("default-band"));
+        pending_initial_band = Application.settings.get_string ("default-band");
+        band_stack.set_visible_child_name ("All");
         Application.current_band_filter = band_stack.visible_child_name;
+        Application.current_mode_filter = null;
         Application.current_program_filter = null;
         Application.current_search_text = null;
 
@@ -218,7 +263,7 @@ public sealed class AppWindow : Gtk.Window {
 
         left_sidebar.update_bands (
             Application.spot_repo.band_counts,
-            Application.current_band_filter ?? "All"
+            get_initial_sidebar_band ()
         );
         left_sidebar.update_mode_model (
             Application.spot_repo.mode_model,
@@ -241,19 +286,21 @@ public sealed class AppWindow : Gtk.Window {
         };
         list_container.append (list_view);
         Application.app.radio_connection_state_changed.connect (() => {
-            list_view.set_row_actions_visible (content_paned.get_end_child () == null);
+            list_view.set_row_actions_visible (!inspector_split.show_sidebar);
         });
 
         spot_detail.set_action_buttons_visible (true);
-        set_inspector_visible (true);
+
+        set_refresh_button_state (update_paused);
+
+        set_sidebar_visible (true);
+        set_inspector_visible (false);
 
         Application.settings.changed["hide-qrt"].connect (refresh_spot_views);
         Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
         Application.settings.changed["hide-older-than"].connect (refresh_spot_views);
-
     }
 
-    [GtkCallback]
     private void on_astronomy_button_clicked () {
         if (astronomy_window == null) {
             astronomy_window = new AstronomyWindow ((Gtk.Application) application);
@@ -271,6 +318,7 @@ public sealed class AppWindow : Gtk.Window {
         spot_detail.set_spot (spot);
 
         if (spot == null) {
+            set_inspector_visible (false);
             map_centered_spot_hash = BLANK_HASH;
             foreach (var page in band_pages) {
                 var band_view = page.get_child () as BandView;
@@ -280,6 +328,8 @@ public sealed class AppWindow : Gtk.Window {
                 list_view.set_current_spot (BLANK_HASH);
             return;
         }
+
+        set_inspector_visible (true);
 
         if ((map_view != null) && (spot_hash != map_centered_spot_hash)) {
             map_view.go_to_spot (spot);
@@ -292,12 +342,18 @@ public sealed class AppWindow : Gtk.Window {
     }
 
     private void set_inspector_visible (bool visible) {
-        if (visible) {
-            if (content_paned.get_end_child () == null)
-                content_paned.set_end_child (spot_detail);
-        } else if (content_paned.get_end_child () != null) {
-            content_paned.set_end_child (null);
+        if (visible == inspector_split.show_sidebar) {
+            syncing_inspector_toggle = true;
+            inspector_toggle.active = visible;
+            syncing_inspector_toggle = false;
+            inspector_toggle.tooltip_text = visible ? _("Hide Inspector") : _("Show Inspector");
+            if (list_view != null)
+                list_view.set_row_actions_visible (!visible);
+            return;
         }
+
+        inspector_split.show_sidebar = visible;
+        spot_detail.sensitive = visible;
 
         syncing_inspector_toggle = true;
         inspector_toggle.active = visible;
@@ -305,6 +361,20 @@ public sealed class AppWindow : Gtk.Window {
         inspector_toggle.tooltip_text = visible ? _("Hide Inspector") : _("Show Inspector");
         if (list_view != null)
             list_view.set_row_actions_visible (!visible);
+    }
+
+    private void set_sidebar_visible (bool visible) {
+        left_sidebar.set_sidebar_visible_state (visible);
+
+        if (visible == sidebar_split.show_sidebar) {
+            sidebar_toggle.active = visible;
+            sidebar_toggle.tooltip_text = visible ? _("Hide Sidebar") : _("Show Sidebar");
+            return;
+        }
+
+        sidebar_split.show_sidebar = visible;
+        sidebar_toggle.active = visible;
+        sidebar_toggle.tooltip_text = visible ? _("Hide Sidebar") : _("Show Sidebar");
     }
 
     private void sync_band_view_to_spot (Quark spot_hash, Spot spot) {
@@ -361,6 +431,36 @@ public sealed class AppWindow : Gtk.Window {
         );
     }
 
+    private void restore_window_state () {
+        restoring_window_state = true;
+
+        var width = Application.settings.get_int ("window-width");
+        var height = Application.settings.get_int ("window-height");
+        set_default_size (width, height);
+
+        if (Application.settings.get_boolean ("window-maximized"))
+            maximize ();
+
+        restoring_window_state = false;
+    }
+
+    private void save_window_geometry () {
+        if (restoring_window_state || is_maximized ())
+            return;
+
+        Application.settings.set_int ("window-width", default_width);
+        Application.settings.set_int ("window-height", default_height);
+    }
+
+    private void save_window_maximized_state () {
+        if (restoring_window_state)
+            return;
+
+        Application.settings.set_boolean ("window-maximized", is_maximized ());
+        if (!is_maximized ())
+            save_window_geometry ();
+    }
+
     private void refresh_spot_views () {
         bounce_map_filter_if_ready ();
         if (list_view != null)
@@ -410,6 +510,30 @@ public sealed class AppWindow : Gtk.Window {
             band_pages.add (page);
 
         }
+    }
+
+    private string get_initial_sidebar_band () {
+        if (initial_band_applied)
+            return Application.current_band_filter ?? "All";
+
+        var preferred_band = pending_initial_band ?? "All";
+        if (Application.spot_repo.band_counts.size == 0)
+            return "All";
+        if ((preferred_band != "All") &&
+            !Application.spot_repo.band_counts.has_key (preferred_band))
+            return "All";
+
+        return preferred_band;
+    }
+
+    private void apply_initial_band_selection_if_needed () {
+        if (initial_band_applied)
+            return;
+
+        var initial_band = get_initial_sidebar_band ();
+        initial_band_applied = true;
+        pending_initial_band = null;
+        band_stack.set_visible_child_name (initial_band);
     }
 
     private void power_off_radio () {
@@ -554,7 +678,6 @@ public sealed class AppWindow : Gtk.Window {
         status_bar.set_time (now);
     } /* tick */
 
-    [GtkCallback]
     private void on_add_button_clicked () {
         AddSpot? add_spot = null;
         if (Application.radio_control.is_rig_connected && Application.radio_control.frequency > 0) {
@@ -565,19 +688,27 @@ public sealed class AppWindow : Gtk.Window {
         add_spot.present (this);
     }
 
+    private void set_refresh_button_state (bool paused) {
+        refresh_toggle.active = paused;
+        refresh_toggle.icon_name = paused
+            ? "arrow-circular-bottom-right-symbolic"
+            : "media-playback-pause-symbolic";
+        refresh_toggle.tooltip_text = paused ? _("Resume") : _("Pause");
+    }
+
     private void on_refresh_button_clicked () {
         update_paused = !update_paused;
         if (update_paused) {
             current_ticks = 0;
+            Application.show_toast (_("Spot updates paused"));
         } else {
             current_ticks = 0;
+            Application.show_toast (_("Spot updates resumed"));
             Application.spot_repo.update_spots.begin ();
         }
-        refresh_toggle.active = update_paused;
-        refresh_toggle.icon_name = update_paused
-            ? "arrow-circular-bottom-right-symbolic"
-            : "media-playback-pause-symbolic";
-        refresh_toggle.tooltip_text = update_paused ? _("Resume") : _("Pause");
+
+        set_refresh_button_state (update_paused);
+
         update_refresh_status ();
     }
 

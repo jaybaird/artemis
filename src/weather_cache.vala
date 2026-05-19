@@ -2,15 +2,11 @@ using Gee;
 using GLib;
 using Shumate;
 
-public enum WeatherError {
+public errordomain WeatherError {
     INVALID_REQUEST,
     API_KEY_MISSING,
     HTTP_FAILED,
     PARSE_FAILED
-}
-
-public static GLib.Quark weather_error_quark () {
-    return GLib.Quark.from_string ("weather-error");
 }
 
 public struct WeatherData {
@@ -80,10 +76,7 @@ public sealed class WeatherClient : Object {
     public async WeatherData fetch_weather (Coordinate coord, string units) throws Error {
         var api_key = Build.OPENWEATHER_API_KEY.strip ();
         if (api_key == "") {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.API_KEY_MISSING,
-                "OpenWeather API key is not configured in this build"
+            throw new WeatherError.API_KEY_MISSING ("OpenWeather API key is not configured in this build"
             );
         }
 
@@ -98,10 +91,7 @@ public sealed class WeatherClient : Object {
         );
 
         if (message.status_code != Soup.Status.OK) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.HTTP_FAILED,
-                "Weather request failed: %u %s".printf (
+            throw new WeatherError.HTTP_FAILED ("Weather request failed: %u %s".printf (
                     message.status_code,
                     message.reason_phrase
                 )
@@ -113,10 +103,7 @@ public sealed class WeatherClient : Object {
 
         var root = parser.get_root ();
         if ((root == null) || (root.get_node_type () != Json.NodeType.OBJECT)) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.PARSE_FAILED,
-                "Weather response did not contain a JSON object"
+            throw new WeatherError.PARSE_FAILED ("Weather response did not contain a JSON object"
             );
         }
 
@@ -125,19 +112,13 @@ public sealed class WeatherClient : Object {
         var weather = object.get_array_member ("weather");
 
         if ((main == null) || (weather == null) || (weather.get_length () == 0)) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.PARSE_FAILED,
-                "Weather response was missing required fields"
+            throw new WeatherError.PARSE_FAILED ("Weather response was missing required fields"
             );
         }
 
         var condition_object = weather.get_object_element (0);
         if (condition_object == null) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.PARSE_FAILED,
-                "Weather response was missing the current condition"
+            throw new WeatherError.PARSE_FAILED ("Weather response was missing the current condition"
             );
         }
 
@@ -175,10 +156,7 @@ public sealed class WeatherCache : Object {
     private static string normalize_grid4 (string grid) throws Error {
         var normalized = grid.strip ().ascii_up ();
         if (normalized.length < 4) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.INVALID_REQUEST,
-                "Grid locator %s is too short for weather lookups".printf (grid)
+            throw new WeatherError.INVALID_REQUEST ("Grid locator %s is too short for weather lookups".printf (grid)
             );
         }
 
@@ -194,10 +172,7 @@ public sealed class WeatherCache : Object {
         if (grid6.length >= 4)
             return normalize_grid4 (grid6.substring (0, 4));
 
-        throw new Error (
-            weather_error_quark (),
-            WeatherError.INVALID_REQUEST,
-            "Spot %s has no usable grid square for weather lookups".printf (
+        throw new WeatherError.INVALID_REQUEST ("Spot %s has no usable grid square for weather lookups".printf (
                 spot.park_ref
             )
         );

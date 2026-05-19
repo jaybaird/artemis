@@ -1,4 +1,9 @@
 artemis_vala_sources = [
+  'src/help/help_models.vala',
+  'src/help/help_window.vala',
+  'src/adif/adif_types.vala',
+  'src/adif/adif_parser.vala',
+  'src/adif/adif_generator.vala',
   'src/application.vala',
   'src/window.vala',
   'src/astronomy_window.vala',
@@ -21,9 +26,13 @@ artemis_vala_sources = [
   'src/spot_detail.vala',
   'src/spot_list_view.vala',
   'src/weather_cache.vala',
-  'src/wsjtx_message.vala',
-  'src/wsjtx_parser.vala',
-  'src/wsjtx_udp.vala'
+  'src/web_views.vala',
+  'src/wsjtx/wsjtx_packet.vala',
+  'src/wsjtx/wsjtx_packet_reader.vala',
+  'src/wsjtx/wsjtx_packet_parser.vala',
+  'src/wsjtx/wsjtx_packet_writer.vala',
+  'src/wsjtx/wsjtx_listener.vala',
+  'src/wsjtx/wsjtx_session.vala'
 ]
 
 if is_windows
@@ -98,7 +107,11 @@ artemis_vala_deps = [
 ]
 
 if not is_windows
-  artemis_vala_deps += dependency('webkitgtk-6.0')
+  artemis_vala_deps += [
+    dependency('webkitgtk-6.0'),
+    dependency('glycin-2'),
+    dependency('glycin-gtk4-2')
+  ]
 endif
 
 artemis_vala_sources += configure_file(

@@ -68,6 +68,13 @@ public static string format_frequency_khz (double frequency_khz) {
     return formatted;
 }
 
+public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error {
+    var loader = new Gly.Loader.for_bytes (bytes);
+    var image = yield loader.load_async (null);
+    var frame = yield image.next_frame_async (null);
+    return GlyGtk4.frame_get_texture (frame);
+}
+
 public static string pota_profile_callsign (string callsign) {
     var stripped_callsign = callsign.strip ();
     var profile_callsign = "";
@@ -97,6 +104,14 @@ public sealed class SpotBadgeInfo : Object {
 
 public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
     var badges = new Gee.ArrayList<SpotBadgeInfo> ();
+
+    if (spot.heard_recently) {
+        badges.add (new SpotBadgeInfo (
+            "headphones-symbolic",
+            _("Heard recently"),
+            "badge-heard-recently"
+        ));
+    }
 
     if (spot.is_new_park && Application.settings.get_boolean ("highlight-unhunted-parks")) {
         badges.add (new SpotBadgeInfo (
@@ -192,12 +207,8 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
 }
 
 namespace Distance {
-    public enum MaidenheadError {
+    public errordomain MaidenheadError {
         TOO_SHORT,
-    }
-
-    public static GLib.Quark distance_error_quark () {
-        return GLib.Quark.from_string ("maidenhead-error");
     }
 
     public inline static double to_radians (double degrees) {
@@ -212,8 +223,7 @@ namespace Distance {
     // Parse a Maidenhead locator to decimal degrees (approx center of square)
     public static Coordinate maidenhead_to_latlon (string grid) throws Error {
         if (grid.length < 4)
-            throw new Error (distance_error_quark (), MaidenheadError.TOO_SHORT,
-                "Grid locator %s is too short", grid);
+            throw new MaidenheadError.TOO_SHORT ("Grid locator %s is too short", grid);
 
         var loc = grid.ascii_down ();      // simplify handling
         double lon = (loc[0] - 'a') * 20.0 - 180.0;

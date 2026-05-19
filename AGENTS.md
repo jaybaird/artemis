@@ -52,6 +52,7 @@ When changing UI/resources, ensure the build succeeds and generated resources re
 - Surface root causes, not only symptoms.
 - Do not silently swallow runtime errors when debugging asynchronous code paths.
 - Preserve release quality: buildable, reviewable, and maintainable changes.
+- A human must remain in the loop at all times.
 
 ## Practical Workflow
 1. Reproduce or trace the issue.

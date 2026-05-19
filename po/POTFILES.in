@@ -24,4 +24,6 @@ src/repo.vala
 src/spot_card.vala
 src/spot_detail.vala
 src/spot_list_view.vala
+src/wsjtx/wsjtx_listener.vala
+src/wsjtx/wsjtx_session.vala
 src/window.vala

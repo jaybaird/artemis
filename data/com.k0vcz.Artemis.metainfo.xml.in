@@ -16,7 +16,7 @@
   </developer>
 
   <!-- Required: Should be a link to the upstream homepage for the component -->
-  <url type="homepage">https://github.com/jaybaird/artemis-vala</url>
+  <url type="homepage">https://artemispota.app</url>
   <!-- Recommended: It is highly recommended for open-source projects to display the source code repository -->
   <url type="vcs-browser">https://github.com/jaybaird/artemis-vala</url>
   <!-- Should point to the software's bug tracking system, for users to report new bugs -->
@@ -26,11 +26,11 @@
   <url type="translate">https://github.com/jaybaird/artemis-vala</url>
   <url type="faq">https://github.com/jaybaird/artemis-vala#readme</url>
   <!-- Should provide a web link to an online user's reference, a software manual or help page -->
-  <url type="help">https://github.com/jaybaird/artemis-vala#readme</url>
+  <url type="help">https://artemispota.app/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to donate to the described software project -->
   <url type="donation">https://github.com/jaybaird/artemis-vala</url>
   <!-- This could for example be an HTTPS URL to an online form or a page describing how to contact the developer -->
-  <url type="contact">https://github.com/jaybaird/artemis-vala/issues</url>
+  <url type="contact">https://artemispota.app/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to contribute to the described software project -->
   <url type="contribute">https://github.com/jaybaird/artemis-vala/pulls</url>
 

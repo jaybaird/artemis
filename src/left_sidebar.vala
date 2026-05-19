@@ -43,6 +43,12 @@ public sealed class BandButton : Gtk.Box {
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/left_sidebar.ui")]
 public sealed class LeftSidebar : Gtk.Box {
     [GtkChild]
+    private unowned Gtk.Button add_spot_button;
+
+    [GtkChild]
+    private unowned Gtk.ToggleButton sidebar_toggle;
+
+    [GtkChild]
     private unowned Gtk.Box band_buttons_box;
 
     [GtkChild]
@@ -78,6 +84,8 @@ public sealed class LeftSidebar : Gtk.Box {
     public signal void mode_changed (string? mode);
     public signal void program_changed (string? program);
     public signal void power_clicked ();
+    public signal void add_requested ();
+    public signal void sidebar_visibility_changed (bool visible);
 
     public LeftSidebar () {
         Object ();
@@ -86,6 +94,10 @@ public sealed class LeftSidebar : Gtk.Box {
     construct {
         band_buttons = new HashMap<string, Gtk.ToggleButton> ();
 
+        add_spot_button.clicked.connect (() => add_requested ());
+        sidebar_toggle.toggled.connect (() => {
+            sidebar_visibility_changed (sidebar_toggle.active);
+        });
         radio_power_button.clicked.connect (() => power_clicked ());
 
         mode_handler = mode_select.notify["selected"].connect (() => {
@@ -213,6 +225,11 @@ public sealed class LeftSidebar : Gtk.Box {
 
     public void set_power_button_text (string text) {
         radio_power_button.label = text;
+    }
+
+    public void set_sidebar_visible_state (bool visible) {
+        sidebar_toggle.active = visible;
+        sidebar_toggle.tooltip_text = visible ? _("Hide Sidebar") : _("Show Sidebar");
     }
 
     public void set_vfo_animated (double freq_khz) {

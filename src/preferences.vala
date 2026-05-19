@@ -26,50 +26,50 @@ static string _strip_quotes (string s) {
     return s;
 }
 
-public sealed class PreferencesDialog : Object {
-    private Adw.PreferencesDialog dialog;
-    private Adw.EntryRow row_callsign;
-    private Adw.EntryRow row_location;
-    private Adw.EntryRow row_spot_message;
-    private Adw.SpinRow row_update_interval;
-    private Adw.ComboRow row_default_band;
-    private Adw.ComboRow row_default_mode;
+ [GtkTemplate (ui = "/com/k0vcz/artemis/ui/preferences.ui")]
+public sealed class PreferencesDialog : Adw.PreferencesDialog {
+    [GtkChild] private unowned Adw.EntryRow row_callsign;
+    [GtkChild] private unowned Adw.EntryRow row_location;
+    [GtkChild] private unowned Adw.EntryRow row_spot_message;
+    [GtkChild] private unowned Adw.SpinRow row_update_interval;
+    [GtkChild] private unowned Adw.ComboRow row_default_band;
+    [GtkChild] private unowned Adw.ComboRow row_default_mode;
 
-    private Adw.ComboRow row_connection_type;
-    private Adw.ComboRow row_radio_model;
-    private Adw.ComboRow row_device_path;
-    private Adw.ComboRow row_baud_rate;
-    private Adw.ComboRow row_data_bits;
-    private Adw.ComboRow row_stop_bits;
-    private Adw.ComboRow row_handshake;
+    [GtkChild] private unowned Adw.ComboRow row_connection_type;
+    [GtkChild] private unowned Adw.ComboRow row_radio_model;
+    [GtkChild] private unowned Adw.ComboRow row_device_path;
+    [GtkChild] private unowned Adw.ComboRow row_baud_rate;
+    [GtkChild] private unowned Adw.ComboRow row_data_bits;
+    [GtkChild] private unowned Adw.ComboRow row_stop_bits;
+    [GtkChild] private unowned Adw.ComboRow row_handshake;
 
-    private Adw.EntryRow row_network_host;
-    private Adw.EntryRow row_network_port;
-    private Adw.EntryRow row_wsjtx_listen_ip;
-    private Adw.EntryRow row_wsjtx_listen_port;
-    private Adw.PreferencesGroup serial_settings_group;
-    private Adw.PreferencesGroup network_settings_group;
-    private Adw.PreferencesGroup radio_test_group;
+    [GtkChild] private unowned Adw.EntryRow row_network_host;
+    [GtkChild] private unowned Adw.EntryRow row_network_port;
+    [GtkChild] private unowned Adw.EntryRow row_wsjtx_listen_ip;
+    [GtkChild] private unowned Adw.EntryRow row_wsjtx_listen_port;
+    [GtkChild] private unowned Adw.PreferencesGroup serial_settings_group;
+    [GtkChild] private unowned Adw.PreferencesGroup network_settings_group;
+    [GtkChild] private unowned Adw.PreferencesGroup radio_test_group;
 
-    private Adw.SwitchRow row_enable_logging;
-    private Adw.SwitchRow row_use_metric;
-    private Adw.SwitchRow row_show_scale;
-    private Adw.SwitchRow row_hide_qrt;
-    private Adw.SwitchRow row_hide_hunted;
-    private Adw.SpinRow row_hide_older_than;
-    private Adw.PasswordEntryRow row_qrz_api_key;
-    private Adw.SwitchRow row_highlight_unhunted;
-    private Adw.ActionRow import_file_row;
-    private Adw.ButtonRow import_log;
+    [GtkChild] private unowned Adw.SwitchRow row_enable_logging;
+    [GtkChild] private unowned Adw.SwitchRow row_use_metric;
+    [GtkChild] private unowned Adw.SwitchRow row_show_scale;
+    [GtkChild] private unowned Adw.SwitchRow row_hide_qrt;
+    [GtkChild] private unowned Adw.SwitchRow row_hide_hunted;
+    [GtkChild] private unowned Adw.SpinRow row_hide_older_than;
+    [GtkChild] private unowned Adw.PasswordEntryRow row_qrz_api_key;
+    [GtkChild] private unowned Adw.SwitchRow row_highlight_unhunted;
+    [GtkChild] private unowned Adw.ActionRow import_file_row;
+    [GtkChild] private unowned Adw.ButtonRow import_log;
 
-    private Gtk.Button test_connection_button;
-    private Gtk.Image connection_status_icon;
-    private Gtk.Label connection_status_label;
-    private Gtk.Label hamlib_version_label;
-    private Adw.ActionRow wsjtx_status_row;
-    private Gtk.Image wsjtx_status_icon;
-    private Gtk.Label wsjtx_status_label;
-    private Gtk.Label wsjtx_status_detail;
+    [GtkChild] private unowned Gtk.Button test_connection_button;
+    [GtkChild] private unowned Gtk.Image connection_status_icon;
+    [GtkChild] private unowned Gtk.Label connection_status_label;
+    [GtkChild] private unowned Gtk.Label hamlib_version_label;
+    [GtkChild] private unowned Adw.ActionRow wsjtx_status_row;
+    [GtkChild] private unowned Gtk.Image wsjtx_status_icon;
+    [GtkChild] private unowned Gtk.Label wsjtx_status_label;
+    [GtkChild] private unowned Gtk.Label wsjtx_status_detail;
 
     private File? logbook_csv = null;
 
@@ -78,19 +78,6 @@ public sealed class PreferencesDialog : Object {
     }
 
     construct {
-        var builder = new Gtk.Builder.from_resource ("/com/k0vcz/artemis/ui/preferences.ui");
-
-        dialog = builder.get_object ("prefs_dialog") as Adw.PreferencesDialog;
-        row_callsign = builder.get_object ("row_callsign") as Adw.EntryRow;
-        row_location = builder.get_object ("row_location") as Adw.EntryRow;
-        row_spot_message = builder.get_object ("row_spot_message") as Adw.EntryRow;
-        row_update_interval = builder.get_object ("row_update_interval") as Adw.SpinRow;
-        row_default_band = builder.get_object ("row_default_band") as Adw.ComboRow;
-        row_default_mode = builder.get_object ("row_default_mode") as Adw.ComboRow;
-
-        row_connection_type = builder.get_object ("row_connection_type") as Adw.ComboRow;
-
-        row_radio_model = builder.get_object ("row_radio_model") as Adw.ComboRow;
         var radio_models = RadioControl.get_radio_models ();
         var radio_model_list = new Gtk.StringList ({});
         for (var i = 0; i < radio_models.length; i++) {
@@ -100,55 +87,17 @@ public sealed class PreferencesDialog : Object {
         row_radio_model.enable_search = true;
         row_radio_model.search_match_mode = Gtk.StringFilterMatchMode.SUBSTRING;
 
-        row_device_path = builder.get_object ("row_device_path") as Adw.ComboRow;
         row_device_path.model = get_serial_devices ();
-
-        row_baud_rate = builder.get_object ("row_baud_rate") as Adw.ComboRow;
-        row_data_bits = builder.get_object ("row_data_bits") as Adw.ComboRow;
-        row_stop_bits = builder.get_object ("row_stop_bits") as Adw.ComboRow;
-        row_handshake = builder.get_object ("row_handshake") as Adw.ComboRow;
-
-        row_network_host = builder.get_object ("row_network_host") as Adw.EntryRow;
-        row_network_port = builder.get_object ("row_network_port") as Adw.EntryRow;
-        row_wsjtx_listen_ip = builder.get_object ("row_wsjtx_listen_ip") as Adw.EntryRow;
-        row_wsjtx_listen_port = builder.get_object ("row_wsjtx_listen_port") as Adw.EntryRow;
-        serial_settings_group = builder.get_object ("serial_settings_group") as Adw.PreferencesGroup;
-        network_settings_group = builder.get_object ("network_settings_group") as Adw.PreferencesGroup;
-        radio_test_group = builder.get_object ("radio_test_group") as Adw.PreferencesGroup;
-        hamlib_version_label = builder.get_object ("hamlib_version_label") as Gtk.Label;
 
         if (hamlib_version_label != null) {
             hamlib_version_label.label = RadioControl.hamlib_version ();
         }
-
-        row_hide_qrt = builder.get_object ("row_hide_qrt") as Adw.SwitchRow;
-        row_show_scale = builder.get_object ("row_show_scale") as Adw.SwitchRow;
-        row_hide_hunted = builder.get_object ("row_hide_hunted") as Adw.SwitchRow;
-        row_hide_older_than = builder.get_object ("row_hide_older_than") as Adw.SpinRow;
-        row_enable_logging = builder.get_object ("row_enable_logging") as Adw.SwitchRow;
-        row_qrz_api_key = builder.get_object ("row_qrz_api_key") as Adw.PasswordEntryRow;
-        row_highlight_unhunted = builder.get_object ("row_highlight_unhunted") as Adw.SwitchRow;
-        row_use_metric = builder.get_object ("row_use_metric") as Adw.SwitchRow;
-        import_file_row = builder.get_object ("import_file_row") as Adw.ActionRow;
-        import_log = builder.get_object ("import_log") as Adw.ButtonRow;
-
-        test_connection_button = builder.get_object ("test_connection_button") as Gtk.Button;
-        connection_status_icon = builder.get_object ("connection_status_icon") as Gtk.Image;
-        connection_status_label = builder.get_object ("connection_status_label") as Gtk.Label;
-        wsjtx_status_row = builder.get_object ("wsjtx_status_row") as Adw.ActionRow;
-        wsjtx_status_icon = builder.get_object ("wsjtx_status_icon") as Gtk.Image;
-        wsjtx_status_label = builder.get_object ("wsjtx_status_label") as Gtk.Label;
-        wsjtx_status_detail = builder.get_object ("wsjtx_status_detail") as Gtk.Label;
 
         setup_bindings ();
         setup_signals ();
         update_connection_groups_visibility ();
         update_wsjtx_status ();
     } /* get_widgets */
-
-    public void present (Gtk.Window parent) {
-        dialog.present (parent);
-    }
 
     void setup_bindings () {
         Application.settings.bind ("callsign", row_callsign, "text",
@@ -527,20 +476,20 @@ public sealed class PreferencesDialog : Object {
         test_connection_button.clicked.connect (on_test_connection);
         import_file_row.activated.connect (on_import_file);
         import_log.activated.connect (do_import_file);
-        Application.wsjtx_udp.status_changed.connect (update_wsjtx_status);
+        Application.wsjtx_session.status_changed.connect (update_wsjtx_status);
     }
 
     void update_wsjtx_status () {
-        if (Application.wsjtx_udp == null)
+        if (Application.wsjtx_session == null)
             return;
 
-        wsjtx_status_row.subtitle = Application.wsjtx_udp.status_subtitle;
-        wsjtx_status_label.label = Application.wsjtx_udp.status_label;
-        wsjtx_status_detail.label = Application.wsjtx_udp.status_detail;
+        wsjtx_status_row.subtitle = Application.wsjtx_session.status_subtitle;
+        wsjtx_status_label.label = Application.wsjtx_session.status_label;
+        wsjtx_status_detail.label = Application.wsjtx_session.status_detail;
 
-        if (Application.wsjtx_udp.is_connected) {
+        if (Application.wsjtx_session.connected) {
             wsjtx_status_icon.icon_name = "network-idle-symbolic";
-        } else if (Application.wsjtx_udp.is_listening) {
+        } else if (Application.wsjtx_session.listening) {
             wsjtx_status_icon.icon_name = "network-workgroup-symbolic";
         } else {
             wsjtx_status_icon.icon_name = "network-offline-symbolic";
@@ -739,7 +688,7 @@ public sealed class PreferencesDialog : Object {
         alert.set_response_appearance ("ok", Adw.ResponseAppearance.SUGGESTED);
         alert.set_default_response ("ok");
         alert.set_close_response ("ok");
-        alert.present (dialog.get_root ());
+        alert.present (get_root ());
     } /* do_import_file */
 
     void on_import_file () {
@@ -756,7 +705,7 @@ public sealed class PreferencesDialog : Object {
         filter_list.append (csv_filter);
         file_dialog.filters = filter_list;
 
-        file_dialog.open.begin (dialog.get_root () as Gtk.Window, null, (obj,
+        file_dialog.open.begin (get_root () as Gtk.Window, null, (obj,
                                                                          res) => {
             try {
                 var file = file_dialog.open.end (res);

@@ -155,17 +155,22 @@ public class CallsignCache : Object {
                     .printf (gravatar_hash);
 
                 var message = new Soup.Message ("GET", url);
+                var bytes = yield avatar_session.send_and_read_async (
+                    message,
+                    GLib.Priority.DEFAULT,
+                    null
+                );
 
-                var stream = yield avatar_session.send_async (message, GLib.Priority.
-                    DEFAULT, null);
-
-                var pixbuf = new Gdk.Pixbuf.from_stream (stream);
-                if (pixbuf != null) {
-                    var texture = Gdk.Texture.for_pixbuf (pixbuf);
-                    cached_entry.avatar = texture;
-                    avatar = texture;
-                    emit_profile_updated (profile_callsign, callsign);
+                if (message.status_code != Soup.Status.OK) {
+                    throw new IOError.FAILED (
+                        "HTTP %u %s".printf (message.status_code, message.reason_phrase)
+                    );
                 }
+
+                var texture = yield load_texture_from_bytes (bytes);
+                cached_entry.avatar = texture;
+                avatar = texture;
+                emit_profile_updated (profile_callsign, callsign);
             }
         } catch (Error e) {
             warning ("Failed to fetch avatar for %s: %s", callsign, e.message);

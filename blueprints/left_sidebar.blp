@@ -24,106 +24,145 @@ using Adw 1;
 template $LeftSidebar : Box {
   orientation: vertical;
 
-  Adw.Bin {
-    vexpand: true;
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      show-title: false;
 
-    Box {
-      orientation: vertical;
-      spacing: 2;
-
-      Label {
-        label: _("Band");
-        xalign: 0;
-        margin-start: 8;
-        margin-bottom: 4;
-        styles ["heading", "dim-label"]
+      Button add_spot_button {
+        icon-name: "list-add-symbolic";
+        tooltip-text: _("Add Spot");
+        accessibility {
+          label: _("Add Spot");
+          role-description: _("button");
+        }
       }
 
-      Box band_buttons_box {
+      [end]
+      ToggleButton sidebar_toggle {
+        icon-name: "sidebar-show-symbolic";
+        tooltip-text: _("Hide Sidebar");
+        active: true;
+        accessibility {
+          label: _("Show Sidebar");
+          role-description: _("toggle button");
+        }
+      }
+    }
+
+    content: ScrolledWindow {
+      hscrollbar-policy: never;
+      vexpand: true;
+
+      child: Box {
         orientation: vertical;
-        spacing: 2;
-      }
-    }
-  }
+        spacing: 12;
+        margin-top: 12;
+        margin-bottom: 12;
+        margin-start: 12;
+        margin-end: 12;
 
-  Separator {}
+        Box {
+          orientation: vertical;
+          spacing: 2;
 
-  Box {
-    orientation: vertical;
+          Label {
+            label: _("Band");
+            xalign: 0;
+            margin-start: 8;
+            margin-bottom: 4;
+            styles ["heading", "dim-label"]
+          }
 
-    Label {
-      label: _("Mode");
-      xalign: 0;
-      margin-start: 8;
-      styles ["heading", "dim-label"]
-    }
+          Box band_buttons_box {
+            orientation: vertical;
+            spacing: 2;
+          }
+        }
 
-    DropDown mode_select {
-      accessibility {
-        label: _("Mode");
-        role-description: _("combo box");
-      }
-    }
+        Separator {}
 
-    Label {
-      label: _("Program");
-      xalign: 0;
-      margin-start: 8;
-      styles ["heading", "dim-label"]
-    }
+        Box {
+          orientation: vertical;
+          spacing: 8;
 
-    DropDown program_select {
-      accessibility {
-        label: _("Program");
-        role-description: _("combo box");
-      }
-    }
-  }
+          Label {
+            label: _("Mode");
+            xalign: 0;
+            margin-start: 8;
+            styles ["heading", "dim-label"]
+          }
 
-  Separator {}
+          DropDown mode_select {
+            accessibility {
+              label: _("Mode");
+              role-description: _("combo box");
+            }
+          }
 
-  Box {
-    orientation: vertical;
+          Label {
+            label: _("Program");
+            xalign: 0;
+            margin-start: 8;
+            styles ["heading", "dim-label"]
+          }
 
-    Label {
-      label: _("Radio");
-      xalign: 0;
-      margin-start: 8;
-      styles ["heading", "dim-label"]
-    }
+          DropDown program_select {
+            accessibility {
+              label: _("Program");
+              role-description: _("combo box");
+            }
+          }
+        }
 
-    Box {
-      orientation: vertical;
-      spacing: 6;
+        Separator {}
 
-      Label radio_vfo {
-        hexpand: true;
-        halign: center;
-        justify: center;
-        xalign: 0.5;
-        label: "14.074.000";
-        ellipsize: end;
-        styles ["numeric", "title-1", "frequency-display"]
-      }
+        Box {
+          orientation: vertical;
+          spacing: 8;
 
-      Label radio_mode {
-        xalign: 0.5;
-        label: "USB-D";
-        halign: center;
-        justify: center;
-        styles ["card", "pill", "caption", "mode-display"]
-        visible: false;
-      }
-    }
+          Label {
+            label: _("Radio");
+            xalign: 0;
+            margin-start: 8;
+            styles ["heading", "dim-label"]
+          }
 
-    ToggleButton radio_power_button {
-      label: _("Connect");
-      hexpand: true;
-      styles ["radio-power-button"]
-      accessibility {
-        label: _("Connect");
-        role-description: _("toggle button");
-      }
-    }
+          Box {
+            orientation: vertical;
+            spacing: 6;
+
+            Label radio_vfo {
+              hexpand: true;
+              halign: center;
+              justify: center;
+              xalign: 0.5;
+              label: "14.074.000";
+              ellipsize: end;
+              styles ["numeric", "title-1", "frequency-display"]
+            }
+
+            Label radio_mode {
+              xalign: 0.5;
+              label: "USB-D";
+              halign: center;
+              justify: center;
+              styles ["card", "pill", "caption", "mode-display"]
+              visible: false;
+            }
+          }
+
+          ToggleButton radio_power_button {
+            label: _("Connect");
+            hexpand: true;
+            styles ["radio-power-button"]
+            accessibility {
+              label: _("Connect");
+              role-description: _("toggle button");
+            }
+          }
+        }
+      };
+    };
   }
 }

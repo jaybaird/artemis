@@ -214,6 +214,9 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Label detail_park_name;
 
     [GtkChild]
+    private unowned Gtk.Box weather_summary_card;
+
+    [GtkChild]
     private unowned Gtk.Image wx_conditions;
 
     [GtkChild]
@@ -247,6 +250,7 @@ public sealed class SpotDetail : Gtk.Box {
     private string? park_url = null;
     private string? activator_url = null;
     private ulong callsign_cache_handler = 0;
+    private ulong pota_locations_handler = 0;
     private ulong radio_connected_handler = 0;
     private ulong radio_disconnected_handler = 0;
     private ulong radio_error_handler = 0;
@@ -291,6 +295,10 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_list.row_activated.connect ((row) => {
             if (row == detail_activator_link_row)
                 on_activator_clicked ();
+        });
+        pota_locations_handler = Application.pota_client.locations_updated.connect (() => {
+            if (current_spot != null)
+                populate (current_spot);
         });
         radio_connected_handler = Application.radio_control.radio_connected.connect (() => {
             update_tune_button_state ();
@@ -400,14 +408,14 @@ public sealed class SpotDetail : Gtk.Box {
         detail_spot_count_row.value = ngettext ("%d spot", "%d spots", spot.spot_count)
             .printf (spot.spot_count);
 
-        Error err = null;
         var locations = spot.location_desc.split (",", -1);
         var loc_str = "";
         if (locations.length <= 2) {
             for (int i = 0; i < locations.length; i++) {
-                var country = Application.spot_database.country_string_for_location (
-                    locations[i], out err);
-                loc_str += (i > 0 ? "\n" : "") + (country ?? spot.location_desc);
+                string location_key = locations[i].strip ();
+                var location = Application.pota_client.lookup_location (location_key);
+                string display = location != null ? location.to_string () : location_key;
+                loc_str += (i > 0 ? "\n" : "") + display;
             }
         } else {
             loc_str = spot.location_desc;
@@ -537,6 +545,7 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void set_weather_loading () {
+        weather_summary_card.visible = false;
         wx_conditions.icon_name = "clouds-outline-symbolic";
         wx_conditions_txt.label = _("Loading weather…");
         wx_temp.label = "—";
@@ -544,13 +553,11 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void set_weather_unavailable () {
-        wx_conditions.icon_name = "clouds-outline-symbolic";
-        wx_conditions_txt.label = _("Weather unavailable");
-        wx_temp.label = "—";
-        wx_humidity.label = "—";
+        weather_summary_card.visible = false;
     }
 
     private void apply_weather (WeatherData data) {
+        weather_summary_card.visible = true;
         wx_conditions.icon_name = weather_icon_name (data);
         wx_conditions_txt.label = data.condition;
         wx_temp.label = weather_temperature_label (data.temperature);
@@ -641,8 +648,11 @@ public sealed class SpotDetail : Gtk.Box {
     private void on_park_clicked () {
         if (park_url == null)
             return;
+        var parent = get_root () as Gtk.Window;
+        if (parent == null)
+            return;
 #if ARTEMIS_UNIX
-        new ParkDetailsView (_("Park Details"), park_url).present (get_root ());
+        new ParkDetailsView (parent, _("Park Details"), park_url).present ();
 #else
         GLib.AppInfo.launch_default_for_uri (park_url, null);
 #endif
@@ -652,7 +662,10 @@ public sealed class SpotDetail : Gtk.Box {
         if (activator_url == null)
             return;
 #if ARTEMIS_UNIX
-        new ParkDetailsView (_("Activator Details"), activator_url).present (get_root ());
+        var parent = get_root () as Gtk.Window;
+        if (parent == null)
+            return;
+        new ParkDetailsView (parent, _("Activator Details"), activator_url).present ();
 #else
         GLib.AppInfo.launch_default_for_uri (activator_url, null);
 #endif
@@ -662,6 +675,9 @@ public sealed class SpotDetail : Gtk.Box {
         if (callsign_cache_handler != 0 &&
             SignalHandler.is_connected (Application.callsign_cache, callsign_cache_handler))
             SignalHandler.disconnect (Application.callsign_cache, callsign_cache_handler);
+        if (pota_locations_handler != 0 &&
+            SignalHandler.is_connected (Application.pota_client, pota_locations_handler))
+            SignalHandler.disconnect (Application.pota_client, pota_locations_handler);
         if (radio_connected_handler != 0 &&
             SignalHandler.is_connected (Application.radio_control, radio_connected_handler))
             SignalHandler.disconnect (Application.radio_control, radio_connected_handler);
