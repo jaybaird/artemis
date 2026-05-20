@@ -348,6 +348,7 @@ struct _RadioControl {
   gboolean        is_connected;
   double          frequency_khz;
   enum RadioMode  mode;
+  gboolean        tx_active;
 
   gulong    settings_changed_handler;
 
@@ -513,6 +514,9 @@ radio_control_init(RadioControl *self)
 #endif
 
   self->poll_interval_ms = 500;
+  self->frequency_khz = -1;
+  self->mode = RADIO_MODE_UNKNOWN;
+  self->tx_active = FALSE;
   g_mutex_init(&self->rig_mutex);
   self->canceled = dex_cancellable_new();
   self->scheduler = dex_thread_pool_scheduler_new();
@@ -626,6 +630,9 @@ connect_worker(gpointer user_data)
     self->rig = NULL;
   }
   self->is_connected = FALSE;
+  self->frequency_khz = -1;
+  self->mode = RADIO_MODE_UNKNOWN;
+  self->tx_active = FALSE;
 
   self->rig = rig_init(config->model_id);
 
@@ -699,10 +706,16 @@ connect_worker(gpointer user_data)
     rig_cleanup(self->rig);
     self->rig = NULL;
     self->is_connected = FALSE;
+    self->frequency_khz = -1;
+    self->mode = RADIO_MODE_UNKNOWN;
+    self->tx_active = FALSE;
     g_mutex_unlock(&self->rig_mutex);
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
   self->is_connected = TRUE;
+  self->frequency_khz = -1;
+  self->mode = RADIO_MODE_UNKNOWN;
+  self->tx_active = FALSE;
   g_mutex_unlock(&self->rig_mutex);
 
   _RadioStatus *status = g_new0(_RadioStatus, 1);
@@ -721,6 +734,9 @@ connect_worker(gpointer user_data)
       self->rig = NULL;
     }
     self->is_connected = FALSE;
+    self->frequency_khz = -1;
+    self->mode = RADIO_MODE_UNKNOWN;
+    self->tx_active = FALSE;
 
     if (error == NULL) {
       g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Radio connection setup failed");
@@ -754,6 +770,9 @@ disconnect_worker(gpointer user_data)
 
   g_mutex_lock(&self->rig_mutex);
   self->is_connected = FALSE;
+  self->frequency_khz = -1;
+  self->mode = RADIO_MODE_UNKNOWN;
+  self->tx_active = FALSE;
 
   if (self->rig != NULL)
   {
@@ -992,28 +1011,41 @@ watcher_iteration(DexFuture *_, gpointer user_data)
   int r_ps = rig_get_powerstat(self->rig, &pwr_stat);
   int r_ptt = rig_get_ptt(self->rig, RIG_VFO_CURR, &ptt);
 
-  _RadioStatus *status = g_new0(_RadioStatus, 1);
-  status->radio = g_object_ref(self);
+  _RadioStatus *status = NULL;
   _RadioStatus *disconnect_status = NULL;
   
   if (r_f == RIG_OK && r_ps == RIG_OK)
   {
-    status->status = SIG_STATUS;
-    status->frequency = ((double)freq) / 1000.0;
-    status->mode = map_hamlib_mode(mode);
-    status->tx_active = (r_ptt == RIG_OK && ptt != RIG_PTT_OFF);
+    double frequency_khz = ((double)freq) / 1000.0;
+    enum RadioMode radio_mode = map_hamlib_mode(mode);
+    gboolean tx_active = (r_ptt == RIG_OK && ptt != RIG_PTT_OFF);
 
-    self->frequency_khz = ((double)freq) / 1000.0;
-    self->mode = map_hamlib_mode(mode);
+    if (frequency_khz != self->frequency_khz ||
+        radio_mode != self->mode ||
+        tx_active != self->tx_active) {
+      status = g_new0(_RadioStatus, 1);
+      status->radio = g_object_ref(self);
+      status->status = SIG_STATUS;
+      status->frequency = frequency_khz;
+      status->mode = radio_mode;
+      status->tx_active = tx_active;
+    }
+
+    self->frequency_khz = frequency_khz;
+    self->mode = radio_mode;
+    self->tx_active = tx_active;
   }
   else 
   {
+    status = g_new0(_RadioStatus, 1);
+    status->radio = g_object_ref(self);
     status->status = SIG_ERROR;
     status->frequency = -1;
     status->mode = 0;
 
     self->frequency_khz = -1;
     self->mode = 0;
+    self->tx_active = FALSE;
 
     GError *error = g_error_new(G_IO_ERROR, G_IO_ERROR_FAILED, "[RadioControl] heartbeat received error from hamlib: %s; %s", rigerror(r_f), rigerror(r_ps));
     status->error = g_steal_pointer(&error);
@@ -1042,9 +1074,11 @@ watcher_iteration(DexFuture *_, gpointer user_data)
     );
   }
   
-  dex_future_disown(
-    dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, status, (GDestroyNotify)radio_status_free)
-  );
+  if (status != NULL) {
+    dex_future_disown(
+      dex_scheduler_spawn(dex_scheduler_get_default(), 0, send_status, status, (GDestroyNotify)radio_status_free)
+    );
+  }
 
   return dex_timeout_new_msec(self->poll_interval_ms);
 }

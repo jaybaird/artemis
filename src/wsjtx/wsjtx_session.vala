@@ -32,6 +32,7 @@ namespace Artemis.Wsjtx {
         private string last_error_message = "";
         private string last_highlighted_callsign = "";
         private string last_selected_tx_callsign = "";
+        private LoggedAdifHandler logged_adif_handler;
 
         public bool listening { get; private set; default = false; }
         public bool connected { get; private set; default = false; }
@@ -57,6 +58,14 @@ namespace Artemis.Wsjtx {
         }
 
         construct {
+            logged_adif_handler = new LoggedAdifHandler (
+                Application.logging_service,
+                Application.spot_repo,
+                new SettingsLoggingPreferences (Application.settings)
+            );
+            logged_adif_handler.user_message.connect ((message) => {
+                Application.show_toast (message);
+            });
             Application.settings.changed["wsjtx-listen-ip"].connect (restart_listener);
             Application.settings.changed["wsjtx-listen-port"].connect (restart_listener);
             restart_listener ();
@@ -205,7 +214,7 @@ namespace Artemis.Wsjtx {
                     break;
                 case MessageType.DECODE:
                     var decode = packet.get_decode ();
-                    highlight_active_spot_decode (decode);
+                    handle_decode (decode);
                     decode_received (decode);
                     break;
                 case MessageType.CLEAR:
@@ -215,7 +224,7 @@ namespace Artemis.Wsjtx {
                 case MessageType.LOGGED_ADIF:
                     var logged_adif = packet.get_logged_adif ();
                     logged_adif_received (logged_adif);
-                    handle_logged_adif.begin (logged_adif);
+                    logged_adif_handler.handle.begin (logged_adif);
                     break;
                 default:
                     break;
@@ -280,11 +289,16 @@ namespace Artemis.Wsjtx {
             return "%s:%d".printf (ip_text, port);
         }
 
-        private void highlight_active_spot_decode (DecodePacket decode) {
+        private void handle_decode (DecodePacket decode) {
             var spot = Application.spot_repo.get_spot_for_decode_text (decode.text);
             if (spot == null)
                 return;
 
+            spot.mark_heard_recently ();
+            highlight_spot_callsign (spot);
+        }
+
+        private void highlight_spot_callsign (Spot spot) {
             var callsign = spot.callsign.strip ().up ();
             if (callsign == "" || callsign == last_highlighted_callsign)
                 return;
@@ -332,148 +346,6 @@ namespace Artemis.Wsjtx {
                 ip_text,
                 port
             );
-        }
-
-        private struct ParsedLoggedAdif {
-            public string call;
-            public string station_callsign;
-            public string mode;
-            public double frequency_khz;
-            public string rst_sent;
-            public string rst_rcvd;
-            public string comment;
-            public DateTime? spot_time;
-            public string dedupe_key;
-        }
-
-        private async void handle_logged_adif (LoggedAdifPacket packet) {
-            ParsedLoggedAdif? parsed = parse_logged_adif (packet.adif);
-            if (parsed == null)
-                return;
-
-            var active_spot = Application.spot_repo.get_spot_for_callsign (parsed.call);
-            var park_ref = active_spot != null ? active_spot.park_ref : "";
-            var mode = parsed.mode != "" ? parsed.mode : active_spot != null ? active_spot.mode : "";
-            var frequency_khz = parsed.frequency_khz > 0.0 ?
-                parsed.frequency_khz :
-                active_spot != null ? active_spot.frequency_khz : 0.0;
-            var dedupe_key = "%s|%s|%s".printf (
-                parsed.dedupe_key,
-                park_ref,
-                mode
-            );
-
-            if (Application.logging_service.has_completed_logged_adif (dedupe_key))
-                return;
-
-            if ((mode == "") || (frequency_khz <= 0.0) ||
-                (parsed.station_callsign == "") || (parsed.spot_time == null)) {
-                warning ("Skipping WSJT-X logged QSO for %s: ADIF record missing required fields",
-                    parsed.call);
-                return;
-            }
-
-            var spot = new Spot.from_add_spot (
-                parsed.call,
-                park_ref,
-                parsed.spot_time,
-                "%.3f".printf (frequency_khz),
-                mode,
-                parsed.station_callsign,
-                parsed.comment,
-                parsed.rst_sent,
-                parsed.rst_rcvd
-            );
-
-            try {
-                var result = yield Application.logging_service.submit_spot_qso (
-                    spot,
-                    park_ref != ""
-                );
-                Application.logging_service.mark_logged_adif_completed (dedupe_key);
-                if (result.pota_error != null)
-                    Application.show_toast (_("WSJT-X QSO saved locally; POTA spot failed"));
-                if (result.qrz_error != null)
-                    Application.show_toast (_("WSJT-X QSO saved locally; QRZ upload failed"));
-            } catch (Error err) {
-                warning ("Unable to auto spot WSJT-X POTA contact %s: %s",
-                    parsed.call,
-                    err.message);
-            }
-        }
-
-        private ParsedLoggedAdif? parse_logged_adif (string adif_text) {
-            string normalized = adif_text.strip ();
-            if (normalized == "")
-                return null;
-
-            if (!normalized.down ().contains ("<eor>"))
-                normalized += "<eor>";
-
-            Artemis.Adif.Document document;
-            try {
-                document = Artemis.Adif.Parser.from_string (normalized);
-            } catch (Artemis.Adif.Error error) {
-                warning ("Unable to parse WSJT-X logged ADIF: %s", error.message);
-                return null;
-            }
-
-            if (document.records.size == 0)
-                return null;
-
-            Artemis.Adif.Record record = document.records[0];
-
-            var call = map_record_value (record, "CALL").up ();
-            if (call == "")
-                return null;
-
-            var mode = map_record_value (record, "MODE").up ();
-            var frequency_khz = parse_mhz_to_khz_or_zero (map_record_value (record, "FREQ"));
-            var station_callsign = first_non_empty (
-                map_record_value (record, "STATION_CALLSIGN"),
-                Application.settings.get_string ("callsign").strip ()
-            ).up ();
-            var comment = first_non_empty (
-                map_record_value (record, "COMMENT"),
-                map_record_value (record, "NOTES"),
-                Application.settings.get_string ("spot-message").strip ()
-            );
-            var qso_date = map_record_value (record, "QSO_DATE");
-            var time_on = first_non_empty (
-                map_record_value (record, "TIME_ON"),
-                map_record_value (record, "TIME_OFF")
-            );
-
-            ParsedLoggedAdif parsed = {};
-            parsed.call = call;
-            parsed.station_callsign = station_callsign;
-            parsed.mode = mode;
-            parsed.frequency_khz = frequency_khz;
-            parsed.rst_sent = map_record_value (record, "RST_SENT");
-            parsed.rst_rcvd = map_record_value (record, "RST_RCVD");
-            parsed.comment = comment;
-            parsed.spot_time = Artemis.Adif.parse_qso_datetime_utc (qso_date, time_on);
-            parsed.dedupe_key = "%s|%s|%s|%s".printf (
-                call,
-                "",
-                qso_date,
-                time_on
-            );
-
-            return parsed;
-        }
-
-        private string map_record_value (Artemis.Adif.Record record, string key) {
-            var value = record.get (key);
-            return value != null ? value.strip () : "";
-        }
-
-        private string first_non_empty (string first, string second = "", string third = "") {
-            if (first.strip () != "")
-                return first.strip ();
-            if (second.strip () != "")
-                return second.strip ();
-            return third.strip ();
         }
 
         private void set_status (

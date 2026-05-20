@@ -24,6 +24,7 @@ public sealed class Application : Adw.Application {
 
     public static AppState state { get; private set; }
     public static LoggingService logging_service { get; private set; }
+    public static LogbookImportService logbook_import_service { get; private set; }
 
     public static Quark current_spot_hash {
         get {
@@ -121,7 +122,14 @@ public sealed class Application : Adw.Application {
         }
 
         callsign_cache = new CallsignCache (3600);
-        logging_service = new LoggingService ();
+        logging_service = new LoggingService (
+            spot_database,
+            pota_client,
+            qrz_client,
+            new FileLocalAdifWriter (),
+            new SettingsLoggingPreferences (settings)
+        );
+        logbook_import_service = new LogbookImportService (spot_database);
         weather_cache = new WeatherCache ();
         solar_conditions = new SolarConditionsService ();
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();

@@ -9,38 +9,165 @@ public errordomain LoggingError {
     REMOTE_FAILED
 }
 
-public sealed class LoggingResult : Object {
-    public bool local_saved { get; construct; }
-    public bool pota_posted { get; construct; }
-    public bool qrz_uploaded { get; construct; }
-    public string? pota_error { get; construct; }
-    public string? qrz_error { get; construct; }
+public interface QsoStore : Object {
+    public abstract bool add_qso_from_spot (Spot spot, out Error? error);
+}
+
+public interface PotaSpotPoster : Object {
+    public abstract async void post_spot (
+        string activator,
+        string spotter,
+        string reference,
+        string frequency,
+        string mode,
+        string comment
+    ) throws Error;
+}
+
+public interface QrzQsoUploader : Object {
+    public abstract async void upload_spot_qso (Spot spot) throws Error;
+}
+
+[Compact (opaque=true)]
+public class QsoDraft {
+    public string callsign { get; }
+    public string park_ref { get; }
+    public DateTime spot_time { get; }
+    public double frequency_khz { get; }
+    public string mode { get; }
+    public string spotter { get; }
+    public string spotter_comment { get; }
+    public string rst_sent { get; }
+    public string rst_rcvd { get; }
+
+    public QsoDraft (
+        string callsign,
+        string park_ref,
+        DateTime spot_time,
+        double frequency_khz,
+        string mode,
+        string spotter,
+        string spotter_comment,
+        string rst_sent,
+        string rst_rcvd
+    ) {
+        _callsign = callsign;
+        _park_ref = park_ref;
+        _spot_time = spot_time;
+        _frequency_khz = frequency_khz;
+        _mode = mode;
+        _spotter = spotter;
+        _spotter_comment = spotter_comment;
+        _rst_sent = rst_sent;
+        _rst_rcvd = rst_rcvd;
+    }
+
+    public QsoDraft.from_user_input (
+        string callsign,
+        string park_ref,
+        DateTime spot_time,
+        string frequency_text,
+        string mode,
+        string spotter,
+        string spotter_comment,
+        string rst_sent,
+        string rst_rcvd
+    ) {
+        _callsign = callsign;
+        _park_ref = park_ref;
+        _spot_time = spot_time;
+        _frequency_khz = parse_khz_or_zero (frequency_text);
+        _mode = mode;
+        _spotter = spotter;
+        _spotter_comment = spotter_comment;
+        _rst_sent = rst_sent;
+        _rst_rcvd = rst_rcvd;
+    }
+
+    public Spot to_spot () {
+        return new Spot.from_add_spot (
+            callsign,
+            park_ref,
+            spot_time,
+            format_frequency_khz (frequency_khz),
+            mode,
+            spotter,
+            spotter_comment,
+            rst_sent,
+            rst_rcvd
+        );
+    }
+}
+
+[Compact (opaque=true)]
+public class LoggingResult {
+    public bool local_saved { get; }
+    public bool local_adif_saved { get; }
+    public bool pota_posted { get; }
+    public bool qrz_uploaded { get; }
+    public string? local_adif_error { get; }
+    public string? pota_error { get; }
+    public string? qrz_error { get; }
 
     public LoggingResult (
         bool local_saved,
+        bool local_adif_saved,
         bool pota_posted,
         bool qrz_uploaded,
+        string? local_adif_error = null,
         string? pota_error = null,
         string? qrz_error = null
     ) {
-        Object (
-            local_saved: local_saved,
-            pota_posted: pota_posted,
-            qrz_uploaded: qrz_uploaded,
-            pota_error: pota_error,
-            qrz_error: qrz_error
-        );
+        _local_saved = local_saved;
+        _local_adif_saved = local_adif_saved;
+        _pota_posted = pota_posted;
+        _qrz_uploaded = qrz_uploaded;
+        _local_adif_error = local_adif_error;
+        _pota_error = pota_error;
+        _qrz_error = qrz_error;
     }
 }
 
 public sealed class LoggingService : Object {
     private Gee.HashSet<string> completed_logged_adif_keys = new Gee.HashSet<string> ();
 
+    public QsoStore qso_store { get; construct; }
+    public PotaSpotPoster pota_poster { get; construct; }
+    public QrzQsoUploader qrz_uploader { get; construct; }
+    public LocalAdifWriter local_adif_writer { get; construct; }
+    public LoggingPreferences preferences { get; construct; }
+
+    public LoggingService (
+        QsoStore qso_store,
+        PotaSpotPoster pota_poster,
+        QrzQsoUploader qrz_uploader,
+        LocalAdifWriter local_adif_writer,
+        LoggingPreferences preferences
+    ) {
+        Object (
+            qso_store: qso_store,
+            pota_poster: pota_poster,
+            qrz_uploader: qrz_uploader,
+            local_adif_writer: local_adif_writer,
+            preferences: preferences
+        );
+    }
+
+    public async LoggingResult submit_qso_draft (
+        QsoDraft draft,
+        bool post_to_pota = true
+    ) throws Error {
+        if (draft == null)
+            throw new LoggingError.INVALID_CONTACT ("QSO is empty");
+
+        return yield submit_spot_qso (draft.to_spot (), post_to_pota);
+    }
+
     public async LoggingResult submit_spot_qso (Spot spot, bool post_to_pota = true) throws Error {
         validate_spot_qso (spot);
 
         Error? db_error = null;
-        if (!Application.spot_database.add_qso_from_spot (spot, out db_error)) {
+        if (!qso_store.add_qso_from_spot (spot, out db_error)) {
             throw new LoggingError.LOCAL_SAVE_FAILED (
                 db_error != null ? db_error.message : "Unable to save QSO locally"
             );
@@ -48,12 +175,24 @@ public sealed class LoggingService : Object {
 
         bool pota_posted = false;
         bool qrz_uploaded = false;
+        bool local_adif_saved = false;
+        string? local_adif_error = null;
         string? pota_error = null;
         string? qrz_error = null;
 
+        if (preferences.enable_local_adif_log) {
+            try {
+                local_adif_writer.append_spot_qso (spot, preferences.local_adif_log_path);
+                local_adif_saved = true;
+            } catch (Error err) {
+                local_adif_error = err.message;
+                warning ("Unable to save QSO to local ADIF log: %s", err.message);
+            }
+        }
+
         if (post_to_pota && spot.park_ref.strip () != "") {
             try {
-                yield Application.pota_client.post_spot (
+                yield pota_poster.post_spot (
                     spot.callsign,
                     spot.spotter,
                     spot.park_ref,
@@ -68,11 +207,9 @@ public sealed class LoggingService : Object {
             }
         }
 
-        bool enable_logging = Application.settings.get_boolean ("enable-logging");
-        string qrz_api_key = Application.settings.get_string ("qrz-api-key").strip ();
-        if (enable_logging && qrz_api_key != "") {
+        if (preferences.enable_qrz_logging && preferences.qrz_api_key != "") {
             try {
-                yield Application.qrz_client.upload_spot_qso (spot);
+                yield qrz_uploader.upload_spot_qso (spot);
                 qrz_uploaded = true;
             } catch (Error err) {
                 qrz_error = err.message;
@@ -80,7 +217,15 @@ public sealed class LoggingService : Object {
             }
         }
 
-        return new LoggingResult (true, pota_posted, qrz_uploaded, pota_error, qrz_error);
+        return new LoggingResult (
+            true,
+            local_adif_saved,
+            pota_posted,
+            qrz_uploaded,
+            local_adif_error,
+            pota_error,
+            qrz_error
+        );
     }
 
     public bool has_completed_logged_adif (string key) {

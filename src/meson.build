@@ -4,10 +4,16 @@ artemis_vala_sources = [
   'src/adif/adif_types.vala',
   'src/adif/adif_parser.vala',
   'src/adif/adif_generator.vala',
+  'src/adif/adif_qso.vala',
   'src/app_state.vala',
   'src/application.vala',
   'src/frequency.vala',
+  'src/logging_preferences.vala',
+  'src/local_adif_file.vala',
+  'src/local_adif_log.vala',
   'src/logging_service.vala',
+  'src/logbook_import_service.vala',
+  'src/spot_filter.vala',
   'src/window.vala',
   'src/astronomy_window.vala',
   'src/solar_conditions.vala',
@@ -35,6 +41,8 @@ artemis_vala_sources = [
   'src/wsjtx/wsjtx_packet_parser.vala',
   'src/wsjtx/wsjtx_packet_writer.vala',
   'src/wsjtx/wsjtx_listener.vala',
+  'src/wsjtx/wsjtx_logged_adif_parser.vala',
+  'src/wsjtx/wsjtx_logged_adif_handler.vala',
   'src/wsjtx/wsjtx_session.vala'
 ]
 

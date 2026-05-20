@@ -30,7 +30,7 @@ public struct PotaLocation {
     }
 }
 
-public sealed class PotaClient : Object {
+public sealed class PotaClient : Object, PotaSpotPoster {
     private Soup.Session session;
     private const string POTA_BASE_URL = "https://api.pota.app";
     private const string POTA_LOCATIONS_URL = "https://api.pota.app/locations";

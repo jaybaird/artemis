@@ -160,7 +160,27 @@ public errordomain DatabaseError {
     SQLITE_FAILED
 }
 
-public class SpotDb : Object {
+public sealed class SpotLogStatusSnapshot : Object {
+    public HashSet<string> hunted_parks { get; private set; }
+    public HashSet<string> hunted_today { get; private set; }
+    public HashSet<string> hunted_park_bands { get; private set; }
+
+    public SpotLogStatusSnapshot () {
+        Object ();
+    }
+
+    construct {
+        hunted_parks = new HashSet<string> ();
+        hunted_today = new HashSet<string> ();
+        hunted_park_bands = new HashSet<string> ();
+    }
+
+    public static string park_band_key (string park_ref, string band) {
+        return "%s|%s".printf (park_ref, band);
+    }
+}
+
+public class SpotDb : Object, QsoStore, ParkStore {
     private Sqlite.Database? db = null;
     private Statement? is_park_hunted_stmt = null;
     private Statement? had_qso_on_utc_day_stmt = null;
@@ -417,6 +437,126 @@ public class SpotDb : Object {
         var rc = st.step ();
         bool hunted = (rc == Sqlite.ROW);
         return hunted;
+    }
+
+    public SpotLogStatusSnapshot load_log_status_snapshot (
+        DateTime utc_day,
+        out Error? error
+    ) {
+        error = null;
+        var snapshot = new SpotLogStatusSnapshot ();
+
+        if (db == null) {
+            error = new DatabaseError.DB_NOT_INITIALIZED ("DB not initialized");
+            return snapshot;
+        }
+
+        if (!load_hunted_parks (snapshot, out error))
+            return snapshot;
+        if (!load_hunted_today (snapshot, utc_day, out error))
+            return snapshot;
+        if (!load_hunted_park_bands (snapshot, out error))
+            return snapshot;
+
+        return snapshot;
+    }
+
+    private bool load_hunted_parks (
+        SpotLogStatusSnapshot snapshot,
+        out Error? error
+    ) {
+        error = null;
+
+        const string SQL =
+            "SELECT reference FROM parks WHERE qso_count > 0;";
+
+        Statement st;
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+            error = new DatabaseError.SQLITE_FAILED ("Failed to prepare hunted parks snapshot query: %s".printf (
+                db.errmsg ()));
+            return false;
+        }
+
+        while (st.step () == Sqlite.ROW) {
+            var park_ref = st.column_text (0);
+            if ((park_ref != null) && (park_ref.strip () != ""))
+                snapshot.hunted_parks.add (park_ref);
+        }
+
+        return true;
+    }
+
+    private bool load_hunted_today (
+        SpotLogStatusSnapshot snapshot,
+        DateTime utc_day,
+        out Error? error
+    ) {
+        error = null;
+
+        DateTime utc = utc_day.to_utc ();
+        string start_iso = iso8601_day_start (utc);
+        string next_iso = iso8601_next_day_start (utc);
+
+        const string SQL =
+            """
+          SELECT DISTINCT park_ref
+          FROM qsos
+          WHERE created_utc >= ? AND created_utc < ?;
+          """;
+
+        Statement st;
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+            error = new DatabaseError.SQLITE_FAILED ("Failed to prepare hunted today snapshot query: %s".printf (
+                db.errmsg ()));
+            return false;
+        }
+
+        st.bind_text (1, start_iso);
+        st.bind_text (2, next_iso);
+        while (st.step () == Sqlite.ROW) {
+            var park_ref = st.column_text (0);
+            if ((park_ref != null) && (park_ref.strip () != ""))
+                snapshot.hunted_today.add (park_ref);
+        }
+
+        return true;
+    }
+
+    private bool load_hunted_park_bands (
+        SpotLogStatusSnapshot snapshot,
+        out Error? error
+    ) {
+        error = null;
+
+        const string SQL =
+            """
+          SELECT DISTINCT park_ref, frequency_khz
+          FROM qsos
+          WHERE frequency_khz IS NOT NULL AND frequency_khz > 0;
+          """;
+
+        Statement st;
+        if (db.prepare_v2 (SQL, -1, out st) != Sqlite.OK) {
+            error = new DatabaseError.SQLITE_FAILED ("Failed to prepare hunted band snapshot query: %s".printf (
+                db.errmsg ()));
+            return false;
+        }
+
+        while (st.step () == Sqlite.ROW) {
+            var park_ref = st.column_text (0);
+            if ((park_ref == null) || (park_ref.strip () == ""))
+                continue;
+
+            var band = band_from_khz (st.column_double (1));
+            if (band == "Other")
+                continue;
+
+            snapshot.hunted_park_bands.add (
+                SpotLogStatusSnapshot.park_band_key (park_ref, band)
+            );
+        }
+
+        return true;
     }
 
     public ParkRow? get_park_by_ref (string park_ref, out Error? error) {

@@ -395,6 +395,24 @@ template $PreferencesDialog : Adw.PreferencesDialog {
       title: _("External Logging");
       description: _("Configure logging to online logbooks");
 
+      Adw.SwitchRow row_enable_local_adif_log {
+        title: _("Local ADIF Recovery Log");
+        subtitle: _("Save spotted QSOs to an ADIF file in the app data directory");
+        accessibility {
+          label: _("Local ADIF Recovery Log");
+          role-description: _("switch");
+        }
+      }
+
+      Adw.EntryRow row_local_adif_log_path {
+        title: _("ADIF Log Path");
+        text: "";
+        accessibility {
+          label: _("ADIF Log Path");
+          role-description: _("text entry");
+        }
+      }
+
       Adw.SwitchRow row_enable_logging {
         title: _("Enable Logging");
         subtitle: _("Automatically log QSOs when spotting");

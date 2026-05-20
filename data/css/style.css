@@ -3,6 +3,23 @@ scrollbar {
     margin-left: 2px;
 }
 
+:root {
+    --band-all-color: var(--light-1);
+    --band-160m-color: #7cfc00;
+    --band-80m-color: #e550e5;
+    --band-60m-color: #00008b;
+    --band-40m-color: #5959ff;
+    --band-30m-color: #62d962;
+    --band-20m-color: #f2c40c;
+    --band-17m-color: #f2f261;
+    --band-15m-color: #cca166;
+    --band-12m-color: #b22222;
+    --band-10m-color: #ff69b4;
+    --band-6m-color: #ff0000;
+    --band-2m-color: #4ade80;
+    --band-70cm-color: #999900;
+}
+
 scrollbar trough {
     min-width: 5pt;
 }
@@ -18,59 +35,59 @@ scrollbar.right slider {
 }
 
 .map-marker-all {
-    color: var(--accent_bg_color);
+    color: var(--band-all-color);
 }
 
 .map-marker-160m {
-    color: #7cfc00;
+    color: var(--band-160m-color);
 }
 
 .map-marker-80m {
-    color: #e550e5;
+    color: var(--band-80m-color);
 }
 
 .map-marker-60m {
-    color: #00008b;
+    color: var(--band-60m-color);
 }
 
 .map-marker-40m {
-    color: #5959ff;
+    color: var(--band-40m-color);
 }
 
 .map-marker-30m {
-    color: #62d962;
+    color: var(--band-30m-color);
 }
 
 .map-marker-20m {
-    color: #f2c40c;
+    color: var(--band-20m-color);
 }
 
 .map-marker-17m {
-    color: #f2f261;
+    color: var(--band-17m-color);
 }
 
 .map-marker-15m {
-    color: #cca166;
+    color: var(--band-15m-color);
 }
 
 .map-marker-12m {
-    color: #b22222;
+    color: var(--band-12m-color);
 }
 
 .map-marker-10m {
-    color: #ff69b4;
+    color: var(--band-10m-color);
 }
 
 .map-marker-6m {
-    color: #ff0000;
+    color: var(--band-6m-color);
 }
 
 .map-marker-2m {
-    color: #4ADE80;
+    color: var(--band-2m-color);
 }
 
 .map-marker-70cm {
-    color: #999900;
+    color: var(--band-70cm-color);
 }
 
 .map-marker-content,
@@ -84,7 +101,7 @@ scrollbar.right slider {
 }
 
 .map-marker-content.map-marker-heard-recently {
-    background-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(var(--purple-3), 0.3);
     border-radius: 9999px;
 }
 
@@ -107,59 +124,59 @@ scrollbar.right slider {
 }
 
 .band-strip-all {
-    background-color: var(--light-1);
+    background-color: var(--band-all-color);
 }
 
 .band-strip-160m {
-    background-color: #7cfc00;
+    background-color: var(--band-160m-color);
 }
 
 .band-strip-80m {
-    background-color: #e550e5;
+    background-color: var(--band-80m-color);
 }
 
 .band-strip-60m {
-    background-color: #00008b;
+    background-color: var(--band-60m-color);
 }
 
 .band-strip-40m {
-    background-color: #5959ff;
+    background-color: var(--band-40m-color);
 }
 
 .band-strip-30m {
-    background-color: #62d962;
+    background-color: var(--band-30m-color);
 }
 
 .band-strip-20m {
-    background-color: #f2c40c;
+    background-color: var(--band-20m-color);
 }
 
 .band-strip-17m {
-    background-color: #f2f261;
+    background-color: var(--band-17m-color);
 }
 
 .band-strip-15m {
-    background-color: #cca166;
+    background-color: var(--band-15m-color);
 }
 
 .band-strip-12m {
-    background-color: #b22222;
+    background-color: var(--band-12m-color);
 }
 
 .band-strip-10m {
-    background-color: #ff69b4;
+    background-color: var(--band-10m-color);
 }
 
 .band-strip-6m {
-    background-color: #ff0000;
+    background-color: var(--band-6m-color);
 }
 
 .band-strip-2m {
-    background-color: #4ADE80;
+    background-color: var(--band-2m-color);
 }
 
 .band-strip-70cm {
-    background-color: #999900;
+    background-color: var(--band-70cm-color);
 }
 
 .spot-badge {

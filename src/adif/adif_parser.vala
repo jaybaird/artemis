@@ -69,9 +69,7 @@ namespace Artemis.Adif {
             var document = new Document ();
             int position = 0;
 
-            if (input.length > 0 && input[0] != '<')
-                position = parse_header (input, document.header);
-            else if (input.length > 0 && starts_with_empty_header_marker (input))
+            if (has_header (input))
                 position = parse_header (input, document.header);
 
             parse_records (input, position, document);
@@ -83,6 +81,35 @@ namespace Artemis.Adif {
             }
 
             return document;
+        }
+
+        private bool has_header (string input) throws Error {
+            int position = 0;
+
+            while (position < input.length) {
+                int tag_start = input.index_of_char ('<', position);
+                if (tag_start < 0)
+                    return false;
+
+                var tag = read_tag (input, tag_start);
+
+                if (is_end_tag (tag.contents, "EOH"))
+                    return true;
+
+                if (is_end_tag (tag.contents, "EOR"))
+                    return false;
+
+                // If this is a data field, skip its payload so field values containing
+                // '<' or '>' do not confuse header detection.
+                if (tag.contents.index_of_char (':') > 0) {
+                    Field field = parse_field (input, tag);
+                    position = tag.next_position + field.value.length;
+                } else {
+                    position = tag.next_position;
+                }
+            }
+
+            return false;
         }
 
         private int parse_header (string input, Header header) throws Error {
@@ -116,11 +143,6 @@ namespace Artemis.Adif {
             );
         }
 
-        private bool starts_with_empty_header_marker (string input) throws Error {
-            var tag = read_tag (input, 0);
-            return is_end_tag (tag.contents, "EOH");
-        }
-
         private void parse_records (
             string input,
             int position,
@@ -150,16 +172,16 @@ namespace Artemis.Adif {
 
                     document.records.add (current_record);
                     current_record = null;
-                position = tag.next_position;
-                continue;
-            }
+                    position = tag.next_position;
+                    continue;
+                }
 
-            Field field = parse_field (input, tag);
-            if (current_record == null)
-                current_record = new Record ();
+                Field field = parse_field (input, tag);
+                if (current_record == null)
+                    current_record = new Record ();
 
-            current_record.add_field (field);
-            position = tag.next_position + field.value.length;
+                current_record.add_field (field);
+                position = tag.next_position + field.value.length;
             }
 
             if (current_record != null && current_record.fields.size > 0) {

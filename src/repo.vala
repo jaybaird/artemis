@@ -32,10 +32,12 @@ public class CallsignCacheEntry {
 }
 
 public sealed class CallsignCache : Object {
-    private HashTable<string, CallsignCacheEntry> ham_cache;
+    private const int64 PRUNE_INTERVAL_USEC = 60 * GLib.TimeSpan.SECOND;
+    private HashMap<string, CallsignCacheEntry> ham_cache;
     private HashMap<string, HashSet<string>> profile_aliases;
     private HashSet<string> avatar_fetch_inflight;
     private Soup.Session avatar_session;
+    private int64 last_prune_time = 0;
     public uint ttl_seconds { get; construct; default = 3600; }
     public signal void entry_updated (string callsign);
 
@@ -53,8 +55,7 @@ public sealed class CallsignCache : Object {
     }
 
     construct {
-        ham_cache = new HashTable<string, CallsignCacheEntry> (GLib.str_hash,
-            GLib.str_equal);
+        ham_cache = new HashMap<string, CallsignCacheEntry> ();
         profile_aliases = new HashMap<string, HashSet<string>> ();
         avatar_fetch_inflight = new HashSet<string> ();
         avatar_session = new Soup.Session ();
@@ -73,10 +74,29 @@ public sealed class CallsignCache : Object {
         return GLib.get_monotonic_time () > entry.expires_at;
     }
 
+    private void prune_expired_entries () {
+        var now = GLib.get_monotonic_time ();
+        if (now - last_prune_time < PRUNE_INTERVAL_USEC)
+            return;
+
+        last_prune_time = now;
+        var expired_keys = new ArrayList<string> ();
+
+        foreach (var entry in ham_cache.entries) {
+            if (is_entry_expired (entry.value))
+                expired_keys.add (entry.key);
+        }
+
+        foreach (var key in expired_keys) {
+            ham_cache.unset (key);
+        }
+    }
+
     public void clear () {
-        ham_cache.remove_all ();
+        ham_cache.clear ();
         profile_aliases.clear ();
         avatar_fetch_inflight.clear ();
+        last_prune_time = 0;
     }
 
     private string remember_profile_alias (string callsign) {
@@ -113,10 +133,11 @@ public sealed class CallsignCache : Object {
     }
 
     public Gdk.Texture? peek_avatar (string callsign) {
-        var entry = ham_cache.lookup (callsign);
+        prune_expired_entries ();
+        var entry = ham_cache.get (callsign);
         if ((entry == null) || is_entry_expired (entry)) {
             var profile_callsign = pota_profile_callsign (callsign);
-            entry = ham_cache.lookup (profile_callsign);
+            entry = ham_cache.get (profile_callsign);
         }
         if (is_entry_expired (entry) || (entry == null))
             return null;
@@ -124,7 +145,8 @@ public sealed class CallsignCache : Object {
     }
 
     public Activator? peek_callsign (string callsign) {
-        var entry = ham_cache.lookup (callsign);
+        prune_expired_entries ();
+        var entry = ham_cache.get (callsign);
         if (is_entry_expired (entry) || (entry == null))
             return null;
         return entry.activator;
@@ -137,7 +159,7 @@ public sealed class CallsignCache : Object {
         if (entry == null)
             return null;
 
-        var cached_entry = ham_cache.lookup (callsign);
+        var cached_entry = ham_cache.get (callsign);
         if ((cached_entry != null) && (cached_entry.avatar != null))
             return cached_entry.avatar;
 
@@ -178,13 +200,14 @@ public sealed class CallsignCache : Object {
     }
 
     public async Activator? get_callsign (string callsign) {
-        var entry = ham_cache.lookup (callsign);
+        prune_expired_entries ();
+        var entry = ham_cache.get (callsign);
 
         if ((entry != null) && !is_entry_expired (entry))
             return entry.activator;
 
         var profile_callsign = remember_profile_alias (callsign);
-        entry = ham_cache.lookup (profile_callsign);
+        entry = ham_cache.get (profile_callsign);
         if ((entry != null) && !is_entry_expired (entry)) {
             ham_cache.set (callsign, entry);
             return entry.activator;
@@ -192,14 +215,12 @@ public sealed class CallsignCache : Object {
 
         // cache miss, load from API
         try {
-            var result = yield Application.pota_client.fetch_operator (profile_callsign)
-            ;
+            var result = yield Application.pota_client.fetch_operator (profile_callsign);
 
             var callsign_entry = new CallsignCacheEntry (
                 new Activator.from_json (result.get_object ()),
-                GLib.get_monotonic_time () + (ttl_seconds * GLib.TimeSpan.SECOND
-                                              )
-                );
+                GLib.get_monotonic_time () + (ttl_seconds * GLib.TimeSpan.SECOND)
+            );
             ham_cache.set (profile_callsign, callsign_entry);
             ham_cache.set (callsign, callsign_entry);
             emit_profile_updated (profile_callsign, callsign);
@@ -307,43 +328,15 @@ public sealed class SpotRepo : Object {
         return 0;
     }
 
-    private void annotate_spot_log_status (Spot spot) {
-        Error? error = null;
-        bool was_hunted_today = Application.spot_database.had_qso_with_park_on_utc_day (
-            spot.park_ref,
-            new DateTime.now_utc (),
-            out error
+    private void annotate_spot_log_status (
+        Spot spot,
+        SpotLogStatusSnapshot snapshot
+    ) {
+        var was_hunted_today = snapshot.hunted_today.contains (spot.park_ref);
+        var is_new_park = !snapshot.hunted_parks.contains (spot.park_ref);
+        var is_new_band = !is_new_park && !snapshot.hunted_park_bands.contains (
+            SpotLogStatusSnapshot.park_band_key (spot.park_ref, spot.band)
         );
-        if (error != null) {
-            warning ("Unable to check whether %s was hunted today: %s",
-                spot.park_ref, error.message);
-            error = null;
-        }
-
-        bool is_new_park = !Application.spot_database.is_park_hunted (
-            spot.park_ref,
-            out error
-        );
-        if (error != null) {
-            warning ("Unable to check whether %s was hunted before: %s",
-                spot.park_ref, error.message);
-            error = null;
-            is_new_park = false;
-        }
-
-        bool is_new_band = false;
-        if (!is_new_park) {
-            is_new_band = !Application.spot_database.had_qso_with_park_on_band (
-                spot.park_ref,
-                spot.band,
-                out error
-            );
-            if (error != null) {
-                warning ("Unable to check whether %s was hunted on %s: %s",
-                    spot.park_ref, spot.band, error.message);
-                is_new_band = false;
-            }
-        }
 
         spot.set_log_status (was_hunted_today, is_new_park, is_new_band);
     }
@@ -377,7 +370,6 @@ public sealed class SpotRepo : Object {
                         try {
                             var element = spots_array.get_element (i).get_object ();
                             var spot = new Spot.from_json (element);
-                            annotate_spot_log_status (spot);
 
                             unique_callsigns.add (spot.callsign);
                             unique_callsigns.add (spot.spotter);
@@ -399,6 +391,23 @@ public sealed class SpotRepo : Object {
                             warning ("Skipping malformed POTA spot at index %u: %s",
                                 i, err.message);
                         }
+                    }
+                }
+
+                Error? snapshot_error = null;
+                var log_status_snapshot = Application.spot_database.load_log_status_snapshot (
+                    new DateTime.now_utc (),
+                    out snapshot_error
+                );
+                if (snapshot_error != null) {
+                    warning ("Unable to load spot log status snapshot: %s",
+                        snapshot_error.message);
+                    foreach (var spot in parsed_spots) {
+                        spot.set_log_status (false, false, false);
+                    }
+                } else {
+                    foreach (var spot in parsed_spots) {
+                        annotate_spot_log_status (spot, log_status_snapshot);
                     }
                 }
 

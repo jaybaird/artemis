@@ -87,9 +87,11 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private unowned SpotDetail spot_detail;
 
     private AstronomyWindow? astronomy_window = null;
-    private uint timer_id = 0;
+    private uint refresh_timer_id = 0;
+    private int64 next_refresh_at_us = 0;
+    private int64 next_clock_update_at_us = 0;
+    private bool refresh_in_progress = false;
 
-    private uint current_ticks = 0;
     private bool update_paused = false;
     private MapView map_view;
     private SpotListView list_view;
@@ -230,7 +232,10 @@ public sealed class AppWindow : Adw.ApplicationWindow {
                 Application.state.current_spot_hash = BLANK_HASH;
             }
 
-            current_ticks = 0;
+            if (!refresh_in_progress) {
+                next_refresh_at_us = get_monotonic_time () + refresh_interval_us ();
+                schedule_next_refresh_wake ();
+            }
 
             update_refresh_status ();
             update_status_bar ();
@@ -571,17 +576,120 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     private void setup_spot_updates () {
-        if (timer_id != 0)
-            Source.remove (timer_id);
+        cancel_refresh_timer ();
 
+        var now = get_monotonic_time ();
+        next_refresh_at_us = now + refresh_interval_us ();
+        next_clock_update_at_us = next_clock_update_deadline_us ();
+        update_clock_label ();
         update_refresh_status ();
-
-        timer_id = Timeout.add_seconds (1, () => {
-            tick.begin ();
-            return Source.CONTINUE;
-        });
+        schedule_next_refresh_wake ();
 
         initial_update ();
+    }
+
+    private int64 refresh_interval_us () {
+        return int64.max (
+            1,
+            Application.settings.get_int ("update-interval")
+        ) * GLib.TimeSpan.SECOND;
+    }
+
+    private int64 next_clock_update_deadline_us () {
+        var now_utc = new DateTime.now_utc ();
+        var seconds_text = now_utc.format ("%S");
+        var seconds = int.parse (seconds_text);
+        return get_monotonic_time () + (60 - seconds) * GLib.TimeSpan.SECOND;
+    }
+
+    private void cancel_refresh_timer () {
+        if (refresh_timer_id != 0) {
+            Source.remove (refresh_timer_id);
+            refresh_timer_id = 0;
+        }
+    }
+
+    private void schedule_next_refresh_wake () {
+        cancel_refresh_timer ();
+
+        if (update_paused)
+            return;
+
+        var now = get_monotonic_time ();
+        var next_status_at_us = next_refresh_status_deadline_us (now);
+        var next_wake_at_us = int64.min (next_status_at_us, next_clock_update_at_us);
+        var delay_us = int64.max (
+            next_wake_at_us - now,
+            100 * GLib.TimeSpan.MILLISECOND
+        );
+
+        refresh_timer_id = Timeout.add (
+            (uint) int64.max (1, delay_us / GLib.TimeSpan.MILLISECOND),
+            () => {
+                refresh_timer_id = 0;
+                on_refresh_timer ();
+                return Source.REMOVE;
+            }
+        );
+    }
+
+    private int64 next_refresh_status_deadline_us (int64 now) {
+        var remaining_seconds = seconds_until_refresh (now);
+        if (remaining_seconds <= 10)
+            return now + GLib.TimeSpan.SECOND;
+        if (remaining_seconds <= 60)
+            return now + 5 * GLib.TimeSpan.SECOND;
+
+        var minute_boundary = next_refresh_at_us -
+            ((remaining_seconds - 60) * GLib.TimeSpan.SECOND);
+        return int64.min (now + 60 * GLib.TimeSpan.SECOND, minute_boundary);
+    }
+
+    private uint seconds_until_refresh (int64 now) {
+        if (next_refresh_at_us <= now)
+            return 0;
+
+        return (uint) Math.ceil (
+            (next_refresh_at_us - now) / (double) GLib.TimeSpan.SECOND
+        );
+    }
+
+    private void on_refresh_timer () {
+        var now = get_monotonic_time ();
+
+        if (!update_paused && now >= next_refresh_at_us) {
+            refresh_due.begin ();
+            return;
+        }
+
+        if (now >= next_clock_update_at_us) {
+            update_clock_label ();
+            next_clock_update_at_us = next_clock_update_deadline_us ();
+        }
+
+        update_refresh_status ();
+        schedule_next_refresh_wake ();
+    }
+
+    private async void refresh_due () {
+        if (refresh_in_progress)
+            return;
+
+        refresh_in_progress = true;
+        yield Application.spot_repo.update_spots ();
+
+        var now = get_monotonic_time ();
+        var interval_us = refresh_interval_us ();
+        do {
+            next_refresh_at_us += interval_us;
+        } while (next_refresh_at_us <= now);
+
+        sync_selected_spot (Application.state.current_spot_hash, false);
+        update_clock_label ();
+        next_clock_update_at_us = next_clock_update_deadline_us ();
+        update_refresh_status ();
+        refresh_in_progress = false;
+        schedule_next_refresh_wake ();
     }
 
     private string get_initial_sidebar_band () {
@@ -732,32 +840,15 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             return;
         }
 
-        var update_time = Application.settings.get_int ("update-interval");
-        var seconds_remaining = update_time - current_ticks;
-        status_bar.set_refresh_countdown (seconds_remaining);
+        status_bar.set_refresh_countdown (
+            seconds_until_refresh (get_monotonic_time ())
+        );
     }
 
-
-    private async void tick () {
-        if (!update_paused) {
-            current_ticks += 1;
-            var update_time = Application.settings.get_int ("update-interval");
-            if (current_ticks >= update_time) {
-                current_ticks = current_ticks - update_time;
-                yield Application.spot_repo.update_spots ();
-
-                Idle.add (() => {
-                    sync_selected_spot (Application.state.current_spot_hash, false);
-                    return Source.REMOVE;
-                });
-            }
-
-            update_refresh_status ();
-        }
-
-        var now = new GLib.DateTime.now_utc ().format ("%H:%M:%S UTC");
+    private void update_clock_label () {
+        var now = new GLib.DateTime.now_utc ().format ("%H:%M UTC");
         status_bar.set_time (now);
-    } /* tick */
+    }
 
     private void on_add_button_clicked () {
         AddSpot? add_spot = null;
@@ -780,12 +871,15 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private void on_refresh_button_clicked () {
         update_paused = !update_paused;
         if (update_paused) {
-            current_ticks = 0;
+            cancel_refresh_timer ();
             Application.show_toast (_("Spot updates paused"));
         } else {
-            current_ticks = 0;
+            var now = get_monotonic_time ();
+            next_refresh_at_us = now + refresh_interval_us ();
+            next_clock_update_at_us = next_clock_update_deadline_us ();
             Application.show_toast (_("Spot updates resumed"));
             Application.spot_repo.update_spots.begin ();
+            schedule_next_refresh_wake ();
         }
 
         set_refresh_button_state (update_paused);
@@ -794,8 +888,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     ~AppWindow () {
-        if (timer_id != 0)
-            Source.remove (timer_id);
+        cancel_refresh_timer ();
 
         disconnect_radio_handlers ();
     }

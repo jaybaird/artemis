@@ -36,16 +36,18 @@ template $StatusBar : Box {
     [start]
     Label status_bar_text {
       halign: start;
+      hexpand: true;
       justify: left;
       xalign: 0.0;
       ellipsize: end;
-      max-width-chars: 16;
+      max-width-chars: 24;
       label: _("64 spots. (4 filtered)");
     }
 
     [center]
     Label refresh_status {
       halign: center;
+      hexpand: false;
       justify: center;
       xalign: 0.5;
       ellipsize: end;
@@ -57,6 +59,7 @@ template $StatusBar : Box {
     [end]
     Label current_time {
       tooltip-text: _("Current Time (UTC)");
+      hexpand: false;
       ellipsize: end;
       max-width-chars: 12;
       styles ["utc-time", "numeric"]

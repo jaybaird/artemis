@@ -54,20 +54,6 @@ public static string format_vfo (double freq_khz) {
     return "%lu.%03lu.%02lu".printf ((ulong)mhz, (ulong)khz, (ulong)(hz / 10));
 }
 
-public static int scaled_avatar_size (int base_size) {
-    var settings = Gtk.Settings.get_default ();
-    if (settings == null)
-        return base_size;
-
-    var font_desc = Pango.FontDescription.from_string (settings.gtk_font_name);
-    var font_size = font_desc.get_size ();
-    if (font_size <= 0)
-        return base_size;
-
-    var scale = (double) font_size / (10.0 * Pango.SCALE);
-    return (int) Math.round (base_size * scale);
-}
-
 public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error {
     var loader = new Gly.Loader.for_bytes (bytes);
     var image = yield loader.load_async (null);
@@ -167,43 +153,26 @@ public static void populate_spot_badges (Gtk.Box box, Spot spot) {
 }
 
 public static bool spot_matches_current_filters (Spot spot, string band_filter) {
-    if (spot == null)
-        return false;
-
-    if ((band_filter != "All") && (spot.band != band_filter))
-        return false;
-
-    if (Application.settings.get_boolean ("hide-qrt") &&
-        spot.activator_comment.down ().contains ("qrt"))
-        return false;
-
-    if (Application.settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
-        return false;
-
-    var stale_minutes = Application.settings.get_int ("hide-older-than");
-    var now = new DateTime.now_utc ();
-    var expires = spot.spot_time.add_minutes (stale_minutes);
-    if (now.compare (expires) > 0)
-        return false;
-
-    if ((Application.state.current_program_filter != null) &&
-        !spot.park_ref.down ().has_prefix (Application.state.current_program_filter.down ()))
-        return false;
-
-    if ((Application.state.current_mode_filter != null) &&
-        !spot.mode.down ().contains (Application.state.current_mode_filter.down ()))
-        return false;
-
-    if (Application.state.current_search_text != null) {
-        var needle = Application.state.current_search_text.down ();
-        if (!(spot.callsign.down ().contains (needle) ||
-              spot.park_ref.down ().contains (needle) ||
-              spot.park_name.down ().contains (needle))) {
-            return false;
-        }
-    }
-
-    return true;
+    var filter = new SpotFilterState (
+        band_filter,
+        Application.state.current_mode_filter,
+        Application.state.current_program_filter,
+        Application.state.current_search_text,
+        Application.settings.get_boolean ("hide-qrt"),
+        Application.settings.get_boolean ("hide-hunted"),
+        Application.settings.get_int ("hide-older-than")
+    );
+    var snapshot = new SpotFilterSnapshot (
+        spot.callsign,
+        spot.park_ref,
+        spot.park_name,
+        spot.activator_comment,
+        spot.band,
+        spot.mode,
+        spot.spot_time,
+        spot.was_hunted_today
+    );
+    return spot_matches_filter (snapshot, filter);
 }
 
 namespace Distance {

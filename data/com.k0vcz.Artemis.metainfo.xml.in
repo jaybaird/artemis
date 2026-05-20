@@ -24,11 +24,11 @@
   <!-- Should link a FAQ page for this software, to answer some of the most-asked questions in detail -->
   <!-- URLs of this type should point to a webpage where users can submit or modify translations of the upstream project -->
   <url type="translate">https://github.com/jaybaird/artemis-vala</url>
-  <url type="faq">https://github.com/jaybaird/artemis-vala#readme</url>
+  <url type="faq">https://artemispota.app/support</url>
   <!-- Should provide a web link to an online user's reference, a software manual or help page -->
   <url type="help">https://artemispota.app/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to donate to the described software project -->
-  <url type="donation">https://github.com/jaybaird/artemis-vala</url>
+  <url type="donation">https://buymeacoffee.com/k0vcz</url>
   <!-- This could for example be an HTTPS URL to an online form or a page describing how to contact the developer -->
   <url type="contact">https://artemispota.app/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to contribute to the described software project -->
@@ -62,7 +62,6 @@
     <content_attribute id="social-location">none</content_attribute>
   </content_rating>
 
-  <!-- Applications should set a brand color in both light and dark variants like so -->
   <branding>
     <color type="primary" scheme_preference="light">#1f5ab4</color>
     <color type="primary" scheme_preference="dark">#545454</color>

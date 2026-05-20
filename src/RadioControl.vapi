@@ -130,7 +130,7 @@ public class RadioControl : GLib.Object {
         }).disown ();
     }
 
-    public static string mode_string (RadioMode mode) {
+    public static unowned string mode_string (RadioMode mode) {
         switch (mode) {
             case AM: return "AM";
             case CW:

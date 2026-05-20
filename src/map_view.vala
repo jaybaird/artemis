@@ -227,6 +227,8 @@ public class MapView : Gtk.Box {
     private Marker? sun_marker = null;
     private Marker? moon_marker = null;
     private uint astronomy_refresh_timeout_id = 0;
+    private bool grayline_visible = true;
+    private bool astronomy_visible = true;
 
     private BoundingBox bbox;
     private Coordinate qth_coordinate;
@@ -237,6 +239,10 @@ public class MapView : Gtk.Box {
     private uint load_spots_idle_id = 0;
 
     private Gtk.Overlay overlay;
+    private GLib.SimpleActionGroup overlay_actions;
+    private GLib.SimpleAction grayline_action;
+    private GLib.SimpleAction astronomy_action;
+    private Adw.SplitButton overlay_button;
 
     Gtk.Filter filter;
     Gtk.FilterListModel filtered;
@@ -272,6 +278,10 @@ public class MapView : Gtk.Box {
         };
         overlay.set_child (box);
         this.append (overlay);
+
+        overlay_actions = new GLib.SimpleActionGroup ();
+        insert_action_group ("map", overlay_actions);
+        install_overlay_controls ();
 
         Adw.StyleManager.get_default ().notify["dark"].connect (() => {
             update_map_source_for_theme ();
@@ -361,6 +371,8 @@ public class MapView : Gtk.Box {
                 return true;
             }
         );
+
+        sync_overlay_visibility ();
 
         map_widget.map.connect (() => {
             if (loaded_after_map)
@@ -714,6 +726,78 @@ public class MapView : Gtk.Box {
             moon_marker.child.tooltip_text = moon_tooltip;
     }
 
+    private void install_overlay_controls () {
+        grayline_action = new GLib.SimpleAction.stateful (
+            "grayline-visible",
+            null,
+            new Variant.boolean (grayline_visible)
+        );
+        grayline_action.change_state.connect ((action, value) => {
+            if (value == null)
+                return;
+
+            set_grayline_visible (value.get_boolean ());
+        });
+        overlay_actions.add_action (grayline_action);
+
+        astronomy_action = new GLib.SimpleAction.stateful (
+            "astronomy-visible",
+            null,
+            new Variant.boolean (astronomy_visible)
+        );
+        astronomy_action.change_state.connect ((action, value) => {
+            if (value == null)
+                return;
+
+            set_astronomy_visible (value.get_boolean ());
+        });
+        overlay_actions.add_action (astronomy_action);
+
+        var menu = new GLib.Menu ();
+        menu.append (_("Grayline"), "map.grayline-visible");
+        menu.append (_("Sun and Moon"), "map.astronomy-visible");
+
+        overlay_button = new Adw.SplitButton () {
+            label = _("Overlays"),
+            icon_name = "sliders-symbolic",
+            menu_model = menu,
+            can_shrink = true,
+            halign = Gtk.Align.END,
+            valign = Gtk.Align.END,
+            margin_start = 6,
+            margin_end = 6,
+            margin_bottom = 6
+        };
+        overlay_button.dropdown_tooltip = _("Overlay options");
+        overlay_button.add_css_class ("flat");
+        overlay_button.clicked.connect (() => {
+            set_grayline_visible (!grayline_visible);
+        });
+
+        overlay.add_overlay (overlay_button);
+    }
+
+    private void set_grayline_visible (bool visible) {
+        grayline_visible = visible;
+        if (grayline_action != null)
+            grayline_action.set_state (new Variant.boolean (visible));
+        sync_overlay_visibility ();
+    }
+
+    private void set_astronomy_visible (bool visible) {
+        astronomy_visible = visible;
+        if (astronomy_action != null)
+            astronomy_action.set_state (new Variant.boolean (visible));
+        sync_overlay_visibility ();
+    }
+
+    private void sync_overlay_visibility () {
+        if (grayline_layer != null)
+            grayline_layer.visible = grayline_visible;
+        if (astronomy_marker_layer != null)
+            astronomy_marker_layer.visible = astronomy_visible;
+    }
+
     private void ensure_body_marker (
         ref Marker? marker,
         Coordinate coordinate,
@@ -811,9 +895,7 @@ public class MapView : Gtk.Box {
         }
         bbox.expand ();
 
-        map_widget.insert_layer_above (grayline_layer, map_layer);
         map_widget.insert_layer_above (marker_layer, grayline_layer);
-        map_widget.insert_layer_above (astronomy_marker_layer, marker_layer);
         sync_marker_selection (Application.state.current_spot_hash);
 
         if (Application.state.current_spot_hash == BLANK_HASH ||

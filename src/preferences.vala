@@ -18,14 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Gee;
-
-static string _strip_quotes (string s) {
-    if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
-        return s.substring (1, s.length - 2);
-    return s;
-}
-
  [GtkTemplate (ui = "/com/k0vcz/artemis/ui/preferences.ui")]
 public sealed class PreferencesDialog : Adw.PreferencesDialog {
     [GtkChild] private unowned Adw.EntryRow row_callsign;
@@ -52,6 +44,8 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
     [GtkChild] private unowned Adw.PreferencesGroup radio_test_group;
 
     [GtkChild] private unowned Adw.SwitchRow row_enable_logging;
+    [GtkChild] private unowned Adw.SwitchRow row_enable_local_adif_log;
+    [GtkChild] private unowned Adw.EntryRow row_local_adif_log_path;
     [GtkChild] private unowned Adw.SwitchRow row_use_metric;
     [GtkChild] private unowned Adw.SwitchRow row_show_scale;
     [GtkChild] private unowned Adw.SwitchRow row_hide_qrt;
@@ -195,6 +189,12 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
 
         Application.settings.bind ("enable-logging", row_enable_logging,
             "active",
+            SettingsBindFlags.DEFAULT);
+        Application.settings.bind ("enable-local-adif-log", row_enable_local_adif_log,
+            "active",
+            SettingsBindFlags.DEFAULT);
+        Application.settings.bind ("local-adif-log-path", row_local_adif_log_path,
+            "text",
             SettingsBindFlags.DEFAULT);
         Application.settings.bind ("use-metric", row_use_metric, "active",
             SettingsBindFlags.DEFAULT);
@@ -644,53 +644,14 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
         if (logbook_csv == null)
             return;
 
-        var db = Application.spot_database;
         string description;
 
         try {
-            var stream = logbook_csv.read ();
-            var data = new DataInputStream (stream);
-            var line = data.read_line ();     // skip column titles
-            var num_parks = 0;
-            Error error;
-            while ((line = data.read_line ()) != null) {
-                var raw_columns = new ArrayList<string>.wrap (line.split (","));
-
-                var columns = to_array (raw_columns.map<string> ((column) => {
-                    return _strip_quotes (column);
-                }));
-
-                if (columns.size < 7) {
-                    throw new IOError.INVALID_DATA (
-                        "CSV row has %d columns; expected at least 7".printf (columns.size)
-                    );
-                }
-
-                int qso_count = 0;
-                unowned string unparsed;
-                if (!int.try_parse (columns.get (6), out qso_count, out unparsed) ||
-                    unparsed != "") {
-                    throw new IOError.INVALID_DATA (
-                        "CSV row has invalid QSO count '%s'".printf (columns.get (6))
-                    );
-                }
-
-                db.add_park (
-                    columns.get (3),
-                    columns.get (4),
-                    columns.get (0),
-                    columns.get (1),
-                    columns.get (2),
-                    columns.get (5),
-                    qso_count,
-                    out error);
-                if (error != null) {
-                    throw new IOError.FAILED (error.message);
-                }
-                num_parks++;
-            }
+            var result = Application.logbook_import_service.import_pota_csv (logbook_csv);
             description = ngettext ("Successfully imported one park",
-                "Succesfully imported %d parks", num_parks).printf (num_parks);
+                "Succesfully imported %d parks",
+                result.imported_count
+            ).printf (result.imported_count);
         } catch (Error err) {
             description = _(
                 "Unable to import hunted parks. Please check your CSV file and try again.");

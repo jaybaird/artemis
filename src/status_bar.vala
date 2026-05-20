@@ -48,6 +48,12 @@ public sealed class StatusBar : Gtk.Box {
     }
 
     public void set_refresh_countdown (uint seconds_remaining) {
+        if (seconds_remaining > 60) {
+            var minutes_remaining = (seconds_remaining + 59) / 60;
+            refresh_status.label = _("Refreshes in %um").printf (minutes_remaining);
+            return;
+        }
+
         refresh_status.label = _("Refreshes in %us").printf (seconds_remaining);
     }
 

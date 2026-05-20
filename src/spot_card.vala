@@ -230,13 +230,10 @@ public sealed class SpotCard : Gtk.Box {
     public Spot spot { get; construct; }
     private ulong callsign_cache_updated_handler = 0;
     private ulong radio_connection_state_handler = 0;
-    private ulong wsjtx_decode_handler = 0;
     private ulong heard_recently_notify_handler = 0;
     private uint avatar_retry_id = 0;
     private uint avatar_fetch_attempt = 0;
     private bool disposed = false;
-    private ulong avatar_font_name_handler = 0;
-    private ulong avatar_xft_dpi_handler = 0;
 
     private Gdk.Texture? activator_avatar_texture {
         set {
@@ -267,20 +264,6 @@ public sealed class SpotCard : Gtk.Box {
         Object ();
     }
 
-    construct {
-        update_avatar_size ();
-
-        var gtk_settings = Gtk.Settings.get_default ();
-        if (gtk_settings != null) {
-            avatar_font_name_handler = gtk_settings.notify["gtk-font-name"].connect (() => {
-                update_avatar_size ();
-            });
-            avatar_xft_dpi_handler = gtk_settings.notify["gtk-xft-dpi"].connect (() => {
-                update_avatar_size ();
-            });
-        }
-    }
-
     public SpotCard.from_spot (Spot spot) {
         Object (spot: spot);
 
@@ -308,11 +291,6 @@ public sealed class SpotCard : Gtk.Box {
             refresh_highlight ();
         });
 
-        wsjtx_decode_handler = Application.wsjtx_session.decode_received.connect ((decode) => {
-            if (decode_matches_spot (decode))
-                spot.mark_heard_recently ();
-        });
-
         update_tune_button_state ();
         tune_button.clicked.connect (on_tune_clicked);
         spot_button.clicked.connect (on_spot_clicked);
@@ -320,10 +298,6 @@ public sealed class SpotCard : Gtk.Box {
         radio_connection_state_handler = Application.app.radio_connection_state_changed.connect (() => {
             update_tune_button_state ();
         });
-    }
-
-    private void update_avatar_size () {
-        activator_avatar.size = scaled_avatar_size (32);
     }
 
     private void update_tune_button_state () {
@@ -399,35 +373,9 @@ public sealed class SpotCard : Gtk.Box {
         }
     }
 
-    private bool decode_matches_spot (Artemis.Wsjtx.DecodePacket decode) {
-        var decoded_text = decode.text.strip ().up ();
-        var callsign = spot.callsign.strip ().up ();
-
-        if ((decoded_text == "") || (callsign == ""))
-            return false;
-
-        return decoded_text.contains (callsign);
-    }
-
     ~SpotCard () {
         disposed = true;
         cancel_avatar_retry ();
-        if (avatar_font_name_handler != 0) {
-            var gtk_settings = Gtk.Settings.get_default ();
-            if (gtk_settings != null &&
-                SignalHandler.is_connected (gtk_settings, avatar_font_name_handler)) {
-                SignalHandler.disconnect (gtk_settings, avatar_font_name_handler);
-            }
-            avatar_font_name_handler = 0;
-        }
-        if (avatar_xft_dpi_handler != 0) {
-            var gtk_settings = Gtk.Settings.get_default ();
-            if (gtk_settings != null &&
-                SignalHandler.is_connected (gtk_settings, avatar_xft_dpi_handler)) {
-                SignalHandler.disconnect (gtk_settings, avatar_xft_dpi_handler);
-            }
-            avatar_xft_dpi_handler = 0;
-        }
         if (callsign_cache_updated_handler != 0) {
             if (SignalHandler.is_connected (Application.callsign_cache, callsign_cache_updated_handler))
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_updated_handler);
@@ -437,11 +385,6 @@ public sealed class SpotCard : Gtk.Box {
             if (SignalHandler.is_connected (Application.app, radio_connection_state_handler))
                 SignalHandler.disconnect (Application.app, radio_connection_state_handler);
             radio_connection_state_handler = 0;
-        }
-        if (wsjtx_decode_handler != 0) {
-            if (SignalHandler.is_connected (Application.wsjtx_session, wsjtx_decode_handler))
-                SignalHandler.disconnect (Application.wsjtx_session, wsjtx_decode_handler);
-            wsjtx_decode_handler = 0;
         }
         if (heard_recently_notify_handler != 0) {
             if (SignalHandler.is_connected (spot, heard_recently_notify_handler))

@@ -258,8 +258,6 @@ public sealed class SpotDetail : Gtk.Box {
     private ulong radio_disconnected_handler = 0;
     private ulong radio_error_handler = 0;
     private uint weather_request_serial = 0;
-    private ulong avatar_font_name_handler = 0;
-    private ulong avatar_xft_dpi_handler = 0;
 
     private DetailFieldRow detail_operator_name_row;
     private DetailFieldRow detail_operator_qth_row;
@@ -290,18 +288,6 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     construct {
-        update_avatar_size ();
-
-        var gtk_settings = Gtk.Settings.get_default ();
-        if (gtk_settings != null) {
-            avatar_font_name_handler = gtk_settings.notify["gtk-font-name"].connect (() => {
-                update_avatar_size ();
-            });
-            avatar_xft_dpi_handler = gtk_settings.notify["gtk-xft-dpi"].connect (() => {
-                update_avatar_size ();
-            });
-        }
-
         build_detail_lists ();
         detail_tune_button.clicked.connect (on_tune_clicked);
         detail_spot_button.clicked.connect (on_spot_clicked);
@@ -330,10 +316,6 @@ public sealed class SpotDetail : Gtk.Box {
         radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
             update_tune_button_state ();
         });
-    }
-
-    private void update_avatar_size () {
-        detail_avatar.size = scaled_avatar_size (72);
     }
 
     private void build_detail_lists () {
@@ -519,7 +501,7 @@ public sealed class SpotDetail : Gtk.Box {
         return "%.0f°%s".printf (temperature, unit);
     }
 
-    private string weather_icon_name (WeatherData data) {
+    private unowned string weather_icon_name (WeatherData data) {
         switch (data.icon_code) {
             case "01d":
                 return "sun-outline-symbolic";
@@ -697,20 +679,6 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     ~SpotDetail () {
-        if (avatar_font_name_handler != 0) {
-            var gtk_settings = Gtk.Settings.get_default ();
-            if (gtk_settings != null &&
-                SignalHandler.is_connected (gtk_settings, avatar_font_name_handler))
-                SignalHandler.disconnect (gtk_settings, avatar_font_name_handler);
-            avatar_font_name_handler = 0;
-        }
-        if (avatar_xft_dpi_handler != 0) {
-            var gtk_settings = Gtk.Settings.get_default ();
-            if (gtk_settings != null &&
-                SignalHandler.is_connected (gtk_settings, avatar_xft_dpi_handler))
-                SignalHandler.disconnect (gtk_settings, avatar_xft_dpi_handler);
-            avatar_xft_dpi_handler = 0;
-        }
         if (callsign_cache_handler != 0 &&
             SignalHandler.is_connected (Application.callsign_cache, callsign_cache_handler))
             SignalHandler.disconnect (Application.callsign_cache, callsign_cache_handler);
