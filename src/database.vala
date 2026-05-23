@@ -50,68 +50,6 @@ static void bind_nullable_text (Sqlite.Statement st, int index, string? value) {
         st.bind_text (index, value);
 }
 
-static bool band_frequency_range_khz (string band, out int min_khz, out int max_khz) {
-    min_khz = 0;
-    max_khz = 0;
-
-    switch (band) {
-        case "160m":
-            min_khz = 1800;
-            max_khz = 2000;
-            return true;
-        case "80m":
-            min_khz = 3500;
-            max_khz = 4100;
-            return true;
-        case "60m":
-            min_khz = 5250;
-            max_khz = 5450;
-            return true;
-        case "40m":
-            min_khz = 7000;
-            max_khz = 7300;
-            return true;
-        case "30m":
-            min_khz = 10100;
-            max_khz = 10150;
-            return true;
-        case "20m":
-            min_khz = 14000;
-            max_khz = 14350;
-            return true;
-        case "17m":
-            min_khz = 18068;
-            max_khz = 18168;
-            return true;
-        case "15m":
-            min_khz = 21000;
-            max_khz = 21450;
-            return true;
-        case "12m":
-            min_khz = 24890;
-            max_khz = 24990;
-            return true;
-        case "10m":
-            min_khz = 28000;
-            max_khz = 29700;
-            return true;
-        case "6m":
-            min_khz = 50000;
-            max_khz = 54000;
-            return true;
-        case "2m":
-            min_khz = 144000;
-            max_khz = 148000;
-            return true;
-        case "70cm":
-            min_khz = 420000;
-            max_khz = 450000;
-            return true;
-        default:
-            return false;
-    }
-}
-
 public sealed class QsoRow : Object {
     public int64 id { get; construct; }
     public string? park_ref { get; construct; }

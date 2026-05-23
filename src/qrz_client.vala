@@ -35,9 +35,10 @@ public sealed class QrzClient : Object, QrzQsoUploader {
     }
 
     construct {
-        session = new Soup.Session ();
-        session.timeout = 30;
-        session.user_agent = "Artemis/%s".printf (Build.VERSION);
+        session = new Soup.Session () {
+            timeout = 30,
+            user_agent = "Artemis/%s".printf (Build.VERSION)
+        };
     }
 
     private static string encode_form_value (string value) {

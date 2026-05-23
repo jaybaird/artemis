@@ -156,6 +156,7 @@ namespace Artemis.Wsjtx {
         private Dex.Future wait_for_packet (Socket socket, Cancellable? cancellable) {
             var promise = new Dex.Promise.cancellable ();
             var source = socket.create_source (IOCondition.IN, cancellable);
+            ulong cancellable_handler = 0;
 
             source.set_callback (() => {
                 promise.resolve_boolean (true);
@@ -163,7 +164,7 @@ namespace Artemis.Wsjtx {
             });
 
             if (cancellable != null) {
-                cancellable.cancelled.connect (() => {
+                cancellable_handler = cancellable.cancelled.connect (() => {
                     promise.reject (new IOError.CANCELLED ("Listener stopped"));
                 });
             }
@@ -171,6 +172,10 @@ namespace Artemis.Wsjtx {
             source.attach (MainContext.default ());
 
             new Dex.Future.finally (promise, (future) => {
+                if (cancellable != null && cancellable_handler != 0 &&
+                    SignalHandler.is_connected (cancellable, cancellable_handler)) {
+                    SignalHandler.disconnect (cancellable, cancellable_handler);
+                }
                 source.destroy ();
                 return future;
             }).disown ();

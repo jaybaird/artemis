@@ -160,7 +160,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         views.notify["visible-child-name"].connect (update_detail_action_buttons);
 
         Application.settings.changed["update-interval"].connect (() => {
-            setup_spot_updates ();
+            reset_refresh_schedule ();
         });
 
         Application.app.toast_requested.connect ((message) => {
@@ -279,7 +279,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         Application.state.current_program_filter = null;
         Application.state.current_search_text = null;
         band_view.set_band_filter (Application.state.current_band_filter);
-        setup_spot_updates ();
+        start_spot_updates ();
 
         left_sidebar.band_selected.connect ((band) => {
             set_current_band_filter (band);
@@ -556,7 +556,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
     }
 
-    private void setup_spot_updates () {
+    private void reset_refresh_schedule () {
         cancel_refresh_timer ();
 
         var now = get_monotonic_time ();
@@ -565,7 +565,10 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         update_clock_label ();
         update_refresh_status ();
         schedule_next_refresh_wake ();
+    }
 
+    private void start_spot_updates () {
+        reset_refresh_schedule ();
         initial_update ();
     }
 

@@ -87,6 +87,8 @@ public sealed class SpotListView : Gtk.Box {
     private Gtk.SortListModel sorted;
     private bool just_selected = false;
     private bool row_actions_visible = false;
+    private uint sync_selection_idle_id = 0;
+    private Quark pending_selection_hash = BLANK_HASH;
 
     public signal void count_changed (uint count);
 
@@ -203,7 +205,14 @@ public sealed class SpotListView : Gtk.Box {
     }
 
     public void set_current_spot (Quark spot_hash) {
-        Idle.add (() => {
+        pending_selection_hash = spot_hash;
+        if (sync_selection_idle_id != 0)
+            return;
+
+        sync_selection_idle_id = Idle.add (() => {
+            sync_selection_idle_id = 0;
+            var current_hash = pending_selection_hash;
+
             for (var child = spot_list.get_first_child (); child != null;
                  child = child.get_next_sibling ()) {
                 var row = child as Gtk.ListBoxRow;
@@ -214,7 +223,7 @@ public sealed class SpotListView : Gtk.Box {
                 if (list_row == null)
                     continue;
 
-                if (list_row.spot.hash == spot_hash) {
+                if (list_row.spot.hash == current_hash) {
                     spot_list.select_row (row);
                     scroll_to_row (row);
                     return Source.REMOVE;

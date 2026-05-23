@@ -329,11 +329,12 @@ public sealed class LeftSidebar : Gtk.Box {
     }
 
     private Gtk.ToggleButton make_band_button (string band, int count, bool active) {
-        var btn = new Gtk.ToggleButton ();
-        btn.child = new BandButton (band, count);
-        btn.active = active;
+        var btn = new Gtk.ToggleButton () {
+            child = new BandButton (band, count),
+            active = active,
+            hexpand = true
+        };
         btn.add_css_class ("flat");
-        btn.hexpand = true;
 
         btn.toggled.connect (() => {
             if (btn.active)

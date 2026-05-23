@@ -1,5 +1,20 @@
 /* src/logbook_window.vala
  *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -88,21 +103,50 @@ public sealed class LogbookParkItem : Object {
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/logbook_window.ui")]
 public sealed class LogbookWindow : Adw.Window {
-    [GtkChild] private unowned Adw.ViewStack views;
-    [GtkChild] private unowned Gtk.SearchEntry search_entry;
-    [GtkChild] private unowned Gtk.Button refresh_button;
-    [GtkChild] private unowned Gtk.Stack qso_stack;
-    [GtkChild] private unowned Gtk.ScrolledWindow qso_scroll;
-    [GtkChild] private unowned Adw.StatusPage qso_status_page;
-    [GtkChild] private unowned Gtk.ColumnView qso_column_view;
-    [GtkChild] private unowned Gtk.Stack parks_stack;
-    [GtkChild] private unowned Gtk.ScrolledWindow parks_scroll;
-    [GtkChild] private unowned Adw.StatusPage parks_status_page;
-    [GtkChild] private unowned Gtk.ColumnView parks_column_view;
-    [GtkChild] private unowned Gtk.Label result_count_label;
-    [GtkChild] private unowned Gtk.Button previous_page_button;
-    [GtkChild] private unowned Gtk.Label page_label;
-    [GtkChild] private unowned Gtk.Button next_page_button;
+    [GtkChild]
+    private unowned Adw.ViewStack views;
+
+    [GtkChild]
+    private unowned Gtk.SearchEntry search_entry;
+
+    [GtkChild]
+    private unowned Gtk.Button refresh_button;
+
+    [GtkChild]
+    private unowned Gtk.Stack qso_stack;
+
+    [GtkChild]
+    private unowned Gtk.ScrolledWindow qso_scroll;
+
+    [GtkChild]
+    private unowned Adw.StatusPage qso_status_page;
+
+    [GtkChild]
+    private unowned Gtk.ColumnView qso_column_view;
+
+    [GtkChild]
+    private unowned Gtk.Stack parks_stack;
+
+    [GtkChild]
+    private unowned Gtk.ScrolledWindow parks_scroll;
+
+    [GtkChild]
+    private unowned Adw.StatusPage parks_status_page;
+
+    [GtkChild]
+    private unowned Gtk.ColumnView parks_column_view;
+
+    [GtkChild]
+    private unowned Gtk.Label result_count_label;
+
+    [GtkChild]
+    private unowned Gtk.Button previous_page_button;
+
+    [GtkChild]
+    private unowned Gtk.Label page_label;
+
+    [GtkChild]
+    private unowned Gtk.Button next_page_button;
 
     private const int PAGE_SIZE = 50;
     private GLib.ListStore qso_store;

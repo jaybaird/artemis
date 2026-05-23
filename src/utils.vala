@@ -174,3 +174,12 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
     );
     return spot_matches_filter (snapshot, filter);
 }
+
+public static Gdk.RGBA rgba (double red, double green, double blue, double alpha) {
+    var color = Gdk.RGBA ();
+    color.red = (float) red;
+    color.green = (float) green;
+    color.blue = (float) blue;
+    color.alpha = (float) alpha;
+    return color;
+}

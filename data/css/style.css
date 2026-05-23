@@ -138,7 +138,7 @@
 }
 
 .map-marker-content.map-marker-heard-recently {
-    background-color: rgba(var(--purple-3), 0.3);
+    background-color: alpha(var(--purple-3), 0.3);
     border-radius: 9999px;
 }
 

@@ -99,17 +99,19 @@ public sealed class LoggingPreferencesPage : Adw.PreferencesPage {
     }
 
     private void on_import_file () {
-        var file_dialog = new Gtk.FileDialog ();
-        file_dialog.title = _("Select Logbook CSV File");
-
-        var csv_filter = new Gtk.FileFilter ();
-        csv_filter.name = _("CSV Files");
+        var csv_filter = new Gtk.FileFilter () {
+            name = _("CSV Files")
+        };
         csv_filter.add_mime_type ("text/csv");
         csv_filter.add_pattern ("*.csv");
 
         var filter_list = new GLib.ListStore (typeof (Gtk.FileFilter));
         filter_list.append (csv_filter);
-        file_dialog.filters = filter_list;
+
+        var file_dialog = new Gtk.FileDialog () {
+            title = _("Select Logbook CSV File"),
+            filters = filter_list
+        };
 
         file_dialog.open.begin (get_root () as Gtk.Window, null, (obj, res) => {
             try {
@@ -126,26 +128,27 @@ public sealed class LoggingPreferencesPage : Adw.PreferencesPage {
     }
 
     private void on_choose_local_adif_log_path () {
-        var file_dialog = new Gtk.FileDialog ();
         var current_path = FileLocalAdifWriter.resolve_path (
             Application.settings.get_string ("local-adif-log-path")
         );
         var current_file = File.new_for_path (current_path);
         var parent = current_file.get_parent ();
 
-        file_dialog.title = _("Choose ADIF Log File");
-        file_dialog.initial_name = current_file.get_basename ();
-        if (parent != null)
-            file_dialog.initial_folder = parent;
-
-        var adif_filter = new Gtk.FileFilter ();
-        adif_filter.name = _("ADIF Files");
+        var adif_filter = new Gtk.FileFilter () {
+            name = _("ADIF Files")
+        };
         adif_filter.add_pattern ("*.adi");
         adif_filter.add_pattern ("*.adif");
 
         var filter_list = new GLib.ListStore (typeof (Gtk.FileFilter));
         filter_list.append (adif_filter);
-        file_dialog.filters = filter_list;
+
+        var file_dialog = new Gtk.FileDialog () {
+            title = _("Choose ADIF Log File"),
+            initial_name = current_file.get_basename (),
+            initial_folder = parent,
+            filters = filter_list
+        };
 
         file_dialog.save.begin (get_root () as Gtk.Window, null, (obj, res) => {
             try {

@@ -6,10 +6,14 @@
 private sealed class FakeOperatorProvider : Object, OperatorProvider {
     public int fetch_count { get; private set; default = 0; }
     public string last_callsign { get; private set; default = ""; }
+    public bool fail_fetch { get; set; default = false; }
 
     public async Json.Node? fetch_operator (string callsign) throws Error {
         fetch_count++;
         last_callsign = callsign;
+
+        if (fail_fetch)
+            throw new IOError.NOT_FOUND ("404 Not Found");
 
         var object = new Json.Object ();
         object.set_string_member ("callsign", callsign);
@@ -80,6 +84,28 @@ private void test_callsign_cache_zero_ttl_refetches () {
     assert (provider.fetch_count == 2);
 }
 
+private void test_callsign_cache_miss_tombstone_suppresses_refetch () {
+    var provider = new FakeOperatorProvider () {
+        fail_fetch = true
+    };
+    var cache = new CallsignCache (3600, provider);
+
+    Test.expect_message (
+        null,
+        LogLevelFlags.LEVEL_WARNING,
+        "*Failed to fetch activator profile for K1ABC*"
+    );
+
+    var first = run_callsign_lookup (cache, "K1ABC");
+    var second = run_callsign_lookup (cache, "K1ABC");
+
+    Test.assert_expected_messages ();
+
+    assert (first == null);
+    assert (second == null);
+    assert (provider.fetch_count == 1);
+}
+
 public int main (string[] args) {
     Test.init (ref args);
 
@@ -88,6 +114,8 @@ public int main (string[] args) {
     Test.add_func ("/callsign-cache/peek-clear", test_callsign_cache_peek_and_clear);
     Test.add_func ("/callsign-cache/zero-ttl-refetches",
         test_callsign_cache_zero_ttl_refetches);
+    Test.add_func ("/callsign-cache/miss-tombstone-suppresses-refetch",
+        test_callsign_cache_miss_tombstone_suppresses_refetch);
 
     return Test.run ();
 }

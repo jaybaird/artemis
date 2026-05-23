@@ -24,7 +24,7 @@ data/ui/status_page.ui
 src/application.vala
 src/band_view.vala
 src/logbook_window.vala
-src/map_view.vala
+src/map/map_view.vala
 src/park_details_cache.vala
 src/preferences.vala
 src/preferences/general_page.vala

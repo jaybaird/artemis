@@ -52,6 +52,8 @@ public sealed class BandView : Gtk.Box {
     private Gtk.SortListModel sorted;
 
     private bool just_selected = false;
+    private uint sync_selection_idle_id = 0;
+    private Quark pending_selection_hash = BLANK_HASH;
 
     public BandView (string band_label, string icon) {
         Object (
@@ -139,8 +141,15 @@ public sealed class BandView : Gtk.Box {
     }
 
     public void set_current_spot (Quark spot_hash) {
-        Idle.add (() => {
-            if (spot_hash == BLANK_HASH) {
+        pending_selection_hash = spot_hash;
+        if (sync_selection_idle_id != 0)
+            return;
+
+        sync_selection_idle_id = Idle.add (() => {
+            sync_selection_idle_id = 0;
+            var current_hash = pending_selection_hash;
+
+            if (current_hash == BLANK_HASH) {
                 band_spot_cards.unselect_all ();
                 return Source.REMOVE;
             }
@@ -153,7 +162,7 @@ public sealed class BandView : Gtk.Box {
                     continue;
 
                 var spot_card = fbchild.get_child () as SpotCard;
-                if ((spot_card != null) && (spot_card.spot.hash == spot_hash)) {
+                if ((spot_card != null) && (spot_card.spot.hash == current_hash)) {
                     band_spot_cards.select_child (fbchild);
                     Idle.add (() => {
                         scroll_to_child (fbchild);

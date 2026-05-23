@@ -1,4 +1,4 @@
-/* src/map_view.vala
+/* src/map/map_view.vala
  *
  * Copyright 2026 Jay Baird (K0VCZ)
  *
@@ -21,189 +21,8 @@
 using Gee;
 using Shumate;
 
-const double MIN_LATITUDE = -85.0511287798;
-const double MAX_LATITUDE = 85.0511287798;
-const double MIN_LONGITUDE = -180.0;
-const double MAX_LONGITUDE = 180.0;
-
-const double EARTH_RADIUS_M = 6378137.0;
-
-static double meters_to_deg_lat (double meters) {
-    return meters / 111320.0;
-}
-
-static double meters_to_deg_lon (double meters, double latitude_deg) {
-    double lat_rad = Distance.to_radians (latitude_deg);
-
-    return meters / (111320.0 * Math.cos (lat_rad));
-}
-
-public class BoundingBox : Object {
-    public double min_lat { get; private set; }
-    public double min_lon { get; private set; }
-    public double max_lat { get; private set; }
-    public double max_lon { get; private set; }
-    public BoundingBox () {
-        clear ();
-    }
-
-    public BoundingBox.from_points (Gee.Collection<Coordinate> coords) {
-        clear ();
-        foreach (var c in coords) {
-            extend (c.latitude, c.longitude);
-        }
-    }
-
-    public void clear () {
-        min_lat = MAX_LATITUDE;
-        max_lat = MIN_LATITUDE;
-        min_lon = MAX_LONGITUDE;
-        max_lon = MIN_LONGITUDE;
-    }
-
-    public bool is_valid () {
-        return min_lat <= max_lat && min_lon <= max_lon;
-    }
-
-    public void extend (double lat, double lon) {
-        lat = clamp (lat, MIN_LATITUDE, MAX_LATITUDE);
-        lon = normalize_longitude (lon);
-
-        if (!is_valid ()) {
-            min_lat = max_lat = lat;
-            min_lon = max_lon = lon;
-            return;
-        }
-
-        if (lat < min_lat)
-            min_lat = lat;
-        if (lat > max_lat)
-            max_lat = lat;
-
-        // handle wrap-around correctly
-        if (lon_distance (lon, min_lon) < lon_distance (lon, max_lon)) {
-            if (lon < min_lon)
-                min_lon = lon;
-        } else {
-            if (lon > max_lon)
-                max_lon = lon;
-        }
-    }
-
-    public void extend_coord (Coordinate? coord) {
-        if (coord == null)
-            return;
-
-        extend (coord.latitude, coord.longitude);
-    }
-
-    public void expand (int padding_meters = 50000) {
-        if (!is_valid ())
-            return;
-
-        double lat_center = (min_lat + max_lat) / 2.0;
-
-        double lat_pad = meters_to_deg_lat (padding_meters);
-        double lon_pad = meters_to_deg_lon (padding_meters, lat_center);
-
-        min_lat -= lat_pad;
-        max_lat += lat_pad;
-        min_lon -= lon_pad;
-        max_lon += lon_pad;
-
-        min_lat = clamp (min_lat, MIN_LATITUDE, MAX_LATITUDE);
-        max_lat = clamp (max_lat, MIN_LATITUDE, MAX_LATITUDE);
-        min_lon = clamp (min_lon, MIN_LONGITUDE, MAX_LONGITUDE);
-        max_lon = clamp (max_lon, MIN_LONGITUDE, MAX_LONGITUDE);
-    }
-
-    public Coordinate center () {
-        var c_lat = (min_lat + max_lat) * 0.5;
-        var c_lon = normalize_longitude ((min_lon + max_lon) * 0.5);
-        return new Coordinate.full (c_lat, c_lon);
-    }
-
-    public bool contains (double lat, double lon) {
-        lat = clamp (lat, MIN_LATITUDE, MAX_LATITUDE);
-        lon = normalize_longitude (lon);
-        return lat >= min_lat && lat <= max_lat &&
-               lon >= min_lon && lon <= max_lon;
-    }
-
-    public string to_string () {
-        return "BBox(lat: %.5f–%.5f, lon: %.5f–%.5f)".printf (min_lat, max_lat,
-            min_lon, max_lon);
-    }
-
-    private static double normalize_longitude (double lon) {
-        while (lon < -180.0) {
-            lon += 360.0;
-        }
-
-        while (lon > 180.0) {
-            lon -= 360.0;
-        }
-
-        return lon;
-    }
-
-    private static double lon_distance (double a, double b) {
-        double d = Math.fabs (a - b);
-        return d > 180.0 ? 360.0 - d : d;
-    }
-} /* class BoundingBox */
-
-public class MapMarkerDot : Gtk.DrawingArea {
-    private bool _selected = false;
-
-    public bool selected {
-        get {
-            return _selected;
-        }
-        set {
-            if (_selected == value)
-                return;
-
-            _selected = value;
-            queue_draw ();
-        }
-    }
-
-    public MapMarkerDot (string band) {
-        width_request = 28;
-        height_request = 28;
-        halign = Gtk.Align.CENTER;
-        valign = Gtk.Align.CENTER;
-
-        add_css_class ("map-marker-dot");
-        add_css_class ("map-marker-%s".printf (band));
-
-        set_draw_func ((area, cr, width, height) => {
-            var color = area.get_color ();
-            double size = (double) int.min (width, height);
-            double center_x = width / 2.0;
-            double center_y = height / 2.0;
-            double radius = (size / 2.0) - 1.5;
-
-            cr.arc (center_x, center_y, radius, 0, 2.0 * Math.PI);
-            Gdk.cairo_set_source_rgba (cr, color);
-            if (selected)
-                cr.fill_preserve ();
-            else
-                cr.fill ();
-
-            if (selected) {
-                cr.set_line_width (2.0);
-                cr.set_source_rgba (0.98, 0.98, 0.98, 0.98);
-                cr.stroke ();
-            }
-        });
-    }
-}
-
 public class MapView : Gtk.Box {
     private const uint ASTRONOMY_REFRESH_INTERVAL_SECONDS = 60;
-    private const double GRAYLINE_LONGITUDE_STEP_DEGREES = 2.0;
     private const double DEFAULT_QTH_ZOOM_LEVEL = 6.0;
     private const string MAPBOX_LICENSE = "© Mapbox © OpenStreetMap";
     private const string MAPBOX_LICENSE_URI = "https://www.mapbox.com/about/maps/";
@@ -216,7 +35,7 @@ public class MapView : Gtk.Box {
     private Scale map_scale;
     private Shumate.License map_license;
     private MapLayer map_layer;
-    private PathLayer grayline_layer;
+    private GraylineOverlay grayline_overlay;
     private MarkerLayer marker_layer;
     private MarkerLayer astronomy_marker_layer;
     private HashMap<Quark, Marker> markers;
@@ -316,15 +135,44 @@ public class MapView : Gtk.Box {
         overlay.add_overlay (map_scale);
 
         map_license = new Shumate.License () {
+            xalign = 1.0f
+        };
+        map_license.append_map_source (map_source);
+
+        var menu = new GLib.Menu ();
+        menu.append (_("Grayline"), "map.grayline-visible");
+        menu.append (_("Sun and Moon"), "map.astronomy-visible");
+
+        overlay_button = new Adw.SplitButton () {
+            label = _("Overlays"),
+            icon_name = "filter-symbolic",
+            menu_model = menu,
+            can_shrink = true,
+            dropdown_tooltip = _("Overlay options")
+        };
+        overlay_button.add_css_class ("flat");
+        overlay_button.clicked.connect (() => {
+            set_grayline_visible (!grayline_visible);
+        });
+
+        var right_box = new Gtk.Box (
+            Gtk.Orientation.VERTICAL,
+            8
+        ) {
             halign = Gtk.Align.END,
             valign = Gtk.Align.END,
             margin_start = 6,
             margin_end = 6,
             margin_top = 6,
+            margin_bottom = 6,
             margin_bottom = 6
         };
-        map_license.xalign = 1.0f;
-        map_license.append_map_source (map_source);
+
+        right_box.append (overlay_button);
+        right_box.append (map_license);
+
+        overlay.add_overlay (right_box);
+
         overlay.add_overlay (map_license);
 
         qth_coordinate = new Coordinate ();
@@ -339,11 +187,11 @@ public class MapView : Gtk.Box {
 
         rebuild_base_map_layer ();
 
-        grayline_layer = create_grayline_layer ();
-        map_widget.insert_layer_above (grayline_layer, map_layer);
+        grayline_overlay = new GraylineOverlay (viewport);
+        map_widget.insert_layer_above (grayline_overlay.layer, map_layer);
 
         astronomy_marker_layer = new MarkerLayer (viewport);
-        map_widget.insert_layer_above (astronomy_marker_layer, grayline_layer);
+        map_widget.insert_layer_above (astronomy_marker_layer, grayline_overlay.layer);
 
         filter = new Gtk.CustomFilter ((item) => {
             var spot = item as Spot;
@@ -443,15 +291,15 @@ public class MapView : Gtk.Box {
         });
         map_layer = layer;
 
-        if (grayline_layer != null)
-            map_widget.insert_layer_above (grayline_layer, map_layer);
+        if (grayline_overlay != null)
+            map_widget.insert_layer_above (grayline_overlay.layer, map_layer);
         if (marker_layer != null)
-            map_widget.insert_layer_above (marker_layer, grayline_layer);
+            map_widget.insert_layer_above (marker_layer, grayline_overlay.layer);
         if (astronomy_marker_layer != null) {
             if (marker_layer != null)
                 map_widget.insert_layer_above (astronomy_marker_layer, marker_layer);
             else
-                map_widget.insert_layer_above (astronomy_marker_layer, grayline_layer);
+                map_widget.insert_layer_above (astronomy_marker_layer, grayline_overlay.layer);
         }
     }
 
@@ -487,11 +335,12 @@ public class MapView : Gtk.Box {
         while (!good_size);
 
         return zoom_level;
-    } /* get_zoom_level_fitting_bounds */
+    }
 
     private void install_map_interaction_tracking () {
-        var drag = new Gtk.GestureDrag ();
-        drag.propagation_phase = Gtk.PropagationPhase.CAPTURE;
+        var drag = new Gtk.GestureDrag () {
+            propagation_phase = Gtk.PropagationPhase.CAPTURE
+        };
         drag.drag_begin.connect ((start_x, start_y) => {
             user_has_adjusted_view = true;
         });
@@ -501,16 +350,18 @@ public class MapView : Gtk.Box {
             Gtk.EventControllerScrollFlags.VERTICAL |
             Gtk.EventControllerScrollFlags.HORIZONTAL |
             Gtk.EventControllerScrollFlags.DISCRETE
-        );
-        scroll.propagation_phase = Gtk.PropagationPhase.CAPTURE;
+        ) {
+            propagation_phase = Gtk.PropagationPhase.CAPTURE
+        };
         scroll.scroll.connect ((dx, dy) => {
             user_has_adjusted_view = true;
             return false;
         });
         map_widget.add_controller (scroll);
 
-        var zoom = new Gtk.GestureZoom ();
-        zoom.propagation_phase = Gtk.PropagationPhase.CAPTURE;
+        var zoom = new Gtk.GestureZoom () {
+            propagation_phase = Gtk.PropagationPhase.CAPTURE
+        };
         zoom.begin.connect ((sequence) => {
             user_has_adjusted_view = true;
         });
@@ -653,53 +504,12 @@ public class MapView : Gtk.Box {
         });
     }
 
-    private PathLayer create_grayline_layer () {
-        var layer = new PathLayer (viewport);
-        layer.closed = true;
-        layer.fill = true;
-        layer.stroke = true;
-        layer.stroke_width = 1.5;
-        layer.outline_width = 0.0;
-        layer.fill_color = rgba (0.05, 0.08, 0.16, 0.22);
-        layer.stroke_color = rgba (1.0, 1.0, 1.0, 0.35);
-        return layer;
-    }
-
-    private void rebuild_grayline_layer (DateTime now) {
-        bool close_to_north_pole = !Astronomy.is_sunlit (
-            now,
-            new Coordinate.full (89.9, 0.0)
-        );
-        double closure_latitude = close_to_north_pole ? 90.0 : -90.0;
-
-        grayline_layer.remove_all ();
-
-        double longitude = -180.0;
-        while (longitude <= 180.0) {
-            grayline_layer.add_node (new Coordinate.full (
-                Astronomy.solar_terminator_latitude (now, longitude),
-                longitude
-            ));
-            longitude += GRAYLINE_LONGITUDE_STEP_DEGREES;
-        }
-
-        if (longitude - GRAYLINE_LONGITUDE_STEP_DEGREES < 180.0) {
-            grayline_layer.add_node (new Coordinate.full (
-                Astronomy.solar_terminator_latitude (now, 180.0),
-                180.0
-            ));
-        }
-
-        grayline_layer.add_node (new Coordinate.full (closure_latitude, 180.0));
-        grayline_layer.add_node (new Coordinate.full (closure_latitude, -180.0));
-    }
-
     private void update_astronomy_overlays () {
         var now = new DateTime.now_utc ();
         var bodies = Astronomy.body_markers (now);
         var sun_coordinate = bodies.sun.coordinate;
         var moon_coordinate = bodies.moon.coordinate;
-        rebuild_grayline_layer (now);
+        grayline_overlay.update (now);
 
         ensure_body_marker (
             ref sun_marker,
@@ -752,29 +562,6 @@ public class MapView : Gtk.Box {
             set_astronomy_visible (value.get_boolean ());
         });
         overlay_actions.add_action (astronomy_action);
-
-        var menu = new GLib.Menu ();
-        menu.append (_("Grayline"), "map.grayline-visible");
-        menu.append (_("Sun and Moon"), "map.astronomy-visible");
-
-        overlay_button = new Adw.SplitButton () {
-            label = _("Overlays"),
-            icon_name = "sliders-symbolic",
-            menu_model = menu,
-            can_shrink = true,
-            halign = Gtk.Align.END,
-            valign = Gtk.Align.END,
-            margin_start = 6,
-            margin_end = 6,
-            margin_bottom = 6
-        };
-        overlay_button.dropdown_tooltip = _("Overlay options");
-        overlay_button.add_css_class ("flat");
-        overlay_button.clicked.connect (() => {
-            set_grayline_visible (!grayline_visible);
-        });
-
-        overlay.add_overlay (overlay_button);
     }
 
     private void set_grayline_visible (bool visible) {
@@ -792,8 +579,8 @@ public class MapView : Gtk.Box {
     }
 
     private void sync_overlay_visibility () {
-        if (grayline_layer != null)
-            grayline_layer.visible = grayline_visible;
+        if (grayline_overlay != null)
+            grayline_overlay.visible = grayline_visible;
         if (astronomy_marker_layer != null)
             astronomy_marker_layer.visible = astronomy_visible;
     }
@@ -828,15 +615,6 @@ public class MapView : Gtk.Box {
 
         marker.latitude = coordinate.latitude;
         marker.longitude = coordinate.longitude;
-    }
-
-    private Gdk.RGBA rgba (double red, double green, double blue, double alpha) {
-        var color = Gdk.RGBA ();
-        color.red = (float) red;
-        color.green = (float) green;
-        color.blue = (float) blue;
-        color.alpha = (float) alpha;
-        return color;
     }
 
     private void update_qth_coordinate () {
@@ -895,7 +673,7 @@ public class MapView : Gtk.Box {
         }
         bbox.expand ();
 
-        map_widget.insert_layer_above (marker_layer, grayline_layer);
+        map_widget.insert_layer_above (marker_layer, grayline_overlay.layer);
         sync_marker_selection (Application.state.current_spot_hash);
 
         if (Application.state.current_spot_hash == BLANK_HASH ||
@@ -921,4 +699,4 @@ public class MapView : Gtk.Box {
         }
 
     } /* load_spots */
-}     /* class MapWindow */
+}     /* class MapView */

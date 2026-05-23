@@ -1,5 +1,20 @@
 /* src/callsign_cache.vala
  *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
@@ -22,9 +37,12 @@ public class CallsignCacheEntry {
 
 public sealed class CallsignCache : Object {
     private const int64 PRUNE_INTERVAL_USEC = 60 * GLib.TimeSpan.SECOND;
+    private const int64 PROFILE_MISS_TTL_USEC = 10 * GLib.TimeSpan.MINUTE;
     private HashMap<string, CallsignCacheEntry> ham_cache;
     private HashMap<string, HashSet<string>> profile_aliases;
     private HashSet<string> avatar_fetch_inflight;
+    private HashSet<string> profile_fetch_inflight;
+    private HashMap<string, int64?> profile_miss_expires_at;
     private Soup.Session avatar_session;
     private OperatorProvider operator_provider;
     private int64 last_prune_time = 0;
@@ -49,14 +67,19 @@ public sealed class CallsignCache : Object {
         ham_cache = new HashMap<string, CallsignCacheEntry> ();
         profile_aliases = new HashMap<string, HashSet<string>> ();
         avatar_fetch_inflight = new HashSet<string> ();
-        avatar_session = new Soup.Session ();
+        profile_fetch_inflight = new HashSet<string> ();
+        profile_miss_expires_at = new HashMap<string, int64?> ();
+
         var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
             "artemis");
         var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
         cache.set_max_size (50 * 1024 * 1024);
+
+        avatar_session = new Soup.Session () {
+            timeout = 3;
+            user_agent = "Artemis/1.0.0";
+        };
         avatar_session.add_feature (cache);
-        avatar_session.timeout = 3;
-        avatar_session.user_agent = "Artemis/1.0.0";
     }
 
     private static string profile_callsign (string callsign) {
@@ -92,14 +115,24 @@ public sealed class CallsignCache : Object {
 
         last_prune_time = now;
         var expired_keys = new ArrayList<string> ();
+        var expired_misses = new ArrayList<string> ();
 
         foreach (var entry in ham_cache.entries) {
             if (is_entry_expired (entry.value))
                 expired_keys.add (entry.key);
         }
 
+        foreach (var entry in profile_miss_expires_at.entries) {
+            if (now > entry.value)
+                expired_misses.add (entry.key);
+        }
+
         foreach (var key in expired_keys) {
             ham_cache.unset (key);
+        }
+
+        foreach (var key in expired_misses) {
+            profile_miss_expires_at.unset (key);
         }
     }
 
@@ -107,6 +140,8 @@ public sealed class CallsignCache : Object {
         ham_cache.clear ();
         profile_aliases.clear ();
         avatar_fetch_inflight.clear ();
+        profile_fetch_inflight.clear ();
+        profile_miss_expires_at.clear ();
         last_prune_time = 0;
     }
 
@@ -224,6 +259,14 @@ public sealed class CallsignCache : Object {
             return entry.activator;
         }
 
+        var miss_expires_at = profile_miss_expires_at.get (profile);
+        if ((miss_expires_at != null) && GLib.get_monotonic_time () <= miss_expires_at)
+            return null;
+
+        if (profile_fetch_inflight.contains (profile))
+            return null;
+
+        profile_fetch_inflight.add (profile);
         try {
             var result = yield operator_provider.fetch_operator (profile);
 
@@ -231,11 +274,16 @@ public sealed class CallsignCache : Object {
                 new Activator.from_json (result.get_object ()),
                 GLib.get_monotonic_time () + (ttl_seconds * GLib.TimeSpan.SECOND)
             );
+            profile_miss_expires_at.unset (profile);
             ham_cache.set (profile, callsign_entry);
             ham_cache.set (callsign, callsign_entry);
             emit_profile_updated (profile, callsign);
+            profile_fetch_inflight.remove (profile);
             return callsign_entry.activator;
         } catch (Error err) {
+            profile_miss_expires_at[profile] =
+                GLib.get_monotonic_time () + PROFILE_MISS_TTL_USEC;
+            profile_fetch_inflight.remove (profile);
             warning ("Failed to fetch activator profile for %s: %s",
                 profile, err.message);
             return null;

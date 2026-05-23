@@ -78,6 +78,11 @@ public sealed class RadioPreferencesPage : Adw.PreferencesPage {
         for (var i = 0; i < radio_models.length; i++)
             radio_model_list.append (radio_models[i].display_name);
         row_radio_model.model = radio_model_list;
+        row_radio_model.expression = new Gtk.PropertyExpression (
+            typeof (Gtk.StringObject),
+            null,
+            "string"
+        );
         row_radio_model.enable_search = true;
         row_radio_model.search_match_mode = Gtk.StringFilterMatchMode.SUBSTRING;
 
