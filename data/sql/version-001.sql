@@ -3,6 +3,8 @@
 
 CREATE TABLE IF NOT EXISTS parks (
   reference TEXT PRIMARY KEY,
+  park_name TEXT,
+  location TEXT,
   first_qso_date DATETIME,
   qso_count INTEGER NOT NULL DEFAULT 0
 );
@@ -17,6 +19,12 @@ CREATE TABLE IF NOT EXISTS qsos (
   spotter TEXT,
   spotter_comment TEXT,
   activator_comment TEXT,
+  local_adif_saved INTEGER NOT NULL DEFAULT 0,
+  pota_spotted INTEGER NOT NULL DEFAULT 0,
+  qrz_uploaded INTEGER NOT NULL DEFAULT 0,
+  local_adif_error TEXT,
+  pota_error TEXT,
+  qrz_error TEXT,
   FOREIGN KEY(park_ref) REFERENCES parks(reference) ON DELETE CASCADE
 );
 

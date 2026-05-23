@@ -170,11 +170,15 @@ template $SpotCard : Box {
             row: 0;
           }
 
-          $BandStrip band_strip {
+          Image band_dot {
             halign: center;
             valign: center;
-            band: "20m";
-            styles ["band-strip-card"]
+            icon-name: "bigger-dot-symbolic";
+            styles ["spot-card-icon", "band-dot-20m"]
+            accessibility {
+              label: _("Band");
+              role-description: _("icon");
+            }
           }
         }
 

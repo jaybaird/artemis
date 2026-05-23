@@ -2,8 +2,11 @@
 <gresources>
   <gresource prefix="/com/k0vcz/artemis/">
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences/general_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences/radio_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences/logging_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences/wsjtx_page.ui</file>
     <file preprocess="xml-stripblanks">ui/main_window.ui</file>
-    <file preprocess="xml-stripblanks">ui/astronomy_window.ui</file>
     <file preprocess="xml-stripblanks">ui/help_window.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_card.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_page.ui</file>
@@ -15,14 +18,17 @@
     <file preprocess="xml-stripblanks">ui/status_bar.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/left_sidebar.ui</file>
+    <file preprocess="xml-stripblanks">ui/logbook_window.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_detail.ui</file>
     <file preprocess="xml-stripblanks">ui/band_button.ui</file>
     <file compressed="true">icons/hicolor/symbolic/actions/arrow-circular-bottom-right-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/big-dot-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/bigger-dot-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/clouds-outline-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/dock-right-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/few-clouds-outline-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/fog-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/globe-alt2-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/grid-filled-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/media-playback-pause-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/moon-clouds-outline-symbolic.svg</file>

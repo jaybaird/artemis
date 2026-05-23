@@ -1,8 +1,11 @@
 inputs = files(
   'add_spot_page.blp',
   'main_window.blp',
-  'astronomy_window.blp',
   'help_window.blp',
+  'preferences/general_page.blp',
+  'preferences/radio_page.blp',
+  'preferences/logging_page.blp',
+  'preferences/wsjtx_page.blp',
   'preferences.blp',
   'spot_card.blp',
   'spot_history_dialog.blp',
@@ -13,6 +16,7 @@ inputs = files(
   'status_bar.blp',
   'park_log_dialog.blp',
   'left_sidebar.blp',
+  'logbook_window.blp',
   'spot_detail.blp',
   'band_button.blp'
 )
@@ -20,8 +24,11 @@ inputs = files(
 outs = [
   'add_spot_page.ui',
   'main_window.ui',
-  'astronomy_window.ui',
   'help_window.ui',
+  'preferences_general_page.ui',
+  'preferences_radio_page.ui',
+  'preferences_logging_page.ui',
+  'preferences_wsjtx_page.ui',
   'preferences.ui',
   'spot_card.ui',
   'spot_history_dialog.ui',
@@ -32,6 +39,7 @@ outs = [
   'status_bar.ui',
   'park_log_dialog.ui',
   'left_sidebar.ui',
+  'logbook_window.ui',
   'spot_detail.ui',
   'band_button.ui'
 ]

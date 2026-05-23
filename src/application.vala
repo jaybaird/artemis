@@ -38,11 +38,12 @@ public sealed class Application : Adw.Application {
     public static SpotRepo spot_repo { get; private set; }
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
+    public static ParkDetailsCache park_details_cache { get; private set; }
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
-    public static SolarConditionsService solar_conditions { get; private set; }
     public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
     private HelpWindow? help_window = null;
+    private LogbookWindow? logbook_window = null;
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -78,6 +79,7 @@ public sealed class Application : Adw.Application {
 
     private const GLib.ActionEntry[] APP_ENTRIES = {
         { "add-spot", on_add_button_clicked },
+        { "logbook", on_logbook_action },
         { "help", on_help_action },
         { "shortcuts", shortcuts_activated },
         { "about", about_activated },
@@ -95,6 +97,7 @@ public sealed class Application : Adw.Application {
 
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
+        set_accels_for_action ("app.logbook", { "<primary>l" });
         set_accels_for_action ("app.help", { "F1" });
         set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
@@ -113,6 +116,7 @@ public sealed class Application : Adw.Application {
         settings = new Settings (Build.DOMAIN);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
+        park_details_cache = new ParkDetailsCache (pota_client);
         qrz_client = new QrzClient ();
 
         spot_database = new SpotDb ();
@@ -121,7 +125,7 @@ public sealed class Application : Adw.Application {
             error (err.message);
         }
 
-        callsign_cache = new CallsignCache (3600);
+        callsign_cache = new CallsignCache (3600, pota_client);
         logging_service = new LoggingService (
             spot_database,
             pota_client,
@@ -130,8 +134,7 @@ public sealed class Application : Adw.Application {
             new SettingsLoggingPreferences (settings)
         );
         logbook_import_service = new LogbookImportService (spot_database);
-        weather_cache = new WeatherCache ();
-        solar_conditions = new SolarConditionsService ();
+        weather_cache = new WeatherCache (new SettingsWeatherUnitsProvider (settings));
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
         radio_control = new RadioControl ();
         radio_control.radio_connected.connect (() => {
@@ -210,6 +213,18 @@ public sealed class Application : Adw.Application {
         }
     }
 
+    private void on_logbook_action () {
+        if (logbook_window == null) {
+            logbook_window = new LogbookWindow (win);
+            logbook_window.close_request.connect (() => {
+                logbook_window = null;
+                return false;
+            });
+        }
+
+        logbook_window.present ();
+    }
+
     private void about_activated () {
         const string[] ARTISTS = {
         };
@@ -263,6 +278,7 @@ public sealed class Application : Adw.Application {
         general.add (new Adw.ShortcutsItem.from_action (_("Add Spot"), "app.add-spot"));
         general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
         general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
         general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
         dialog.add (general);
 

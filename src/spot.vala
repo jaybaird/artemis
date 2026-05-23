@@ -66,7 +66,7 @@ public string band_from_khz (double khz) {
     return "Other";
 } /* band_from_khz */
 
-public sealed class Spot : Object {
+public sealed class Spot : Object, WeatherSpotDetails {
     public const uint HEARD_RECENTLY_TIMEOUT_SECONDS = 90;
     private uint heard_recently_timeout_id = 0;
 
@@ -124,6 +124,18 @@ public sealed class Spot : Object {
             grid4: grid4,
             grid6: grid6
         );
+    }
+
+    public string weather_park_ref () {
+        return park_ref;
+    }
+
+    public string weather_grid4 () {
+        return grid4;
+    }
+
+    public string weather_grid6 () {
+        return grid6;
     }
 
     public Spot.from_add_spot (

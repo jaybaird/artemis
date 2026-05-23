@@ -41,7 +41,34 @@ internal sealed class WeatherCacheEntry : Object {
     }
 }
 
-public sealed class WeatherClient : Object {
+public interface WeatherProvider : Object {
+    public abstract async WeatherData fetch_weather (Coordinate coord, string units) throws Error;
+}
+
+public interface WeatherUnitsProvider : Object {
+    public abstract string get_weather_units ();
+}
+
+public interface WeatherSpotDetails : Object {
+    public abstract string weather_park_ref ();
+    public abstract string weather_grid4 ();
+    public abstract string weather_grid6 ();
+}
+
+public sealed class SettingsWeatherUnitsProvider : Object, WeatherUnitsProvider {
+    private Settings settings;
+
+    public SettingsWeatherUnitsProvider (Settings settings) {
+        Object ();
+        this.settings = settings;
+    }
+
+    public string get_weather_units () {
+        return settings.get_boolean ("use-metric") ? "metric" : "imperial";
+    }
+}
+
+public sealed class WeatherClient : Object, WeatherProvider {
     private const string BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
     private Soup.Session session;
 
@@ -134,23 +161,25 @@ public sealed class WeatherClient : Object {
 public sealed class WeatherCache : Object {
     private const int64 CACHE_TTL_SECONDS = 4 * 60 * 60;
 
-    private WeatherClient client;
+    private WeatherProvider client;
+    private WeatherUnitsProvider units_provider;
     private HashMap<string, WeatherCacheEntry> memory_cache;
     private string cache_path;
     private bool cache_loaded = false;
 
-    public WeatherCache () {
-        client = new WeatherClient ();
+    public WeatherCache (
+        WeatherUnitsProvider units_provider,
+        WeatherProvider? client = null,
+        string? cache_path = null
+    ) {
+        this.units_provider = units_provider;
+        this.client = client ?? new WeatherClient ();
         memory_cache = new HashMap<string, WeatherCacheEntry> ();
-        cache_path = Path.build_filename (
+        this.cache_path = cache_path ?? Path.build_filename (
             Environment.get_user_cache_dir (),
             "artemis",
             "weather-cache.ini"
         );
-    }
-
-    private static string current_units () {
-        return Application.settings.get_boolean ("use-metric") ? "metric" : "imperial";
     }
 
     private static string normalize_grid4 (string grid) throws Error {
@@ -163,17 +192,17 @@ public sealed class WeatherCache : Object {
         return normalized.substring (0, 4);
     }
 
-    private static string grid4_for_spot (Spot spot) throws Error {
-        var grid4 = (spot.grid4 ?? "").strip ();
+    private static string grid4_for_spot (WeatherSpotDetails spot) throws Error {
+        var grid4 = (spot.weather_grid4 () ?? "").strip ();
         if (grid4 != "")
             return normalize_grid4 (grid4);
 
-        var grid6 = (spot.grid6 ?? "").strip ();
+        var grid6 = (spot.weather_grid6 () ?? "").strip ();
         if (grid6.length >= 4)
             return normalize_grid4 (grid6.substring (0, 4));
 
         throw new WeatherError.INVALID_REQUEST ("Spot %s has no usable grid square for weather lookups".printf (
-                spot.park_ref
+                spot.weather_park_ref ()
             )
         );
     }
@@ -280,11 +309,10 @@ public sealed class WeatherCache : Object {
         }
     }
 
-    public async WeatherData get_weather_for_spot (Spot spot) throws Error {
+    public async WeatherData get_weather_for_grid4 (string grid4) throws Error {
         load_cache_from_disk ();
 
-        var grid4 = grid4_for_spot (spot);
-        var units = current_units ();
+        var units = units_provider.get_weather_units ();
         var cache_key = cache_key_for (grid4, units);
         var cached_entry = memory_cache.get (cache_key);
         var now = now_unix ();
@@ -298,5 +326,9 @@ public sealed class WeatherCache : Object {
         persist_cache_to_disk ();
 
         return data;
+    }
+
+    public async WeatherData get_weather_for_spot (WeatherSpotDetails spot) throws Error {
+        return yield get_weather_for_grid4 (grid4_for_spot (spot));
     }
 }

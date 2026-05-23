@@ -107,7 +107,7 @@ else
   vala_args = ['--pkg=RadioControl', '--vapidir='+srcdir]
 endif
 
-executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
+artemis_exe = executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
   dependencies: artemis_vala_deps,
   vala_args: vala_args,
   include_directories: src_inc,
@@ -116,6 +116,45 @@ executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + w
   win_subsystem: is_windows ? 'windows' : 'console',
   install: true,
 )
+
+if not is_windows
+  valgrind = find_program('valgrind', required: false)
+  if valgrind.found()
+    valgrind_env = environment()
+    valgrind_env.set('G_DEBUG', 'gc-friendly')
+    valgrind_env.set('G_SLICE', 'always-malloc')
+    valgrind_env.set('GSETTINGS_SCHEMA_DIR', meson.project_build_root() / 'data')
+
+    run_target(
+      'valgrind-memcheck',
+      command: [
+        valgrind,
+        '--tool=memcheck',
+        '--leak-check=full',
+        '--show-leak-kinds=definite,indirect,possible',
+        '--track-origins=yes',
+        '--num-callers=40',
+        '--log-file=' + meson.project_build_root() / 'valgrind-artemis-%p.log',
+        artemis_exe,
+      ],
+      env: valgrind_env,
+    )
+
+    run_target(
+      'valgrind-massif',
+      command: [
+        valgrind,
+        '--tool=massif',
+        '--time-unit=ms',
+        '--detailed-freq=100',
+        '--max-snapshots=200',
+        '--massif-out-file=' + meson.project_build_root() / 'massif-artemis-%p.out',
+        artemis_exe,
+      ],
+      env: valgrind_env,
+    )
+  endif
+endif
 
 if not is_windows
   gnome.post_install(

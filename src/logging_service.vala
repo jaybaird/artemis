@@ -11,6 +11,16 @@ public errordomain LoggingError {
 
 public interface QsoStore : Object {
     public abstract bool add_qso_from_spot (Spot spot, out Error? error);
+    public abstract bool update_qso_delivery_status (
+        Spot spot,
+        bool local_adif_saved,
+        bool pota_posted,
+        bool qrz_uploaded,
+        string? local_adif_error,
+        string? pota_error,
+        string? qrz_error,
+        out Error? error
+    );
 }
 
 public interface PotaSpotPoster : Object {
@@ -217,7 +227,7 @@ public sealed class LoggingService : Object {
             }
         }
 
-        return new LoggingResult (
+        var result = new LoggingResult (
             true,
             local_adif_saved,
             pota_posted,
@@ -226,6 +236,25 @@ public sealed class LoggingService : Object {
             pota_error,
             qrz_error
         );
+
+        Error? status_error = null;
+        if (!qso_store.update_qso_delivery_status (
+            spot,
+            result.local_adif_saved,
+            result.pota_posted,
+            result.qrz_uploaded,
+            result.local_adif_error,
+            result.pota_error,
+            result.qrz_error,
+            out status_error
+        )) {
+            warning (
+                "Unable to update QSO delivery status: %s",
+                status_error != null ? status_error.message : "unknown error"
+            );
+        }
+
+        return result;
     }
 
     public bool has_completed_logged_adif (string key) {

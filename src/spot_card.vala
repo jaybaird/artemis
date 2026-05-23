@@ -75,12 +75,28 @@ public sealed class AddSpot : Adw.Dialog {
     [GtkChild] private unowned Adw.EntryRow frequency;
     [GtkChild] private unowned Adw.ComboRow mode;
     [GtkChild] private unowned Adw.EntryRow park_ref;
+    [GtkChild] private unowned Adw.ActionRow park_details_row;
     [GtkChild] private unowned Adw.EntryRow rst_sent;
     [GtkChild] private unowned Adw.EntryRow rst_received;
     [GtkChild] private unowned Adw.EntryRow spotter_comments;
 
     [GtkChild] private unowned Gtk.Button cancel_button;
+    [GtkChild] private unowned Gtk.Button lookup_park_button;
+    [GtkChild] private unowned Gtk.Button retry_qrz_button;
     [GtkChild] private unowned Gtk.Button submit_button;
+
+    public signal void qso_changed ();
+
+    private int64 edit_qso_id = 0;
+    private DateTime? edit_spot_time = null;
+    private bool edit_local_adif_saved = false;
+    private bool edit_pota_spotted = false;
+    private bool edit_qrz_uploaded = false;
+    private string? edit_local_adif_error = null;
+    private string? edit_pota_error = null;
+    private string? edit_qrz_error = null;
+    private bool edit_missing_park_name = false;
+    private bool park_lookup_in_progress = false;
 
     public AddSpot () {
         Object ();
@@ -112,8 +128,42 @@ public sealed class AddSpot : Adw.Dialog {
         activator_callsign.editable = false;
         park_ref.text = spot.park_ref;
         park_ref.editable = false;
+        Application.park_details_cache.seed (
+            spot.park_ref,
+            spot.park_name,
+            spot.location_desc
+        );
+        set_park_details (spot.park_name);
         frequency.text = format_frequency_khz (spot.frequency_khz);
         select_mode (spot.mode);
+    }
+
+    public AddSpot.from_qso (QsoRow qso) {
+        Object ();
+
+        title = _("Edit QSO");
+        submit_button.label = _("Save");
+
+        edit_qso_id = qso.id;
+        edit_spot_time = parse_qso_time (qso.created_utc) ?? new DateTime.now_utc ();
+        edit_local_adif_saved = qso.local_adif_saved;
+        edit_pota_spotted = qso.pota_spotted;
+        edit_qrz_uploaded = qso.qrz_uploaded;
+        edit_local_adif_error = qso.local_adif_error;
+        edit_pota_error = qso.pota_error;
+        edit_qrz_error = qso.qrz_error;
+        edit_missing_park_name = (qso.park_name ?? "").strip () == "";
+
+        activator_callsign.text = qso.callsign ?? "";
+        spotter_callsign.text = qso.spotter ?? Application.settings.get_string ("callsign");
+        park_ref.text = qso.park_ref ?? "";
+        Application.park_details_cache.seed (park_ref.text, qso.park_name);
+        set_park_details (qso.park_name);
+        frequency.text = format_frequency_khz (qso.frequency_khz);
+        spotter_comments.text = qso.spotter_comment ?? "";
+        select_mode (qso.mode ?? Application.settings.get_string ("default-mode"));
+
+        retry_qrz_button.visible = can_retry_qrz ();
     }
 
     public AddSpot.with_frequency (double frequency_khz) {
@@ -132,26 +182,27 @@ public sealed class AddSpot : Adw.Dialog {
             this.close ();
         });
 
-        submit_button.clicked.connect (() => {
-            string selected_mode = ((Gtk.StringList) mode.get_model ()).get_string (
-                mode.selected
-            );
-            var spot = new Spot.from_add_spot (
-                activator_callsign.text,
-                park_ref.text,
-                new DateTime.now_utc (),
-                frequency.text,
-                selected_mode,
-                spotter_callsign.text,
-                spotter_comments.text,
-                rst_sent.text,
-                rst_received.text);
+        lookup_park_button.clicked.connect (() => lookup_park_details ());
+        retry_qrz_button.clicked.connect (() => retry_qrz_upload ());
 
+        park_ref.changed.connect (() => {
+            var cached_details = Application.park_details_cache.peek (park_ref.text);
+            set_park_details (cached_details != null ? cached_details.name : null);
+        });
+
+        submit_button.clicked.connect (() => {
             submit_button.sensitive = false;
+            if (edit_qso_id > 0) {
+                save_edited_qso ();
+                return;
+            }
+
+            var spot = build_spot (new DateTime.now_utc ());
             Application.logging_service.submit_spot_qso.begin (spot, true, (obj, res) => {
                 try {
                     var result = Application.logging_service.submit_spot_qso.end (res);
                     this.close ();
+                    qso_changed ();
                     Application.show_toast (_("QSO saved"));
                     if (result.pota_posted)
                         Application.show_toast (_("Spot posted"));
@@ -171,6 +222,146 @@ public sealed class AddSpot : Adw.Dialog {
         });
     }
 
+    private bool can_retry_qrz () {
+        return edit_qso_id > 0 &&
+            !edit_qrz_uploaded &&
+            (edit_qrz_error ?? "").strip () != "" &&
+            Application.logging_service.preferences.enable_qrz_logging &&
+            Application.logging_service.preferences.qrz_api_key != "";
+    }
+
+    private void set_park_details (string? park_name) {
+        var display_name = (park_name ?? "").strip ();
+        park_details_row.subtitle = display_name;
+        park_details_row.visible = display_name != "";
+        update_lookup_park_button_state ();
+    }
+
+    private void update_lookup_park_button_state () {
+        lookup_park_button.visible = park_ref.text.strip () != "" && !park_details_row.visible;
+        if (!park_lookup_in_progress)
+            lookup_park_button.sensitive = lookup_park_button.visible;
+    }
+
+    private Spot build_spot (DateTime spot_time) {
+        string selected_mode = ((Gtk.StringList) mode.get_model ()).get_string (mode.selected);
+        return new Spot.from_add_spot (
+            activator_callsign.text,
+            park_ref.text,
+            spot_time,
+            frequency.text,
+            selected_mode,
+            spotter_callsign.text,
+            spotter_comments.text,
+            rst_sent.text,
+            rst_received.text
+        );
+    }
+
+    private void save_edited_qso () {
+        Error? error = null;
+        var spot = build_spot (edit_spot_time ?? new DateTime.now_utc ());
+        if (!Application.spot_database.update_qso_from_spot (edit_qso_id, spot, out error)) {
+            submit_button.sensitive = true;
+            present_logging_error (error != null ? error.message : _("Unable to save QSO"));
+            return;
+        }
+
+        qso_changed ();
+        Application.show_toast (_("QSO saved"));
+        this.close ();
+    }
+
+    private void retry_qrz_upload () {
+        retry_qrz_button.sensitive = false;
+        submit_button.sensitive = false;
+
+        var spot = build_spot (edit_spot_time ?? new DateTime.now_utc ());
+        Error? save_error = null;
+        if (!Application.spot_database.update_qso_from_spot (edit_qso_id, spot, out save_error)) {
+            retry_qrz_button.sensitive = true;
+            submit_button.sensitive = true;
+            present_logging_error (save_error != null ? save_error.message : _("Unable to save QSO"));
+            return;
+        }
+
+        Application.qrz_client.upload_spot_qso.begin (spot, (obj, res) => {
+            try {
+                Application.qrz_client.upload_spot_qso.end (res);
+                edit_qrz_uploaded = true;
+                edit_qrz_error = null;
+                update_delivery_status (spot);
+                retry_qrz_button.visible = false;
+                qso_changed ();
+                Application.show_toast (_("Uploaded QSO to QRZ"));
+            } catch (Error err) {
+                edit_qrz_error = err.message;
+                update_delivery_status (spot);
+                retry_qrz_button.sensitive = true;
+                present_qrz_error (err.message);
+            } finally {
+                submit_button.sensitive = true;
+            }
+        });
+    }
+
+    private void lookup_park_details () {
+        park_lookup_in_progress = true;
+        lookup_park_button.sensitive = false;
+        var reference = park_ref.text.strip ();
+
+        Application.park_details_cache.get_details.begin (reference, (obj, res) => {
+            try {
+                var details = Application.park_details_cache.get_details.end (res);
+                set_park_details (details.name);
+
+                if (edit_qso_id > 0) {
+                    Error? db_error = null;
+                    if (!Application.spot_database.add_park (
+                        details.reference,
+                        details.name,
+                        null,
+                        details.location_desc,
+                        null,
+                        null,
+                        0,
+                        out db_error
+                    )) {
+                        throw db_error ?? new IOError.FAILED ("Unable to save park details");
+                    }
+
+                    qso_changed ();
+                }
+
+                lookup_park_button.visible = false;
+                Application.show_toast (_("Park details updated"));
+            } catch (Error err) {
+                present_logging_error (err.message);
+            }
+            park_lookup_in_progress = false;
+            update_lookup_park_button_state ();
+        });
+    }
+
+    private void update_delivery_status (Spot spot) {
+        Error? error = null;
+        if (!Application.spot_database.update_qso_delivery_status (
+            spot,
+            edit_local_adif_saved,
+            edit_pota_spotted,
+            edit_qrz_uploaded,
+            edit_local_adif_error,
+            edit_pota_error,
+            edit_qrz_error,
+            out error
+        )) {
+            warning (
+                "Unable to update QSO delivery status: %s",
+                error != null ? error.message : "unknown error"
+            );
+        }
+    }
+
     private void select_mode (string mode_name) {
         var model = mode.get_model () as Gtk.StringList;
         if (model == null)
@@ -183,6 +374,12 @@ public sealed class AddSpot : Adw.Dialog {
                 return;
             }
         }
+    }
+
+    private static DateTime? parse_qso_time (string? iso_utc) {
+        if ((iso_utc ?? "").strip () == "")
+            return null;
+        return new DateTime.from_iso8601 (iso_utc, new TimeZone.utc ());
     }
 } /* class AddSpot */
 
@@ -207,7 +404,7 @@ public sealed class SpotCard : Gtk.Box {
     private unowned Gtk.Label grid_square;
 
     [GtkChild]
-    private unowned BandStrip band_strip;
+    private unowned Gtk.Image band_dot;
 
     [GtkChild]
     private unowned Gtk.Label frequency;
@@ -274,7 +471,7 @@ public sealed class SpotCard : Gtk.Box {
         grid_square.label = grid;
         grid_square.visible = grid != "";
 
-        band_strip.band = spot.band;
+        sync_band_dot_css (spot.band);
         frequency.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));
         mode.label = spot.mode;
         time.label = humanize_ago (spot.spot_time);
@@ -303,6 +500,14 @@ public sealed class SpotCard : Gtk.Box {
     private void update_tune_button_state () {
         tune_button.visible = Application.is_radio_configured;
         tune_button.sensitive = Application.radio_control.is_rig_connected;
+    }
+
+    private void sync_band_dot_css (string band) {
+        foreach (var known_band in RadioConstants.BANDS) {
+            band_dot.remove_css_class ("band-dot-%s".printf (known_band.down ()));
+        }
+
+        band_dot.add_css_class ("band-dot-%s".printf (band.down ()));
     }
 
     private void on_tune_clicked () {

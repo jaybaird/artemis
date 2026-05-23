@@ -81,6 +81,12 @@ template $AddSpot : Adw.Dialog {
         }
       }
 
+      Adw.ActionRow park_details_row {
+        title: _("Park");
+        visible: false;
+        activatable: false;
+      }
+
       Adw.EntryRow rst_sent {
         title: _("RST Sent");
         accessibility {
@@ -116,6 +122,24 @@ template $AddSpot : Adw.Dialog {
         label: _("Cancel");
         accessibility {
           label: _("Cancel");
+          role-description: _("button");
+        }
+      }
+
+      Button lookup_park_button {
+        label: _("Lookup Park");
+        visible: false;
+        accessibility {
+          label: _("Lookup Park");
+          role-description: _("button");
+        }
+      }
+
+      Button retry_qrz_button {
+        label: _("Send to QRZ");
+        visible: false;
+        accessibility {
+          label: _("Send to QRZ");
           role-description: _("button");
         }
       }

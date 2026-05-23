@@ -108,6 +108,12 @@
         <range min="1" max="65535"/>
         </key>
 
+        <key name="enable-wsjtx-integration" type="b">
+        <default>false</default>
+        <summary>Enable WSJT-X integration</summary>
+        <description>Listen for WSJT-X UDP packets for logged contacts and heard spots.</description>
+        </key>
+
         <key name="wsjtx-listen-ip" type="s">
         <default>"127.0.0.1"</default>
         <summary>WSJT-X listen IP</summary>
@@ -190,13 +196,13 @@
         <key name="enable-local-adif-log" type="b">
         <default>true</default>
         <summary>Enable local ADIF log</summary>
-        <description>Save spotted QSOs to a local ADIF recovery log.</description>
+        <description>Enable local ADIF log.</description>
         </key>
 
         <key name="local-adif-log-path" type="s">
         <default>""</default>
         <summary>Local ADIF log path</summary>
-        <description>Optional custom path for the local ADIF recovery log.</description>
+        <description>Path for the local ADIF log</description>
         </key>
 
         <key name="window-width" type="i">

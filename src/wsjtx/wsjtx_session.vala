@@ -46,7 +46,6 @@ namespace Artemis.Wsjtx {
         public string client_revision { get; private set; default = ""; }
         public string status_label { get; private set; default = ""; }
         public string status_subtitle { get; private set; default = ""; }
-        public string status_detail { get; private set; default = ""; }
 
         public signal void status_changed ();
         public signal void decode_received (DecodePacket packet);
@@ -66,6 +65,7 @@ namespace Artemis.Wsjtx {
             logged_adif_handler.user_message.connect ((message) => {
                 Application.show_toast (message);
             });
+            Application.settings.changed["enable-wsjtx-integration"].connect (restart_listener);
             Application.settings.changed["wsjtx-listen-ip"].connect (restart_listener);
             Application.settings.changed["wsjtx-listen-port"].connect (restart_listener);
             restart_listener ();
@@ -79,6 +79,16 @@ namespace Artemis.Wsjtx {
         private void restart_listener () {
             stop_listener ();
 
+            if (!Application.settings.get_boolean ("enable-wsjtx-integration")) {
+                set_status (
+                    false,
+                    false,
+                    _("Inactive"),
+                    _("WSJT-X integration disabled")
+                );
+                return;
+            }
+
             var ip_text = Application.settings.get_string ("wsjtx-listen-ip").strip ();
             var port = Application.settings.get_int ("wsjtx-listen-port");
 
@@ -87,8 +97,7 @@ namespace Artemis.Wsjtx {
                     false,
                     false,
                     _("Inactive"),
-                    _("Not listening"),
-                    _("Enter a listen IP to enable the WSJT-X UDP listener.")
+                    _("Not listening: enter a valid listen IP.")
                 );
                 return;
             }
@@ -99,8 +108,7 @@ namespace Artemis.Wsjtx {
                     false,
                     false,
                     _("Listener error"),
-                    _("Unable to listen"),
-                    _("The configured WSJT-X listen IP is not a valid IP address.")
+                    _("Unable to listen: the listen IP is not a valid IP address.")
                 );
                 return;
             }
@@ -121,8 +129,7 @@ namespace Artemis.Wsjtx {
                     listening,
                     false,
                     _("Listener error"),
-                    _("Receive error"),
-                    err.message
+                    _("Receive error: %s".printf (err.message))
                 );
             });
 
@@ -134,8 +141,7 @@ namespace Artemis.Wsjtx {
                     true,
                     false,
                     _("Listening"),
-                    _("Waiting for packets"),
-                    listener_detail (configured_address.is_multicast, ip_text, port)
+                    _("Waiting for packets")
                 );
             } catch (Error err) {
                 last_error_message = err.message;
@@ -144,8 +150,7 @@ namespace Artemis.Wsjtx {
                     false,
                     false,
                     _("Listener error"),
-                    _("Unable to listen"),
-                    err.message
+                    _("Unable to listen: %s".printf (err.message))
                 );
             }
         }
@@ -191,8 +196,7 @@ namespace Artemis.Wsjtx {
                     listening,
                     false,
                     _("Listening"),
-                    _("Waiting for packets"),
-                    last_packet_detail ()
+                    _("Waiting for packets")
                 );
                 return Source.REMOVE;
             });
@@ -234,8 +238,7 @@ namespace Artemis.Wsjtx {
                 true,
                 true,
                 _("Connected"),
-                connected_subtitle (),
-                connected_detail ()
+                connected_subtitle ()
             );
         }
 
@@ -246,27 +249,6 @@ namespace Artemis.Wsjtx {
             }
 
             return _("Connected to WSJT-X");
-        }
-
-        private string connected_detail () {
-            return "";
-        }
-
-        private string last_packet_detail () {
-            var source_text = last_sender != "" ? last_sender : _("Unknown");
-            var version_text = version_display ();
-            if (version_text != "") {
-                return _("Listening on %s. Last heartbeat: %s from %s.").printf (
-                    endpoint_description (),
-                    version_text,
-                    source_text
-                );
-            }
-
-            return _("Listening on %s. Last packet source: %s.").printf (
-                endpoint_description (),
-                source_text
-            );
         }
 
         private string version_display () {
@@ -281,12 +263,6 @@ namespace Artemis.Wsjtx {
                 return revision;
 
             return "%s (%s)".printf (version, revision);
-        }
-
-        private string endpoint_description () {
-            var ip_text = Application.settings.get_string ("wsjtx-listen-ip").strip ();
-            var port = Application.settings.get_int ("wsjtx-listen-port");
-            return "%s:%d".printf (ip_text, port);
         }
 
         private void handle_decode (DecodePacket decode) {
@@ -334,32 +310,16 @@ namespace Artemis.Wsjtx {
             last_selected_tx_callsign = callsign;
         }
 
-        private string listener_detail (bool multicast, string ip_text, int port) {
-            if (multicast) {
-                return _("Joined multicast group %s on UDP port %d.").printf (
-                    ip_text,
-                    port
-                );
-            }
-
-            return _("Listening for WSJT-X UDP packets on %s:%d.").printf (
-                ip_text,
-                port
-            );
-        }
-
         private void set_status (
             bool listening,
             bool connected,
             string label,
-            string subtitle,
-            string detail
+            string subtitle
         ) {
             this.listening = listening;
             this.connected = connected;
             status_label = label;
             status_subtitle = subtitle;
-            status_detail = detail;
             status_changed ();
         }
     }

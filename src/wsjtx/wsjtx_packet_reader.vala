@@ -27,7 +27,7 @@ namespace Artemis.Wsjtx {
         private size_t total_length = 0;
 
         public PacketReader (uint8[] datagram) {
-            memory = new MemoryInputStream.from_data (datagram, null);
+            memory = new MemoryInputStream.from_data (datagram);
             input = new DataInputStream (memory);
             input.byte_order = DataStreamByteOrder.BIG_ENDIAN;
             total_length = datagram.length;

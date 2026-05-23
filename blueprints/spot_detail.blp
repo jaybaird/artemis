@@ -52,8 +52,8 @@ template $SpotDetail : Box {
         hscrollbar-policy: never;
 
           Adw.Clamp {
-            maximum-size: 400;
-            tightening-threshold: 300;
+            maximum-size: 360;
+            tightening-threshold: 320;
 
             Box {
               orientation: vertical;
@@ -84,7 +84,6 @@ template $SpotDetail : Box {
                 halign: center;
                 wrap: true;
                 wrap-mode: word_char;
-                max-width-chars: 32;
                 justify: center;
                 styles ["title-2"]
               }

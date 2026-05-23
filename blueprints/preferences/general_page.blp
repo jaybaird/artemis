@@ -1,0 +1,165 @@
+/* blueprints/preferences/general_page.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+StringList bands_model {
+  strings ["All", "160m","80m","60m","40m","30m","20m","17m","15m","12m","10m","6m","2m","70cm"]
+}
+
+StringList modes_model {
+  strings [
+    _("All"),
+    _("SSB"),
+    _("CW"),
+    _("FT8"),
+    _("FT4"),
+    _("FM"),
+    _("AM"),
+    _("RTTY"),
+    _("JT65"),
+  ]
+}
+
+template $GeneralPreferencesPage : Adw.PreferencesPage {
+  title: _("General");
+  icon-name: "emblem-system-symbolic";
+
+  Adw.PreferencesGroup identity_group {
+    title: _("Identity");
+
+    Adw.EntryRow row_callsign {
+      title: _("Callsign");
+      accessibility {
+        label: _("Callsign");
+        role-description: _("text entry");
+      }
+    }
+
+    Adw.EntryRow row_location {
+      title: _("Location");
+      accessibility {
+        label: _("Location");
+        role-description: _("text entry");
+      }
+    }
+
+    Adw.EntryRow row_spot_message {
+      title: _("Default Spot Message");
+      accessibility {
+        label: _("Default Spot Message");
+        role-description: _("text entry");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup spots_group {
+    title: _("Spots");
+
+    Adw.SpinRow row_update_interval {
+      title: _("Update Interval (in seconds)");
+      digits: 0;
+      climb-rate: 5.0;
+      accessibility {
+        label: _("Update Interval");
+        role-description: _("spin button");
+      }
+      adjustment: Adjustment {
+          step-increment: 10;
+          lower: 60;
+          upper: 3600;
+          value: 60;
+      };
+    }
+
+    Adw.ComboRow row_default_band {
+      title: _("Default Band");
+      model: bands_model;
+      accessibility {
+        label: _("Default Band");
+        role-description: _("combo box");
+      }
+    }
+
+    Adw.ComboRow row_default_mode {
+      title: _("Default Mode");
+      model: modes_model;
+      accessibility {
+        label: _("Default Mode");
+        role-description: _("combo box");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup {
+    title: _("Display Options");
+
+    Adw.SwitchRow row_use_metric {
+      title: _("Metric Units");
+      subtitle: _("Use metric units for distance calculations and in the map window");
+      accessibility {
+        label: _("Metric Units");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.SwitchRow row_show_scale {
+      title: _("Map Scale");
+      subtitle: _("Show unit scale on map window");
+      accessibility {
+        label: _("Map Scale");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.SwitchRow row_highlight_unhunted {
+      title: _("Highlight Unhunted Parks");
+      subtitle: _("Show visual highlighting for parks you haven't hunted before");
+      accessibility {
+        label: _("Highlight Unhunted Parks");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.SwitchRow row_hide_qrt {
+      title: _("Hide QRT");
+      subtitle: _("Hide stations that have marked themselves QRT");
+      accessibility {
+        label: _("Hide QRT");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.SwitchRow row_hide_hunted {
+      title: _("Hide Hunted");
+      subtitle: _("Hide parks you've hunted today");
+      accessibility {
+        label: _("Hide Hunted");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.SpinRow row_hide_older_than {
+      title: _("Hide Stale");
+      subtitle: _("Hide parks that haven't been updated in a while (in minutes)");
+      accessibility {
+        label: _("Hide Stale");
+        role-description: _("spin button");
+      }
+
+      digits: 0;
+      climb-rate: 5.0;
+      adjustment: Adjustment {
+          step-increment: 5;
+          lower: 20;
+          upper: 60;
+          value: 30;
+      };
+    }
+  }
+}

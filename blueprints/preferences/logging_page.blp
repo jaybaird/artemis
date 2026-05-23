@@ -1,0 +1,100 @@
+/* blueprints/preferences/logging_page.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $LoggingPreferencesPage : Adw.PreferencesPage {
+  title: _("Logging");
+  icon-name: "user-bookmarks-symbolic";
+
+  Adw.PreferencesGroup {
+    title: _("Import POTA.app Log");
+    description: _("(available from POTA App My Stats page)");
+
+    Adw.ActionRow import_file_row {
+      title: _("Import file");
+      activatable: true;
+      subtitle: _("Click to select a CSV file to import");
+      accessibility {
+        label: _("Import file");
+        role-description: _("action row");
+      }
+
+      Image {
+        icon-name: "document-open-symbolic";
+        styles ["dim-label"]
+        accessibility {
+          label: _("Open File");
+          role-description: _("icon");
+        }
+      }
+    }
+
+    Adw.ButtonRow import_log {
+      title: _("Import");
+      tooltip-text: _("Import hunted parks to logbook");
+      end-icon-name: "list-add-symbolic";
+      accessibility {
+        label: _("Import");
+        role-description: _("button");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup {
+    title: _("External Logging");
+    description: _("Configure logging to online logbooks");
+
+    Adw.SwitchRow row_enable_logging {
+      title: _("Enable Logging");
+      subtitle: _("Automatically log QSOs when spotting");
+      accessibility {
+        label: _("Enable Logging");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.PasswordEntryRow row_qrz_api_key {
+      title: _("QRZ API Key");
+      accessibility {
+        label: _("QRZ API Key");
+        role-description: _("password entry");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup logbook_logging_group {
+    title: _("Backup Logging");
+
+    Adw.SwitchRow row_enable_local_adif_log {
+      title: _("Enable backup logging");
+      accessibility {
+        label: _("Local ADIF Log");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.ActionRow row_local_adif_log_path {
+      title: _("Log Path");
+      activatable: true;
+      accessibility {
+        label: _("Log Path");
+        role-description: _("action row");
+      }
+
+      Image {
+        icon-name: "document-open-symbolic";
+        styles ["dim-label"]
+        accessibility {
+          label: _("Choose File");
+          role-description: _("icon");
+        }
+      }
+    }
+  }
+}

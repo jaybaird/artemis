@@ -50,9 +50,7 @@ template $AppWindow : Adw.ApplicationWindow {
       enable-show-gesture: true;
       enable-hide-gesture: true;
       min-sidebar-width: 320;
-      max-sidebar-width: 360;
-      sidebar-width-fraction: 0.28;
-      sidebar-width-unit: sp;
+      max-sidebar-width: 400;
       sidebar-position: end;
 
       [content] 
@@ -113,15 +111,6 @@ template $AppWindow : Adw.ApplicationWindow {
                       role-description: _("toggle button");
                     }
                   }
-                }
-              }
-
-              Button astronomy_button {
-                icon-name: "sun-outline-symbolic";
-                tooltip-text: _("Astronomy");
-                accessibility {
-                  label: _("Astronomy");
-                  role-description: _("button");
                 }
               }
 
@@ -262,6 +251,11 @@ menu menu_app {
     item {
       label: _("Refresh");
       action: "app.refresh";
+    }
+
+    item {
+      label: _("Logbook");
+      action: "app.logbook";
     }
   }
 

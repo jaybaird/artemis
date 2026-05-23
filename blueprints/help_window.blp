@@ -26,56 +26,72 @@ template $HelpWindow : Adw.Window {
   default-width: 1080;
   default-height: 760;
 
-  Adw.ToolbarView {
-    [top]
-    Adw.HeaderBar {
-      title-widget: Adw.WindowTitle {
-        title: _("Artemis Help");
-      };
+  Adw.OverlaySplitView {
+    sidebar-position: start;
 
-      [end]
-      SearchEntry search_entry {
-        width-request: 320;
-        placeholder-text: _("Search Help");
+    [sidebar]
+    Adw.ToolbarView {
+      vexpand: true;
+      styles ["sidebar"]
+
+      [top]
+      Adw.HeaderBar {
+        show-end-title-buttons: false;
+
+        title-widget: Adw.WindowTitle {
+          title: _("Artemis Help");
+        };
       }
+
+      content: ScrolledWindow {
+        hscrollbar-policy: never;
+        min-content-width: 320;
+        margin-start: 12;
+        margin-end: 12;
+        margin-top: 12;
+        margin-bottom: 12;
+        vexpand: true;
+
+        child: ListBox article_list {
+          selection-mode: browse;
+        };
+      };
     }
 
-    content: Paned {
-      orientation: horizontal;
-      vexpand: true;
-      shrink-start-child: false;
-      shrink-end-child: false;
-      position: 360;
-      wide-handle: true;
+    [content]
+    Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        show-start-title-buttons: false;
 
-      start-child: Adw.Bin {
-        vexpand: true;
-        styles ["sidebar"]
+        title-widget: Box {
+        };
 
-        ScrolledWindow {
-          hscrollbar-policy: never;
-          min-content-width: 320;
-          vexpand: true;
-
-          child: ListBox article_list {
-            selection-mode: browse;
-          };
+        [end]
+        SearchEntry search_entry {
+          width-request: 320;
+          placeholder-text: _("Search Help");
         }
-      };
+      }
 
-      end-child: ScrolledWindow {
+      content: ScrolledWindow {
         hscrollbar-policy: never;
         vexpand: true;
 
-        child: Box article_body {
-          orientation: vertical;
-          spacing: 16;
-          margin-top: 24;
-          margin-bottom: 24;
-          margin-start: 24;
-          margin-end: 24;
+        child: Adw.Clamp {
+          maximum-size: 720;
+          tightening-threshold: 520;
+
+          Box article_body {
+            orientation: vertical;
+            spacing: 16;
+            margin-top: 24;
+            margin-bottom: 24;
+            margin-start: 24;
+            margin-end: 24;
+          }
         };
       };
-    };
+    }
   }
 }

@@ -70,12 +70,16 @@ public sealed class LeftSidebar : Gtk.Box {
     private unowned Gtk.Image rx_light;
 
     [GtkChild]
+    private unowned Gtk.Image data_light;
+
+    [GtkChild]
     private unowned Gtk.Label radio_mode;
 
     private Gtk.ToggleButton? band_group_leader = null;
     private HashMap<string, Gtk.ToggleButton> band_buttons;
     private ulong mode_handler = 0;
     private ulong program_handler = 0;
+    private ulong data_status_handler = 0;
     private bool syncing_mode_model = false;
     private bool syncing_program_model = false;
 
@@ -129,6 +133,11 @@ public sealed class LeftSidebar : Gtk.Box {
                 return;
             program_changed (idx > 0 ? model.get_string (idx) : null);
         });
+
+        data_status_handler = Application.wsjtx_session.status_changed.connect (() => {
+            set_data_active (Application.wsjtx_session.connected);
+        });
+        set_data_active (Application.wsjtx_session.connected);
     }
 
     public void update_mode_model (Gtk.StringList model, string? current_filter) {
@@ -229,6 +238,16 @@ public sealed class LeftSidebar : Gtk.Box {
             rx_light.add_css_class ("active");
         else
             rx_light.remove_css_class ("active");
+    }
+
+    public void set_data_active (bool active) {
+        if (active) {
+            data_light.add_css_class ("pulse-green");
+            data_light.tooltip_text = _("WSJT-X connected…");
+        } else {
+            data_light.remove_css_class ("pulse-green");
+            data_light.tooltip_text = "";
+        }
     }
 
     public void set_power_button_active (bool active) {

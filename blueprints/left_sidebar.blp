@@ -194,6 +194,25 @@ template $LeftSidebar : Box {
                 }
               }
 
+              Box data_indicator {
+                orientation: horizontal;
+                spacing: 2;
+
+                Image data_light {
+                  valign: center;
+                  icon-name: "big-dot-symbolic";
+                  styles ["radio-activity-light"]
+                  accessibility {
+                    label: _("Data Active");
+                    role-description: _("Indicator");
+                  }
+                }
+
+                Label {
+                  label: _("Data");
+                }
+              }
+
               Box {
                 hexpand: true;
               }

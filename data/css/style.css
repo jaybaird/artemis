@@ -1,8 +1,3 @@
-scrollbar.hover,
-scrollbar {
-    margin-left: 2px;
-}
-
 :root {
     --band-all-color: var(--light-1);
     --band-160m-color: #7cfc00;
@@ -18,20 +13,6 @@ scrollbar {
     --band-6m-color: #ff0000;
     --band-2m-color: #4ade80;
     --band-70cm-color: #999900;
-}
-
-scrollbar trough {
-    min-width: 5pt;
-}
-
-scrollbar button {
-    min-height: 5pt;
-    min-width: 5pt;
-}
-
-scrollbar.right slider {
-    min-height: 70pt;
-    min-width: 5pt;
 }
 
 .map-marker-all {
@@ -87,6 +68,62 @@ scrollbar.right slider {
 }
 
 .map-marker-70cm {
+    color: var(--band-70cm-color);
+}
+
+.band-dot-all {
+    color: var(--band-all-color);
+}
+
+.band-dot-160m {
+    color: var(--band-160m-color);
+}
+
+.band-dot-80m {
+    color: var(--band-80m-color);
+}
+
+.band-dot-60m {
+    color: var(--band-60m-color);
+}
+
+.band-dot-40m {
+    color: var(--band-40m-color);
+}
+
+.band-dot-30m {
+    color: var(--band-30m-color);
+}
+
+.band-dot-20m {
+    color: var(--band-20m-color);
+}
+
+.band-dot-17m {
+    color: var(--band-17m-color);
+}
+
+.band-dot-15m {
+    color: var(--band-15m-color);
+}
+
+.band-dot-12m {
+    color: var(--band-12m-color);
+}
+
+.band-dot-10m {
+    color: var(--band-10m-color);
+}
+
+.band-dot-6m {
+    color: var(--band-6m-color);
+}
+
+.band-dot-2m {
+    color: var(--band-2m-color);
+}
+
+.band-dot-70cm {
     color: var(--band-70cm-color);
 }
 
@@ -249,6 +286,10 @@ scrollbar.right slider {
     color: var(--accent-green);
 }
 
+.pulse-green {
+    color: var(--accent-green);
+}
+
 .detail-time-icon {
     -gtk-icon-size: 1em;
     min-width: 1em;
@@ -321,4 +362,20 @@ scrollbar.right slider {
 
 .weather-summary-card {
     padding: 8px 12px;
+}
+
+.logbook-table {
+    background-color: var(--card-bg-color);
+}
+
+.logbook-table row {
+    background-color: transparent;
+}
+
+.logbook-table row:not(:selected):not(:hover):nth-child(even) {
+    background-color: alpha(var(--window-fg-color), 0.035);
+}
+
+.logbook-action-warning {
+    color: var(--warning-bg-color);
 }

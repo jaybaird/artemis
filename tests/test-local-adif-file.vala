@@ -4,6 +4,7 @@
  */
 
 private const string TEST_DOMAIN = "com.k0vcz.Artemis";
+private string test_data_root;
 
 private string temp_path (string suffix) {
     return Path.build_filename (
@@ -23,7 +24,27 @@ private void test_resolve_path_uses_default_location () {
         TEST_DOMAIN,
         LOCAL_ADIF_DEFAULT_FILENAME
     );
+    assert (LOCAL_ADIF_DEFAULT_FILENAME == "artemis-log.adi");
     assert (resolve_local_adif_path ("", TEST_DOMAIN) == expected);
+}
+
+private void test_append_text_uses_default_location_for_empty_path () {
+    try {
+        var expected = Path.build_filename (
+            test_data_root,
+            TEST_DOMAIN,
+            LOCAL_ADIF_DEFAULT_FILENAME
+        );
+
+        append_local_adif_text ("DEFAULT-PATH<eor>", "", TEST_DOMAIN);
+
+        string read_back;
+        assert (FileUtils.get_contents (expected, out read_back));
+        assert (read_back == "DEFAULT-PATH<eor>\n");
+    } catch (Error err) {
+        warning ("%s", err.message);
+        assert_not_reached ();
+    }
 }
 
 private void test_append_text_creates_and_appends () {
@@ -66,12 +87,17 @@ private void test_append_text_creates_parent_directories () {
 }
 
 public int main (string[] args) {
+    test_data_root = temp_path ("xdg-data");
+    Environment.set_variable ("XDG_DATA_HOME", test_data_root, true);
+
     Test.init (ref args);
 
     Test.add_func ("/local-adif-file/resolve-path-uses-configured-path",
         test_resolve_path_uses_configured_path);
     Test.add_func ("/local-adif-file/resolve-path-uses-default-location",
         test_resolve_path_uses_default_location);
+    Test.add_func ("/local-adif-file/append-text-uses-default-location-for-empty-path",
+        test_append_text_uses_default_location_for_empty_path);
     Test.add_func ("/local-adif-file/append-text-creates-and-appends",
         test_append_text_creates_and_appends);
     Test.add_func ("/local-adif-file/append-text-creates-parent-directories",

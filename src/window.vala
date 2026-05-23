@@ -54,9 +54,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     public unowned Gtk.Box list_container;
 
     [GtkChild]
-    private unowned Gtk.Button astronomy_button;
-
-    [GtkChild]
     private unowned Gtk.ToggleButton refresh_toggle;
 
     [GtkChild]
@@ -86,7 +83,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     [GtkChild]
     private unowned SpotDetail spot_detail;
 
-    private AstronomyWindow? astronomy_window = null;
     private uint refresh_timer_id = 0;
     private int64 next_refresh_at_us = 0;
     private int64 next_clock_update_at_us = 0;
@@ -137,7 +133,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             start_radio ();
         }
 
-        astronomy_button.clicked.connect (on_astronomy_button_clicked);
         refresh_toggle.clicked.connect (on_refresh_button_clicked);
         header_add_spot_button.clicked.connect (on_add_button_clicked);
 
@@ -154,8 +149,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
                 start_radio ();
             }
         });
-        astronomy_window = null;
-
         search_bar.set_key_capture_widget (this);
         search_bar.bind_property (
             "search-mode-enabled",
@@ -375,18 +368,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             search_margin_animation = null;
         });
         search_margin_animation.play ();
-    }
-
-    private void on_astronomy_button_clicked () {
-        if (astronomy_window == null) {
-            astronomy_window = new AstronomyWindow ((Gtk.Application) application);
-            astronomy_window.close_request.connect (() => {
-                astronomy_window = null;
-                return false;
-            });
-        }
-
-        astronomy_window.present ();
     }
 
     private void on_spot_selected (Quark spot_hash) {
@@ -785,23 +766,25 @@ public sealed class AppWindow : Adw.ApplicationWindow {
                 if (success) {
                     left_sidebar.set_power_button_active (true);
                     left_sidebar.set_power_button_text (_("Disconnect"));
+                    left_sidebar.set_tx_active (false);
+                    left_sidebar.set_rx_active (true);
                     disconnect_radio_handlers ();
                     radio_status_handler = Application.radio_control.radio_status.connect ((freq, mode, tx_active) => {
+                        left_sidebar.set_tx_active (tx_active);
+                        left_sidebar.set_rx_active (!tx_active);
+                        left_sidebar.set_power_button_tooltip (_("Disconnect from radio"));
+                        left_sidebar.set_power_button_text (_("Disconnect"));
+                        left_sidebar.set_power_button_active (true);
+
                         if (freq > 0 && mode != 0) {
                             left_sidebar.set_mode_visible (true);
                             left_sidebar.set_vfo_animated (freq);
                             left_sidebar.set_mode_text (RadioControl.mode_string (mode));
-                            left_sidebar.set_tx_active (tx_active);
-                            left_sidebar.set_rx_active (!tx_active);
-                            left_sidebar.set_power_button_tooltip (_("Disconnect from radio"));
-                            left_sidebar.set_power_button_text (_("Disconnect"));
-                            left_sidebar.set_power_button_active (true);
                         } else {
                             left_sidebar.reset_vfo ();
                             left_sidebar.set_mode_visible (false);
-                            left_sidebar.set_power_button_active (false);
-                            left_sidebar.set_power_button_tooltip (_("Connect to radio"));
-                            left_sidebar.set_power_button_text (_("Connect"));
+                            left_sidebar.set_tx_active (tx_active);
+                            left_sidebar.set_rx_active (!tx_active);
                         }
                     });
                     radio_error_handler = Application.radio_control.radio_error.connect ((err) => {

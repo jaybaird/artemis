@@ -67,6 +67,85 @@ test_logbook_import = executable(
 
 test('Logbook Import Service', test_logbook_import)
 
+test_park_details_cache = executable(
+  'test-park-details-cache',
+  [
+    meson.project_source_root() / 'src/park_details.vala',
+    meson.project_source_root() / 'src/park_details_cache.vala',
+    meson.project_source_root() / 'tests/test-park-details-cache.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0')
+  ]
+)
+
+test('Park Details Cache', test_park_details_cache)
+
+test_callsign_cache = executable(
+  'test-callsign-cache',
+  [
+    meson.project_source_root() / 'src/activator.vala',
+    meson.project_source_root() / 'src/callsign_cache.vala',
+    meson.project_source_root() / 'tests/test-callsign-cache.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('gtk4'),
+    dependency('json-glib-1.0'),
+    dependency('libsoup-3.0'),
+    dependency('glycin-2'),
+    dependency('glycin-gtk4-2')
+  ]
+)
+
+test('Callsign Cache', test_callsign_cache)
+
+test_weather_cache = executable(
+  'test-weather-cache',
+  [
+    meson.project_source_root() / 'src/distance.vala',
+    meson.project_source_root() / 'src/weather_cache.vala',
+    meson.project_build_root() / 'src/build.vala',
+    meson.project_source_root() / 'tests/test-weather-cache.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('json-glib-1.0'),
+    dependency('libsoup-3.0'),
+    dependency('shumate-1.0'),
+    cc.find_library('m', required: true)
+  ]
+)
+
+test('Weather Cache', test_weather_cache)
+
+test_database = executable(
+  'test-database',
+  [
+    meson.project_source_root() / 'src/database.vala',
+    meson.project_source_root() / 'tests/test-database.vala',
+    compiled_resources
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('sqlite3')
+  ]
+)
+
+test('Database Schema and Queries', test_database)
+
 test_local_adif_file = executable(
   'test-local-adif-file',
   [

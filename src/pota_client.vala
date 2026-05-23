@@ -30,7 +30,7 @@ public struct PotaLocation {
     }
 }
 
-public sealed class PotaClient : Object, PotaSpotPoster {
+public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkDetailsProvider {
     private Soup.Session session;
     private const string POTA_BASE_URL = "https://api.pota.app";
     private const string POTA_LOCATIONS_URL = "https://api.pota.app/locations";
@@ -274,6 +274,27 @@ public sealed class PotaClient : Object, PotaSpotPoster {
             escaped_park_ref);
 
         return yield fetch_worker (url);
+    }
+
+    public async PotaParkDetails fetch_park_details (string park_ref) throws Error {
+        var escaped_ref = GLib.Uri.escape_string (park_ref.strip ().up (), null, false);
+        var root = yield fetch_worker ("%s/park/%s".printf (POTA_BASE_URL, escaped_ref));
+        if ((root == null) || (root.get_node_type () != Json.NodeType.OBJECT))
+            throw new IOError.INVALID_DATA ("POTA park response was not an object");
+
+        var object = root.get_object ();
+        var name = object.get_string_member_with_default ("name", "").strip ();
+        var park_type = object.get_string_member_with_default ("parktypeDesc", "").strip ();
+
+        PotaParkDetails details = {};
+        details.reference = object.get_string_member_with_default ("reference", park_ref).strip ();
+        details.name = park_type == "" ? name : "%s %s".printf (name, park_type);
+        details.location_desc = object.get_string_member_with_default ("locationDesc", "").strip ();
+
+        if (details.reference == "" || name == "")
+            throw new IOError.INVALID_DATA ("POTA park response did not include park details");
+
+        return details;
     }
 
     public async Json.Node? fetch_operator (string callsign) throws Error {
