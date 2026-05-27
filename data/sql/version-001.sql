@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS qsos (
   spotter TEXT,
   spotter_comment TEXT,
   activator_comment TEXT,
+  rst_sent TEXT,
+  rst_rcvd TEXT,
   local_adif_saved INTEGER NOT NULL DEFAULT 0,
   pota_spotted INTEGER NOT NULL DEFAULT 0,
   qrz_uploaded INTEGER NOT NULL DEFAULT 0,

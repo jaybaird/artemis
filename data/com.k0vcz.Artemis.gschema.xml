@@ -19,6 +19,24 @@
         <description>Default spot message to use when posting.</description>
         </key>
 
+        <key name="first-run-setup-complete" type="b">
+        <default>false</default>
+        <summary>First-run setup complete</summary>
+        <description>Whether the first-time setup dialog has already been completed or skipped.</description>
+        </key>
+
+        <key name="spot-alerts-enabled" type="b">
+        <default>false</default>
+        <summary>Enable spot alerts</summary>
+        <description>Show notifications when matching POTA spots appear.</description>
+        </key>
+
+        <key name="spot-alert-keywords" type="as">
+        <default>[]</default>
+        <summary>Spot alert keywords</summary>
+        <description>Keyword rules used to match POTA spots for alerts.</description>
+        </key>
+
         <key name="update-interval" type="i">
         <default>60</default>
         <summary>Update interval</summary>
@@ -179,6 +197,44 @@
         <default>true</default>
         <summary>Show Map Scale</summary>
         <description>Use metric units for distance calculations and elsewhere in the app</description>
+        </key>
+
+        <key name="map-grayline-visible" type="b">
+        <default>true</default>
+        <summary>Show grayline overlay</summary>
+        <description>Show the day and night terminator on the map.</description>
+        </key>
+
+        <key name="map-astronomy-visible" type="b">
+        <default>true</default>
+        <summary>Show sun and moon overlay</summary>
+        <description>Show sun and moon positions on the map.</description>
+        </key>
+
+        <key name="map-signal-reports-visible" type="b">
+        <default>false</default>
+        <summary>Show signal report overlay</summary>
+        <description>Show live PSKReporter signal reports on the map.</description>
+        </key>
+
+        <key name="signal-report-max-age-seconds" type="i">
+        <default>1800</default>
+        <summary>Signal report maximum age</summary>
+        <description>How long signal reports remain visible on the map heatmap, in seconds.</description>
+        <range min="300" max="7200"/>
+        </key>
+
+        <key name="signal-report-heatmap-radius" type="i">
+        <default>28</default>
+        <summary>Signal report heatmap spread</summary>
+        <description>Pixel radius used when drawing signal report heatmap points.</description>
+        <range min="12" max="64"/>
+        </key>
+
+        <key name="signal-report-preload-history" type="b">
+        <default>true</default>
+        <summary>Preload signal report history</summary>
+        <description>Load recent PSKReporter signal reports before starting the live MQTT stream.</description>
         </key>
 
         <key name="use-metric" type="b">

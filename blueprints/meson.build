@@ -1,8 +1,11 @@
 inputs = files(
   'add_spot_page.blp',
+  'alerts_window.blp',
+  'first_run_setup_dialog.blp',
   'main_window.blp',
   'help_window.blp',
   'preferences/general_page.blp',
+  'preferences/map_page.blp',
   'preferences/radio_page.blp',
   'preferences/logging_page.blp',
   'preferences/wsjtx_page.blp',
@@ -17,15 +20,19 @@ inputs = files(
   'park_log_dialog.blp',
   'left_sidebar.blp',
   'logbook_window.blp',
+  'qso_dialog.blp',
   'spot_detail.blp',
   'band_button.blp'
 )
 
 outs = [
   'add_spot_page.ui',
+  'alerts_window.ui',
+  'first_run_setup_dialog.ui',
   'main_window.ui',
   'help_window.ui',
   'preferences_general_page.ui',
+  'preferences_map_page.ui',
   'preferences_radio_page.ui',
   'preferences_logging_page.ui',
   'preferences_wsjtx_page.ui',
@@ -40,6 +47,7 @@ outs = [
   'park_log_dialog.ui',
   'left_sidebar.ui',
   'logbook_window.ui',
+  'qso_dialog.ui',
   'spot_detail.ui',
   'band_button.ui'
 ]

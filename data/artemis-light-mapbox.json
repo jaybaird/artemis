@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "Artemis Raster Simple",
+  "name": "Trailwave Raster Simple",
   "sources": {
     "mapbox-streets": {
       "type": "vector",

@@ -304,7 +304,8 @@ template $SpotCard : Box {
         label: _("Tune");
         tooltip-text: _("Tune your radio to this frequency");
         visible: false;
-        styles ["raised"]
+        styles ["flat"]
+
         accessibility {
           label: _("Tune");
           role-description: _("button");
@@ -314,7 +315,8 @@ template $SpotCard : Box {
       Button spot_button {
         label: _("Re-Spot");
         tooltip-text: _("Add your spot for this park");
-        styles ["raised", "suggested-action"]
+        styles ["flat"]
+
         accessibility {
           label: _("Re-Spot");
           role-description: _("button");

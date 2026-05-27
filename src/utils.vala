@@ -88,6 +88,25 @@ public sealed class SpotBadgeInfo : Object {
     }
 }
 
+public class SpotBadgeHelpInfo {
+    public string icon_name { get; private set; }
+    public string label { get; private set; }
+    public string description { get; private set; }
+    public string css_class { get; private set; }
+
+    public SpotBadgeHelpInfo (
+        string icon_name,
+        string label,
+        string description,
+        string css_class
+    ) {
+        this.icon_name = icon_name;
+        this.label = label;
+        this.description = description;
+        this.css_class = css_class;
+    }
+}
+
 public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
     var badges = new Gee.ArrayList<SpotBadgeInfo> ();
 
@@ -128,6 +147,43 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
             "badge-new-band"
         ));
     }
+
+    return badges;
+}
+
+public static Gee.ArrayList<SpotBadgeHelpInfo> spot_badge_help_items () {
+    var badges = new Gee.ArrayList<SpotBadgeHelpInfo> ();
+
+    badges.add (new SpotBadgeHelpInfo (
+        "starred-symbolic",
+        _("New park"),
+        _("You have no local record of hunting this park."),
+        "badge-new-park"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "verified-checkmark-symbolic",
+        _("Hunted today"),
+        _("You already logged this park on the current UTC day."),
+        "badge-hunted-today"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "clock-alt-symbolic",
+        _("Previously hunted"),
+        _("This park exists in your local hunting history."),
+        "badge-previously-hunted"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "sound-wave-add-symbolic",
+        _("New band"),
+        _("You have hunted this park before, but not on this band."),
+        "badge-new-band"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "headphones-symbolic",
+        _("Heard recently"),
+        _("WSJT-X recently decoded text matching this activator."),
+        "badge-heard-recently"
+    ));
 
     return badges;
 }
@@ -176,10 +232,11 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
 }
 
 public static Gdk.RGBA rgba (double red, double green, double blue, double alpha) {
-    var color = Gdk.RGBA ();
-    color.red = (float) red;
-    color.green = (float) green;
-    color.blue = (float) blue;
-    color.alpha = (float) alpha;
+    var color = Gdk.RGBA () {
+        red = (float) red,
+        green = (float) green,
+        blue = (float) blue,
+        alpha = (float) alpha
+    };
     return color;
 }

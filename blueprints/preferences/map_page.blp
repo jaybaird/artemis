@@ -1,0 +1,75 @@
+/* blueprints/preferences/map_page.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+StringList signal_report_spread_model {
+  strings [
+    _("Compact"),
+    _("Normal"),
+    _("Wide"),
+  ]
+}
+
+template $MapPreferencesPage : Adw.PreferencesPage {
+  title: _("Map");
+  icon-name: "map-symbolic";
+
+  Adw.PreferencesGroup {
+    title: _("Signal Reports");
+
+    Adw.SpinRow row_signal_report_max_age {
+      title: _("Maximum Age");
+      subtitle: _("How long signal reports remain visible on the heatmap, in minutes");
+      digits: 0;
+      climb-rate: 5.0;
+      accessibility {
+        label: _("Maximum Age");
+        role-description: _("spin button");
+      }
+      adjustment: Adjustment {
+        step-increment: 5;
+        lower: 5;
+        upper: 120;
+        value: 30;
+      };
+    }
+
+    Adw.ComboRow row_signal_report_spread {
+      title: _("Heatmap Spread");
+      subtitle: _("How wide each report appears in the signal report overlay");
+      model: signal_report_spread_model;
+      accessibility {
+        label: _("Heatmap Spread");
+        role-description: _("combo box");
+      }
+    }
+
+    Adw.SwitchRow row_signal_report_preload_history {
+      title: _("Preload Recent Reports");
+      subtitle: _("Load recent PSKReporter reports before starting the live stream");
+      accessibility {
+        label: _("Preload Recent Reports");
+        role-description: _("switch");
+      }
+    }
+  }
+}

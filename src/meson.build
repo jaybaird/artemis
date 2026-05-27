@@ -5,29 +5,43 @@ artemis_vala_sources = [
   'src/adif/adif_parser.vala',
   'src/adif/adif_generator.vala',
   'src/adif/adif_qso.vala',
+  'src/add_spot.vala',
+  'src/alerts_window.vala',
   'src/app_state.vala',
   'src/application.vala',
   'src/callsign_cache.vala',
   'src/distance.vala',
   'src/frequency.vala',
+  'src/first_run_setup_dialog.vala',
   'src/logging_preferences.vala',
   'src/local_adif_file.vala',
   'src/local_adif_log.vala',
   'src/logging_service.vala',
   'src/logbook_import_service.vala',
   'src/logbook_window.vala',
+  'src/park_log_dialog.vala',
+  'src/models/heatmap_model.vala',
+  'src/models/heatmap_point.vala',
+  'src/models/signal_report.vala',
+  'src/models/signal_report_bucket.vala',
   'src/park_details.vala',
   'src/park_details_cache.vala',
+  'src/psk_reporter_client.vala',
+  'src/psk_reporter_decoder.vala',
   'src/spot_filter.vala',
+  'src/models/signal_report_mqtt_session.vala',
   'src/window.vala',
   'src/pota_client.vala',
   'src/qrz_client.vala',
+  'src/qso_dialog.vala',
   'src/preferences.vala',
   'src/preferences/general_page.vala',
+  'src/preferences/map_page.vala',
   'src/preferences/radio_page.vala',
   'src/preferences/logging_page.vala',
   'src/preferences/wsjtx_page.vala',
   'src/spot_card.vala',
+  'src/spot_history_dialog.vala',
   'src/spot.vala',
   'src/repo.vala',
   'src/activator.vala',
@@ -36,9 +50,12 @@ artemis_vala_sources = [
   'src/database.vala',
   'src/utils.vala',
   'src/status_bar.vala',
+  'src/utils/maidenhead.vala',
+  'src/utils/spot_format.vala',
   'src/map/bounding_box.vala',
   'src/map/grayline_overlay.vala',
   'src/map/map_marker_dot.vala',
+  'src/map/signal_report_heatmap_layer.vala',
   'src/map/map_view.vala',
   'src/left_sidebar.vala',
   'src/astronomy.vala',
@@ -81,6 +98,11 @@ hamlib_dep = dependency('hamlib')
 
 cc = meson.get_compiler('c')
 
+paho_mqtt_dep = cc.find_library('paho-mqtt3a', required: true)
+if not cc.has_header('MQTTAsync.h')
+  error('MQTTAsync.h not found. Install paho.mqtt.c development headers.')
+endif
+
 has_set_conf2 = cc.has_function(
   'rig_set_conf2',
   prefix: '#include <hamlib/rig.h>',
@@ -95,7 +117,7 @@ endif
 src_inc = include_directories('.')
 cc = meson.get_compiler('c')
 
-radio_control_sources = ['radio_control.c']
+radio_control_sources = ['radio/radio_control.c']
 radio_control_deps = [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
 
 if is_windows
@@ -111,7 +133,27 @@ libradiocontrol = static_library(
   dependencies: radio_control_deps
 )
 
+artemis_mqtt_sources = ['mqtt/mqtt_client.c']
+artemis_mqtt_deps = [glib_dep, gobject_dep, gio_dep, paho_mqtt_dep]
+
+libartemismqtt = static_library(
+  'artemismqtt',
+  artemis_mqtt_sources,
+  include_directories: src_inc,
+  dependencies: artemis_mqtt_deps
+)
+
 mathlib = cc.find_library('m', required: true)
+
+heatmap_sources = ['map/heatmap.c']
+heatmap_deps = [mathlib]
+
+libheatmap = static_library(
+  'heatmap',
+  heatmap_sources,
+  include_directories: src_inc,
+  dependencies: heatmap_deps
+)
 
 artemis_vala_deps = [
   dependency('gtk4'),

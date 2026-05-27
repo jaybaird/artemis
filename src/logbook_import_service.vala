@@ -86,7 +86,7 @@ public sealed class LogbookImportService : Object {
                 columns.get (0),
                 columns.get (1),
                 columns.get (2),
-                columns.get (5),
+                normalize_first_qso_date (columns.get (5)),
                 qso_count,
                 out error
             );
@@ -97,6 +97,36 @@ public sealed class LogbookImportService : Object {
         }
 
         return new LogbookImportResult (num_parks);
+    }
+
+    private static string? normalize_first_qso_date (string value) throws Error {
+        var trimmed = value.strip ();
+        if (trimmed == "")
+            return null;
+
+        var parsed = new DateTime.from_iso8601 (trimmed, new TimeZone.utc ());
+        if (parsed != null)
+            return parsed.to_utc ().format ("%Y-%m-%dT%H:%M:%SZ");
+
+        if (trimmed.length == 10 &&
+            trimmed.get_char (4) == '-' &&
+            trimmed.get_char (7) == '-') {
+            int year = 0;
+            int month = 0;
+            int day = 0;
+            unowned string unparsed;
+            if (int.try_parse (trimmed.substring (0, 4), out year, out unparsed) &&
+                unparsed == "" &&
+                int.try_parse (trimmed.substring (5, 2), out month, out unparsed) &&
+                unparsed == "" &&
+                int.try_parse (trimmed.substring (8, 2), out day, out unparsed) &&
+                unparsed == "") {
+                var date = new DateTime.utc (year, month, day, 0, 0, 0);
+                return date.format ("%Y-%m-%dT%H:%M:%SZ");
+            }
+        }
+
+        throw new IOError.INVALID_DATA ("CSV row has invalid first QSO date '%s'".printf (value));
     }
 
     private static string strip_quotes (string s) {

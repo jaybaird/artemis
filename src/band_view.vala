@@ -95,7 +95,7 @@ public sealed class BandView : Gtk.Box {
         band_spot_cards.bind_model (
             sorted,
             (Gtk.FlowBoxCreateWidgetFunc)create_spot_card
-            );
+        );
         band_spot_cards.child_activated.connect ((child) => {
             var spot_card = child.get_child () as SpotCard;
             if ((spot_card != null) &&
@@ -112,6 +112,17 @@ public sealed class BandView : Gtk.Box {
             }
         });
         band_spot_cards.selected_children_changed.connect (() => {
+            for (var child = band_spot_cards.get_first_child ();
+                     child != null;
+                     child = child.get_next_sibling ()) {
+                var flow_child = child as Gtk.FlowBoxChild;
+                if (flow_child == null)
+                    continue;
+
+                var spot_card = flow_child.get_child () as SpotCard;
+                spot_card.selected = false;
+            }
+
             var selected = band_spot_cards.get_selected_children ();
             if ((selected != null) && (selected.length () > 0)) {
                 var child = selected.nth_data (0) as Gtk.FlowBoxChild;
@@ -121,6 +132,7 @@ public sealed class BandView : Gtk.Box {
                     if (spot_hash != Application.state.current_spot_hash) {
                         Application.state.current_spot_hash = spot_hash;
                         just_selected = true;
+                        spot_card.selected = true;
                     }
                 }
             }

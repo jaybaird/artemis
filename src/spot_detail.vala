@@ -493,7 +493,7 @@ public sealed class SpotDetail : Gtk.Box {
         if (time == null)
             return "—";
 
-        return time.to_utc ().format ("%H:%M UTC");
+        return time.to_utc ().format ("%R UTC");
     }
 
     private string weather_temperature_label (double temperature) {

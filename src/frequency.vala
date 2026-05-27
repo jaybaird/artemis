@@ -148,6 +148,36 @@ public bool band_frequency_range_khz (string band, out int min_khz, out int max_
     }
 }
 
+public string? band_for_frequency_khz (double frequency_khz) {
+    string[] bands = {
+        "160m",
+        "80m",
+        "60m",
+        "40m",
+        "30m",
+        "20m",
+        "17m",
+        "15m",
+        "12m",
+        "10m",
+        "6m",
+        "2m",
+        "70cm"
+    };
+
+    foreach (var band in bands) {
+        int min_khz;
+        int max_khz;
+
+        if (band_frequency_range_khz (band, out min_khz, out max_khz) &&
+            frequency_khz >= min_khz && frequency_khz <= max_khz) {
+            return band;
+        }
+    }
+
+    return null;
+}
+
 private double frequency_to_hz (double value, FrequencyUnit unit) {
     switch (unit) {
         case FrequencyUnit.HZ:

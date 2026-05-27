@@ -28,6 +28,7 @@ install_data(
     'hicolor/symbolic/actions/bigger-dot-symbolic.svg',
     'hicolor/symbolic/actions/arrow-circular-bottom-right-symbolic.svg',
     'hicolor/symbolic/actions/dock-right-symbolic.svg',
+    'hicolor/symbolic/actions/map-layers-symbolic.svg',
     'hicolor/symbolic/actions/map-marker-symbolic.svg',
     'hicolor/symbolic/actions/map-symbolic.svg',
     'hicolor/symbolic/actions/filter-symbolic.svg',

@@ -34,6 +34,7 @@ public sealed class SpotRepo : Object {
     public HashMap<string, int> band_counts;
     private bool update_in_progress = false;
     private bool update_pending = false;
+    private HashSet<uint> notified_alert_hashes;
 
     public SpotRepo () {
         Object ();
@@ -44,6 +45,7 @@ public sealed class SpotRepo : Object {
         program_model = new Gtk.StringList ({});
         mode_model = new Gtk.StringList ({});
         band_counts = new HashMap<string, int> ();
+        notified_alert_hashes = new HashSet<uint> ();
     }
 
     public Spot? get_spot (Quark spot_hash) {
@@ -197,7 +199,7 @@ public sealed class SpotRepo : Object {
                     }
                 }
 
-                // TODO: alert if watched callsign is seen in unique_callsigns
+                notify_matching_spot_alerts (parsed_spots);
 
                 var programs_sorted = new ArrayList<string> ();
                 foreach (var program in programs) {
@@ -263,4 +265,57 @@ public sealed class SpotRepo : Object {
 
         update_in_progress = false;
     } /* update_spots */
+
+    private void notify_matching_spot_alerts (ArrayList<Spot> spots) {
+        if (!Application.settings.get_boolean ("spot-alerts-enabled"))
+            return;
+
+        var keywords = normalized_alert_keywords ();
+        if (keywords.size == 0)
+            return;
+
+        foreach (var spot in spots) {
+            var hash = (uint) spot.hash;
+            if (notified_alert_hashes.contains (hash))
+                continue;
+
+            if (!spot_matches_keywords (spot, keywords))
+                continue;
+
+            notified_alert_hashes.add (hash);
+            Application.app.send_spot_alert (spot);
+        }
+    }
+
+    private ArrayList<string> normalized_alert_keywords () {
+        var keywords = new ArrayList<string> ();
+        foreach (var keyword in Application.settings.get_strv ("spot-alert-keywords")) {
+            var normalized = keyword.strip ().down ();
+            if (normalized != "")
+                keywords.add (normalized);
+        }
+        return keywords;
+    }
+
+    private bool spot_matches_keywords (Spot spot, ArrayList<string> keywords) {
+        var haystack = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s".printf (
+            spot.callsign,
+            spot.park_ref,
+            spot.park_name,
+            spot.location_desc,
+            spot.grid4,
+            spot.grid6,
+            spot.band,
+            spot.mode,
+            spot.activator_comment,
+            spot.spotter_comment
+        ).down ();
+
+        foreach (var keyword in keywords) {
+            if (haystack.contains (keyword))
+                return true;
+        }
+
+        return false;
+    }
 }     /* class SpotRepo */

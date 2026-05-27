@@ -6,6 +6,7 @@
 private sealed class FakeParkStore : Object, ParkStore {
     public int add_count { get; private set; default = 0; }
     public string last_reference { get; private set; default = ""; }
+    public string? last_first_qso_date { get; private set; default = null; }
     public int last_qso_count { get; private set; default = 0; }
     public bool fail_next { get; set; default = false; }
 
@@ -27,6 +28,7 @@ private sealed class FakeParkStore : Object, ParkStore {
         error = null;
         add_count++;
         last_reference = reference;
+        last_first_qso_date = first_qso_date;
         last_qso_count = qso_count;
         return true;
     }
@@ -55,6 +57,7 @@ private void test_import_valid_csv () {
         assert (result.imported_count == 1);
         assert (store.add_count == 1);
         assert (store.last_reference == "US-1234");
+        assert (store.last_first_qso_date == "2025-01-02T00:00:00Z");
         assert (store.last_qso_count == 3);
     } catch (Error err) {
         assert_not_reached ();
@@ -115,6 +118,24 @@ private void test_import_empty_body_returns_zero () {
     }
 }
 
+private void test_import_rejects_invalid_first_qso_date () {
+    try {
+        var store = new FakeParkStore ();
+        var service = new LogbookImportService (store);
+        var file = write_temp_csv (
+            "DX Entity,Location,HASC,Reference,Park Name,First QSO Date,QSO Count\n" +
+            "United States,Minnesota,US.MN,US-1234,Test Park,not-a-date,3\n"
+        );
+
+        service.import_pota_csv (file);
+        assert_not_reached ();
+    } catch (IOError.INVALID_DATA err) {
+        assert (err.message.contains ("invalid first QSO date"));
+    } catch (Error err) {
+        assert_not_reached ();
+    }
+}
+
 public int main (string[] args) {
     Test.init (ref args);
 
@@ -125,6 +146,8 @@ public int main (string[] args) {
         test_import_surfaces_park_store_error);
     Test.add_func ("/logbook-import/empty-body-returns-zero",
         test_import_empty_body_returns_zero);
+    Test.add_func ("/logbook-import/rejects-invalid-first-qso-date",
+        test_import_rejects_invalid_first_qso_date);
 
     return Test.run ();
 }

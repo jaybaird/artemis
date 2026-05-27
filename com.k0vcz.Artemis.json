@@ -40,8 +40,8 @@
             "sources": [
                 {
                     "type": "archive",
-                    "url": "https://github.com/Hamlib/Hamlib/releases/download/4.6.5/hamlib-4.6.5.tar.gz",
-                    "sha256": "90d6f1dba59417c00f8f4545131c7efd31930cd0e178598980a8210425e3852e"
+                    "url": "https://github.com/Hamlib/Hamlib/releases/download/4.7.1/hamlib-4.7.1.tar.gz",
+                    "sha256": "d197a08a3d5d936d7571ae573f745bbba619e88998742c8267e3fcb0fb3d5974"
                 }
             ]
         },
@@ -85,9 +85,30 @@
             "sources": [
                 {
                     "type": "git",
-                    "url": "https://gitlab.gnome.org/GNOME/libshumate.git",
-                    "tag": "1.5.0",
-                    "commit": "570222efec093a1e9df928f62113e0756aa302a0"
+                    "url": "https://github.com/GNOME/libshumate.git",
+                    "tag": "1.6.1",
+                    "commit": "8bf191245f8010b003b6bb5462201cb35d61ecbb"
+                }
+            ]
+        },
+        {
+            "name": "paho-mqtt-c",
+            "buildsystem": "cmake-ninja",
+            "config-opts": [
+                "-DPAHO_BUILD_SHARED=TRUE",
+                "-DPAHO_BUILD_STATIC=FALSE",
+                "-DPAHO_BUILD_SAMPLES=FALSE",
+                "-DPAHO_WITH_SSL=FALSE"
+            ],
+            "cleanup": [
+                "/bin"
+            ],
+            "sources": [
+                {
+                    "type": "git",
+                    "url": "https://github.com/eclipse-paho/paho.mqtt.c.git",
+                    "tag": "v1.3.16",
+                    "commit": "4a939ddb01eea581a32fd6f0adcfee51b91d2601"
                 }
             ]
         },
@@ -97,6 +118,7 @@
             "buildsystem" : "meson",
             "config-opts":[
                 "-Dbuildtype=release",
+                "-Dmapbox_access_token=pk.eyJ1IjoiazB2Y3oiLCJhIjoiY21wamNnbHpkMTJpdzJwcHNoOXBvbzZiNSJ9.PBpJW9GbX82C2uQNrn0Asg",
                 "-Dopenweather_api_key=79d09752976d3a97926412f49b93cd11"
             ],
             "build-commands": [

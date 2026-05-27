@@ -1,0 +1,111 @@
+/* blueprints/alerts_window.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+TextBuffer keyword_buffer {
+}
+
+template $AlertsWindow : Adw.Window {
+  title: _("Alerts");
+  default-width: 520;
+  default-height: 460;
+  width-request: 360;
+  height-request: 360;
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.WindowTitle {
+        title: _("Alerts");
+      };
+    }
+
+    content: Adw.PreferencesPage {
+      margin-top: 12;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+
+      Adw.PreferencesGroup {
+        title: _("Spot Alerts");
+        description: _("Keywords match callsign, park reference or name, location, grid, band, mode, activator comments, or spotter comments.");
+
+        Adw.SwitchRow enabled_row {
+          title: _("Enable Spot Alerts");
+          subtitle: _("Show desktop notifications when matching spots appear.");
+          accessibility {
+            label: _("Enable Spot Alerts");
+            role-description: _("switch");
+          }
+        }
+
+        Adw.PreferencesRow {
+          title: _("Keywords");
+
+          Box {
+            orientation: vertical;
+            spacing: 6;
+            margin-top: 12;
+            margin-bottom: 12;
+            margin-start: 12;
+            margin-end: 12;
+
+            Label {
+              label: _("Keywords");
+              xalign: 0;
+              styles ["heading"]
+            }
+
+            ScrolledWindow {
+              height-request: 180;
+              hscrollbar-policy: never;
+              vscrollbar-policy: automatic;
+              styles ["card"]
+
+              TextView keyword_view {
+                accepts-tab: false;
+                bottom-margin: 8;
+                buffer: keyword_buffer;
+                hexpand: true;
+                input-hints: no_spellcheck;
+                top-margin: 8;
+                vexpand: true;
+                wrap-mode: word_char;
+                accessibility {
+                  label: _("Keywords");
+                  role-description: _("text view");
+                }
+              }
+            }
+
+            Label {
+              label: _("Enter one keyword rule per line.");
+              xalign: 0;
+              wrap: true;
+              styles ["dim-label"]
+            }
+          }
+        }
+      }
+    };
+  }
+}

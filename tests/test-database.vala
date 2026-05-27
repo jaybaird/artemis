@@ -41,6 +41,8 @@ public class Spot : Object {
     public string? spotter { get; construct; }
     public string? spotter_comment { get; construct; }
     public string? activator_comment { get; construct; }
+    public string? rst_sent { get; construct; }
+    public string? rst_rcvd { get; construct; }
 
     public Spot (
         string callsign,
@@ -50,7 +52,9 @@ public class Spot : Object {
         string mode,
         double frequency_khz,
         DateTime spot_time,
-        string spotter
+        string spotter,
+        string rst_sent = "",
+        string rst_rcvd = ""
     ) {
         Object (
             callsign: callsign,
@@ -62,7 +66,9 @@ public class Spot : Object {
             spot_time: spot_time,
             spotter: spotter,
             spotter_comment: "",
-            activator_comment: ""
+            activator_comment: "",
+            rst_sent: rst_sent,
+            rst_rcvd: rst_rcvd
         );
     }
 }
@@ -177,7 +183,7 @@ private int count_migration_backups () throws Error {
     FileInfo? info;
     while ((info = enumerator.next_file ()) != null) {
         var name = info.get_name ();
-        if (name.has_prefix ("spots.db.backup-v1-to-v3-"))
+        if (name.has_prefix ("spots.db.backup-v1-to-v5-"))
             count++;
     }
     return count;
@@ -225,14 +231,17 @@ private void test_database_creates_latest_schema () {
         var spot_db = new SpotDb ();
         assert (spot_db.init (out error));
         assert (error == null);
-        assert (spot_db.user_version == 3);
+        assert (spot_db.user_version == 5);
         assert (spot_db.has_qso_delivery_status);
         assert (spot_db.has_park_details);
+        assert (spot_db.has_qso_signal_reports);
 
         var raw = open_raw_db ();
-        assert (scalar_int (raw, "PRAGMA user_version;") == 3);
+        assert (scalar_int (raw, "PRAGMA user_version;") == 5);
         assert (column_exists (raw, "qsos", "qrz_uploaded"));
         assert (column_exists (raw, "qsos", "qrz_error"));
+        assert (column_exists (raw, "qsos", "rst_sent"));
+        assert (column_exists (raw, "qsos", "rst_rcvd"));
         assert (column_exists (raw, "parks", "park_name"));
         assert (column_exists (raw, "parks", "location"));
     } catch (Error err) {
@@ -249,15 +258,18 @@ private void test_database_migrates_v1_and_backups () {
         var spot_db = new SpotDb ();
         assert (spot_db.init (out error));
         assert (error == null);
-        assert (spot_db.user_version == 3);
+        assert (spot_db.user_version == 5);
         assert (spot_db.has_qso_delivery_status);
         assert (spot_db.has_park_details);
+        assert (spot_db.has_qso_signal_reports);
         assert (count_migration_backups () == 1);
 
         var raw = open_raw_db ();
-        assert (scalar_int (raw, "PRAGMA user_version;") == 3);
+        assert (scalar_int (raw, "PRAGMA user_version;") == 5);
         assert (column_exists (raw, "qsos", "local_adif_saved"));
         assert (column_exists (raw, "qsos", "qrz_error"));
+        assert (column_exists (raw, "qsos", "rst_sent"));
+        assert (column_exists (raw, "qsos", "rst_rcvd"));
         assert (column_exists (raw, "parks", "park_name"));
         assert (column_exists (raw, "parks", "location"));
 
@@ -370,6 +382,164 @@ private void test_database_logbook_pages_search_and_sort () {
     }
 }
 
+private void test_database_persists_qso_signal_reports () {
+    try {
+        reset_database_dir ();
+
+        Error? error = null;
+        var spot_db = new SpotDb ();
+        assert (spot_db.init (out error));
+        assert (error == null);
+
+        var spot = new Spot (
+            "K1ABC",
+            "US-0001",
+            "Acadia",
+            "US-ME",
+            "FT8",
+            14074,
+            new DateTime.from_iso8601 ("2026-01-02T00:00:00Z", new TimeZone.utc ()),
+            "K0VCZ",
+            "+04",
+            "-08"
+        );
+        assert (spot_db.add_qso_from_spot (spot, out error));
+        assert (error == null);
+
+        var qsos = spot_db.latest_qsos (1, out error);
+        assert (error == null);
+        assert (qsos.size == 1);
+        assert (qsos[0].rst_sent == "+04");
+        assert (qsos[0].rst_rcvd == "-08");
+
+        var updated = new Spot (
+            "K1ABC",
+            "US-0001",
+            "Acadia",
+            "US-ME",
+            "FT8",
+            14074,
+            new DateTime.from_iso8601 ("2026-01-02T00:00:00Z", new TimeZone.utc ()),
+            "K0VCZ",
+            "+06",
+            "-10"
+        );
+        assert (spot_db.update_qso_from_spot (qsos[0].id, updated, out error));
+        assert (error == null);
+
+        qsos = spot_db.latest_qsos (1, out error);
+        assert (error == null);
+        assert (qsos.size == 1);
+        assert (qsos[0].rst_sent == "+06");
+        assert (qsos[0].rst_rcvd == "-10");
+    } catch (Error err) {
+        warning ("%s", err.message);
+        assert_not_reached ();
+    }
+}
+
+private void test_database_migrates_date_only_park_first_qso_dates () {
+    try {
+        reset_database_dir ();
+        var raw = open_raw_db ();
+        exec_sql (raw, """
+            CREATE TABLE parks(
+              reference TEXT PRIMARY KEY,
+              park_name TEXT,
+              location TEXT,
+              first_qso_date TEXT,
+              qso_count INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE qsos(
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              park_ref TEXT NOT NULL,
+              callsign TEXT NOT NULL,
+              mode TEXT,
+              frequency_khz REAL,
+              created_utc TEXT NOT NULL,
+              spotter TEXT,
+              spotter_comment TEXT,
+              activator_comment TEXT,
+              local_adif_saved INTEGER NOT NULL DEFAULT 0,
+              pota_spotted INTEGER NOT NULL DEFAULT 0,
+              qrz_uploaded INTEGER NOT NULL DEFAULT 0,
+              local_adif_error TEXT,
+              pota_error TEXT,
+              qrz_error TEXT,
+              rst_sent TEXT,
+              rst_rcvd TEXT
+            );
+            INSERT INTO parks(reference, park_name, location, first_qso_date, qso_count)
+            VALUES('US-0001', 'Acadia', 'US-ME', '2025-08-29', 1);
+            PRAGMA user_version = 4;
+        """);
+
+        Error? error = null;
+        var spot_db = new SpotDb ();
+        assert (spot_db.init (out error));
+        assert (error == null);
+        assert (spot_db.user_version == 5);
+
+        Sqlite.Statement st;
+        if (raw.prepare_v2 (
+            "SELECT first_qso_date FROM parks WHERE reference = 'US-0001';",
+            -1,
+            out st
+        ) != Sqlite.OK) {
+            throw new IOError.FAILED ("SQLite prepare failed: %s".printf (raw.errmsg ()));
+        }
+        assert (st.step () == Sqlite.ROW);
+        assert (st.column_text (0) == "2025-08-29T00:00:00Z");
+    } catch (Error err) {
+        warning ("%s", err.message);
+        assert_not_reached ();
+    }
+}
+
+private void test_database_delete_qso_updates_park_summary () {
+    try {
+        reset_database_dir ();
+
+        Error? error = null;
+        var spot_db = new SpotDb ();
+        assert (spot_db.init (out error));
+        assert (error == null);
+
+        var raw = open_raw_db ();
+        exec_sql (raw, """
+            INSERT INTO parks(reference, park_name, location, first_qso_date, qso_count)
+            VALUES('US-0001', 'Acadia', 'US-ME', '2026-01-02T00:00:00Z', 2);
+            INSERT INTO qsos(
+              park_ref, callsign, mode, frequency_khz, created_utc,
+              spotter, spotter_comment, activator_comment
+            )
+            VALUES
+              ('US-0001', 'K1ABC', 'CW', 14063, '2026-01-02T00:00:00Z', 'K0VCZ', '', ''),
+              ('US-0001', 'N9XYZ', 'SSB', 7250, '2026-03-04T00:00:00Z', 'K0VCZ', '', '');
+        """);
+
+        assert (spot_db.delete_qso (1, out error));
+        assert (error == null);
+
+        assert (scalar_int (raw, "SELECT COUNT(*) FROM qsos;") == 1);
+        assert (scalar_int (raw, "SELECT qso_count FROM parks WHERE reference = 'US-0001';") == 1);
+
+        Sqlite.Statement st;
+        if (raw.prepare_v2 (
+            "SELECT first_qso_date FROM parks WHERE reference = 'US-0001';",
+            -1,
+            out st
+        ) != Sqlite.OK) {
+            throw new IOError.FAILED ("SQLite prepare failed: %s".printf (raw.errmsg ()));
+        }
+        assert (st.step () == Sqlite.ROW);
+        assert (st.column_text (0) == "2026-03-04T00:00:00Z");
+    } catch (Error err) {
+        warning ("%s", err.message);
+        assert_not_reached ();
+    }
+}
+
 public int main (string[] args) {
     test_data_root = Path.build_filename (
         Environment.get_tmp_dir (),
@@ -383,6 +553,10 @@ public int main (string[] args) {
     Test.add_func ("/database/migrate-v1-and-backup", test_database_migrates_v1_and_backups);
     Test.add_func ("/database/local-park-details-lookup", test_database_park_details_lookup_uses_local_rows);
     Test.add_func ("/database/logbook-pages-search-and-sort", test_database_logbook_pages_search_and_sort);
+    Test.add_func ("/database/persist-qso-signal-reports", test_database_persists_qso_signal_reports);
+    Test.add_func ("/database/migrate-date-only-park-first-qso-dates",
+        test_database_migrates_date_only_park_first_qso_dates);
+    Test.add_func ("/database/delete-qso-updates-park-summary", test_database_delete_qso_updates_park_summary);
 
     var result = Test.run ();
 

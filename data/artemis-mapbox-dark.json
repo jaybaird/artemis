@@ -1,6 +1,6 @@
 {
   "version": 8,
-  "name": "Artemis Raster Dark",
+  "name": "Trailwave Raster Dark",
   "sources": {
     "mapbox-streets": {
       "type": "vector",

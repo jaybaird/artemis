@@ -1,0 +1,156 @@
+/* blueprints/qso_dialog.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+Gtk.StringList modes_model {
+  strings: ["SSB","CW","FT8","FT4","FM","AM","RTTY","JT65"];
+}
+
+template $QsoDialog : Adw.Dialog {
+  title: _("QSO");
+  content-width: 500;
+
+  Box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Adw.PreferencesGroup {
+      title: _("QSO Details");
+
+      Adw.EntryRow activator_callsign {
+        title: _("Activator Callsign");
+        accessibility {
+          label: _("Activator Callsign");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow spotter_callsign {
+        title: _("Spotter Callsign");
+        accessibility {
+          label: _("Spotter Callsign");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow frequency {
+        title: _("Frequency (kHz)");
+        accessibility {
+          label: _("Frequency");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.ComboRow mode {
+        title: _("Mode");
+        model: modes_model;
+        accessibility {
+          label: _("Mode");
+          role-description: _("combo box");
+        }
+      }
+
+      Adw.EntryRow park_ref {
+        title: _("Park Reference");
+        accessibility {
+          label: _("Park Reference");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.ActionRow park_details_row {
+        title: _("Park");
+        visible: false;
+        activatable: false;
+      }
+
+      Adw.EntryRow rst_sent {
+        title: _("RST Sent");
+        accessibility {
+          label: _("RST Sent");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow rst_received {
+        title: _("RST Received");
+        accessibility {
+          label: _("RST Received");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow spotter_comments {
+        title: _("Comments");
+        accessibility {
+          label: _("Comments");
+          role-description: _("text entry");
+        }
+      }
+    }
+
+    Box {
+      orientation: horizontal;
+      spacing: 6;
+      margin-bottom: 12;
+
+      Button delete_button {
+        label: _("Delete");
+        styles ["destructive-action"]
+        accessibility {
+          label: _("Delete QSO");
+          role-description: _("button");
+        }
+      }
+
+      Box {
+        hexpand: true;
+      }
+
+      Button cancel_button {
+        label: _("Cancel");
+        accessibility {
+          label: _("Cancel");
+          role-description: _("button");
+        }
+      }
+
+      Button lookup_park_button {
+        label: _("Lookup Park");
+        visible: false;
+        accessibility {
+          label: _("Lookup Park");
+          role-description: _("button");
+        }
+      }
+
+      Button retry_qrz_button {
+        label: _("Send to QRZ");
+        visible: false;
+        accessibility {
+          label: _("Send to QRZ");
+          role-description: _("button");
+        }
+      }
+
+      Button save_button {
+        label: _("Save");
+        styles ["suggested-action"]
+        accessibility {
+          label: _("Save QSO");
+          role-description: _("button");
+        }
+      }
+    }
+  }
+}

@@ -273,6 +273,30 @@ map_artemis_mode(enum RadioMode mode)
   return RIG_MODE_USB;
 }
 
+static pbwidth_t
+map_artemis_mode_bandwidth(enum RadioMode mode)
+{
+  switch (mode)
+  {
+    case RADIO_MODE_CW:
+    case RADIO_MODE_CW_R:
+      return 500;
+    case RADIO_MODE_DIGITAL_U:
+    case RADIO_MODE_DIGITAL_L:
+      return 3000;
+    case RADIO_MODE_AM:
+      return 6000;
+    case RADIO_MODE_FM:
+    case RADIO_MODE_DIGITAL_FM:
+      return 12000;
+    case RADIO_MODE_USB:
+    case RADIO_MODE_LSB:
+      return 2400;
+    default:
+      return 2400;
+  }
+}
+
 static gboolean
 try_set_rig_conf(RIG        *rig,
                   const char *key,
@@ -866,7 +890,7 @@ radio_control_get_mode_async(RadioControl *self)
 
 typedef struct {
   RadioControl *radio;
-  mode_t       mode;
+  enum RadioMode mode;
 } _SetModeData;
 
 static void
@@ -892,7 +916,12 @@ set_mode_worker(gpointer user_data)
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
-  int result = rig_set_mode(self->rig, RIG_VFO_CURR, map_artemis_mode(data->mode), RIG_PASSBAND_NOCHANGE);
+  int result = rig_set_mode(
+    self->rig,
+    RIG_VFO_CURR,
+    map_artemis_mode(data->mode),
+    map_artemis_mode_bandwidth(data->mode)
+  );
   g_mutex_unlock(&self->rig_mutex);
   if (result != RIG_OK)
   {

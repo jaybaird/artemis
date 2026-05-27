@@ -42,8 +42,10 @@ public sealed class Application : Adw.Application {
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
     public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
+    private AlertsWindow? alerts_window = null;
     private HelpWindow? help_window = null;
     private LogbookWindow? logbook_window = null;
+    private bool setup_dialog_active = false;
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -79,12 +81,14 @@ public sealed class Application : Adw.Application {
 
     private const GLib.ActionEntry[] APP_ENTRIES = {
         { "add-spot", on_add_button_clicked },
+        { "alerts", on_alerts_action },
         { "logbook", on_logbook_action },
         { "help", on_help_action },
         { "shortcuts", shortcuts_activated },
         { "about", about_activated },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
+        { "tune", tune_current_spot },
         { "quit", quit_activated }
     };
 
@@ -97,11 +101,13 @@ public sealed class Application : Adw.Application {
 
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
+        set_accels_for_action ("app.alerts", { "<primary><shift>a" });
         set_accels_for_action ("app.logbook", { "<primary>l" });
         set_accels_for_action ("app.help", { "F1" });
         set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
+        set_accels_for_action ("app.tune", { "<primary>t" });
         set_accels_for_action ("app.quit", { "<primary>q" });
         set_accels_for_action ("win.search", { "<Ctrl>F" });
         set_accels_for_action ("win.toggle-sidebar", { "F9" });
@@ -194,6 +200,40 @@ public sealed class Application : Adw.Application {
             return false;
         });
         win.present ();
+        maybe_show_first_run_setup ();
+    }
+
+    public void send_spot_alert (Spot spot) {
+        var title = _("POTA spot alert: %s").printf (spot.callsign);
+        var body = _("%s on %s %s").printf (spot.park_ref, spot.band, spot.mode);
+        var notification = new GLib.Notification (title);
+        notification.set_body (body);
+        notification.set_icon (new ThemedIcon ("preferences-system-notifications-symbolic"));
+        notification.set_priority (GLib.NotificationPriority.NORMAL);
+
+        send_notification ("spot-alert-%u".printf ((uint) spot.hash), notification);
+        show_toast ("%s: %s".printf (title, body));
+    }
+
+    private void maybe_show_first_run_setup () {
+        if (setup_dialog_active ||
+            settings.get_boolean ("first-run-setup-complete") ||
+            win == null) {
+            return;
+        }
+
+        setup_dialog_active = true;
+        var dialog = new FirstRunSetupDialog ();
+        dialog.completed.connect ((save, callsign, location, use_metric) => {
+            setup_dialog_active = false;
+            if (save) {
+                settings.set_string ("callsign", callsign);
+                settings.set_string ("location", location);
+                settings.set_boolean ("use-metric", use_metric);
+            }
+            settings.set_boolean ("first-run-setup-complete", true);
+        });
+        dialog.present (win);
     }
 
     private void on_help_action () {
@@ -225,19 +265,37 @@ public sealed class Application : Adw.Application {
         logbook_window.present ();
     }
 
+    private void on_alerts_action () {
+        if (alerts_window == null) {
+            alerts_window = new AlertsWindow (this);
+            alerts_window.set_transient_for (win);
+            alerts_window.close_request.connect (() => {
+                alerts_window = null;
+                return false;
+            });
+        }
+
+        alerts_window.present ();
+    }
+
     private void about_activated () {
         const string[] ARTISTS = {
+            "App icon designed by gnoman https://gitlab.gnome.org/gnoman",
+            null
         };
 
         const string[] DESIGNERS = {
+            null
         };
 
         const string[] DEVELOPERS = {
-            "Jay Baird (K0VCZ)"
+            "Jay Baird (K0VCZ)",
+            null
         };
 
         const string[] CONTRIBUTORS = {
-            "Henry Cisneros (KG5VFJ)"
+            "Henry Cisneros (KG5VFJ)",
+            null
         };
 
         const string COPYRIGHT = "© 2026 Jay Baird (K0VCZ)";
@@ -251,11 +309,25 @@ public sealed class Application : Adw.Application {
             translator_credits = _("translator-credits")
         };
 
-        dialog.add_acknowledgement_section (_("Contributors"), CONTRIBUTORS);
+        dialog.add_acknowledgement_section (_("Beta Testers"), CONTRIBUTORS);
         dialog.add_legal_section (
             _("Hamlib"),
             RadioControl.hamlib_copyright (),
             Gtk.License.LGPL_2_1, null
+        );
+        dialog.add_legal_section (
+            _("Eclipse Paho MQTT C Client Library"),
+            "Copyright © 2007, Eclipse Foundation, Inc. and its licensors.\n" +
+            "Licensed under the Eclipse Distribution License v1.0.",
+            Gtk.License.CUSTOM,
+            null
+        );
+        dialog.add_legal_section (
+            _("libheatmap"),
+            "Copyright © 2013 Lucas Beyer\n" +
+            "https://github.com/lucasb-eyer/libheatmap",
+            Gtk.License.MIT_X11,
+            null
         );
         dialog.add_legal_section (
             _("Map Tiles"),
@@ -278,6 +350,7 @@ public sealed class Application : Adw.Application {
         general.add (new Adw.ShortcutsItem.from_action (_("Add Spot"), "app.add-spot"));
         general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
         general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Tune"), "app.tune"));
         general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
         general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
         dialog.add (general);
@@ -296,6 +369,13 @@ public sealed class Application : Adw.Application {
         spot_repo.update_spots.begin ((obj, res) => {
             spot_repo.update_spots.end (res);
         });
+    }
+
+    private void tune_current_spot () {
+        Spot? spot = _spot_repo.get_spot (_state.current_spot_hash);
+        if (spot != null) {
+            _radio_control.tune_to_spot (spot);
+        }
     }
 
     private void quit_activated () {
@@ -388,8 +468,8 @@ public sealed class Application : Adw.Application {
 #if ARTEMIS_WINDOWS
         configure_windows_runtime_environment (args);
 #endif
-        Environment.set_prgname ("Artemis");
-        Environment.set_application_name ("Artemis");
+        Environment.set_prgname (Build.NAME);
+        Environment.set_application_name (Build.NAME);
         Intl.setlocale (LocaleCategory.ALL, "");
         Intl.bindtextdomain (Build.GETTEXT_PACKAGE, Build.LOCALEDIR);
         Intl.bind_textdomain_codeset (Build.GETTEXT_PACKAGE, "UTF-8");

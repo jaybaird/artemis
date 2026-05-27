@@ -60,6 +60,8 @@ public sealed class QsoRow : Object {
     public string? spotter { get; construct; }
     public string? spotter_comment { get; construct; }
     public string? activator_comment { get; construct; }
+    public string? rst_sent { get; construct; }
+    public string? rst_rcvd { get; construct; }
     public string? park_name { get; construct; }
     public bool local_adif_saved { get; construct; }
     public bool pota_spotted { get; construct; }
@@ -70,7 +72,8 @@ public sealed class QsoRow : Object {
 
     public QsoRow.from_statement (
         Sqlite.Statement st,
-        bool includes_delivery_status = false
+        bool includes_delivery_status = false,
+        bool includes_rst = false
     ) {
         Object (
             id: st.column_int64 (0),
@@ -82,16 +85,18 @@ public sealed class QsoRow : Object {
             spotter: (st.column_type (6) == Sqlite.NULL) ? null : st.column_text (6),
             spotter_comment: (st.column_type (7) == Sqlite.NULL) ? null : st.column_text (7),
             activator_comment: (st.column_type (8) == Sqlite.NULL) ? null : st.column_text (8),
-            park_name: (st.column_type (9) == Sqlite.NULL) ? null : st.column_text (9),
-            local_adif_saved: includes_delivery_status && st.column_int (10) != 0,
-            pota_spotted: includes_delivery_status && st.column_int (11) != 0,
-            qrz_uploaded: includes_delivery_status && st.column_int (12) != 0,
-            local_adif_error: (!includes_delivery_status || st.column_type (13) == Sqlite.NULL) ?
-                null : st.column_text (13),
-            pota_error: (!includes_delivery_status || st.column_type (14) == Sqlite.NULL) ?
-                null : st.column_text (14),
-            qrz_error: (!includes_delivery_status || st.column_type (15) == Sqlite.NULL) ?
-                null : st.column_text (15)
+            rst_sent: (!includes_rst || st.column_type (9) == Sqlite.NULL) ? null : st.column_text (9),
+            rst_rcvd: (!includes_rst || st.column_type (10) == Sqlite.NULL) ? null : st.column_text (10),
+            park_name: (st.column_type (11) == Sqlite.NULL) ? null : st.column_text (11),
+            local_adif_saved: includes_delivery_status && st.column_int (12) != 0,
+            pota_spotted: includes_delivery_status && st.column_int (13) != 0,
+            qrz_uploaded: includes_delivery_status && st.column_int (14) != 0,
+            local_adif_error: (!includes_delivery_status || st.column_type (15) == Sqlite.NULL) ?
+                null : st.column_text (15),
+            pota_error: (!includes_delivery_status || st.column_type (16) == Sqlite.NULL) ?
+                null : st.column_text (16),
+            qrz_error: (!includes_delivery_status || st.column_type (17) == Sqlite.NULL) ?
+                null : st.column_text (17)
         );
     }
 }
@@ -229,7 +234,9 @@ public class SpotDb : Object, QsoStore, ParkStore {
     private const int SCHEMA_VERSION_INITIAL = 1;
     private const int SCHEMA_VERSION_QSO_DELIVERY_STATUS = 2;
     private const int SCHEMA_VERSION_PARK_DETAILS = 3;
-    private const int SCHEMA_VERSION_LATEST = SCHEMA_VERSION_PARK_DETAILS;
+    private const int SCHEMA_VERSION_QSO_SIGNAL_REPORTS = 4;
+    private const int SCHEMA_VERSION_CANONICAL_PARK_QSO_DATES = 5;
+    private const int SCHEMA_VERSION_LATEST = SCHEMA_VERSION_CANONICAL_PARK_QSO_DATES;
 
     private Sqlite.Database? db = null;
     private string db_path = "";
@@ -248,6 +255,10 @@ public class SpotDb : Object, QsoStore, ParkStore {
 
     public bool has_park_details {
         get { return schema_version >= SCHEMA_VERSION_PARK_DETAILS; }
+    }
+
+    public bool has_qso_signal_reports {
+        get { return schema_version >= SCHEMA_VERSION_QSO_SIGNAL_REPORTS; }
     }
 
     public SpotDb () {}
@@ -320,7 +331,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
 
         if (detected_version > SCHEMA_VERSION_LATEST) {
             error = new DatabaseError.SQLITE_FAILED (
-                "Database schema version %d is newer than this Artemis build supports (%d)".printf (
+                "Database schema version %d is newer than this Trailwave build supports (%d)".printf (
                     detected_version,
                     SCHEMA_VERSION_LATEST
                 )
@@ -416,6 +427,20 @@ public class SpotDb : Object, QsoStore, ParkStore {
             ok = migrate_to_park_details (out error);
             if (ok) {
                 current_version = SCHEMA_VERSION_PARK_DETAILS;
+                ok = set_user_version (current_version, out error);
+            }
+        }
+        if (ok && current_version < SCHEMA_VERSION_QSO_SIGNAL_REPORTS) {
+            ok = migrate_to_qso_signal_reports (out error);
+            if (ok) {
+                current_version = SCHEMA_VERSION_QSO_SIGNAL_REPORTS;
+                ok = set_user_version (current_version, out error);
+            }
+        }
+        if (ok && current_version < SCHEMA_VERSION_CANONICAL_PARK_QSO_DATES) {
+            ok = migrate_to_canonical_park_qso_dates (out error);
+            if (ok) {
+                current_version = SCHEMA_VERSION_CANONICAL_PARK_QSO_DATES;
                 ok = set_user_version (current_version, out error);
             }
         }
@@ -560,6 +585,55 @@ public class SpotDb : Object, QsoStore, ParkStore {
         return true;
     }
 
+    private bool migrate_to_qso_signal_reports (out Error? error) {
+        error = null;
+
+        var columns = load_qso_columns (out error);
+        if (error != null)
+            return false;
+
+        if (!add_qso_column_if_missing (
+            columns,
+            "rst_sent",
+            "ALTER TABLE qsos ADD COLUMN rst_sent TEXT;",
+            out error
+        )) {
+            return false;
+        }
+        if (!add_qso_column_if_missing (
+            columns,
+            "rst_rcvd",
+            "ALTER TABLE qsos ADD COLUMN rst_rcvd TEXT;",
+            out error
+        )) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool migrate_to_canonical_park_qso_dates (out Error? error) {
+        error = null;
+
+        const string SQL =
+            """
+            UPDATE parks
+            SET first_qso_date = strftime('%Y-%m-%dT%H:%M:%SZ', first_qso_date)
+            WHERE first_qso_date IS NOT NULL
+              AND trim(first_qso_date) != ''
+              AND strftime('%Y-%m-%dT%H:%M:%SZ', first_qso_date) IS NOT NULL;
+            """;
+
+        if (db.exec (SQL) != Sqlite.OK) {
+            error = new DatabaseError.SQLITE_FAILED (
+                "Failed to canonicalize park first QSO dates: %s".printf (db.errmsg ())
+            );
+            return false;
+        }
+
+        return true;
+    }
+
     private HashSet<string> load_qso_columns (out Error? error) {
         error = null;
         var columns = new HashSet<string> ();
@@ -645,6 +719,9 @@ public class SpotDb : Object, QsoStore, ParkStore {
     private string qso_select_columns (string alias = "q") {
         var prefix = alias == "" ? "" : "%s.".printf (alias);
         var park_name_column = has_park_details ? "p.park_name" : "NULL";
+        var rst_columns = has_qso_signal_reports ?
+            "%srst_sent, %srst_rcvd".printf (prefix, prefix) :
+            "NULL, NULL";
         var delivery_columns = has_qso_delivery_status ?
             "%slocal_adif_saved, %spota_spotted, %sqrz_uploaded, %slocal_adif_error, %spota_error, %sqrz_error".printf (
                 prefix,
@@ -656,7 +733,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             ) :
             "0, 0, 0, NULL, NULL, NULL";
 
-        return "%sid, %spark_ref, %scallsign, %smode, %sfrequency_khz, %screated_utc, %sspotter, %sspotter_comment, %sactivator_comment, %s, %s".printf (
+        return "%sid, %spark_ref, %scallsign, %smode, %sfrequency_khz, %screated_utc, %sspotter, %sspotter_comment, %sactivator_comment, %s, %s, %s".printf (
             prefix,
             prefix,
             prefix,
@@ -666,6 +743,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             prefix,
             prefix,
             prefix,
+            rst_columns,
             park_name_column,
             delivery_columns
         );
@@ -893,9 +971,9 @@ public class SpotDb : Object, QsoStore, ParkStore {
             """
             INSERT INTO qsos(
             park_ref, callsign, mode, frequency_khz, created_utc,
-            spotter, spotter_comment, activator_comment
+            spotter, spotter_comment, activator_comment, rst_sent, rst_rcvd
             )
-            SELECT ?, ?, ?, ?, ?, ?, ?, ?
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             WHERE NOT EXISTS (
                 SELECT 1
                 FROM qsos
@@ -922,12 +1000,14 @@ public class SpotDb : Object, QsoStore, ParkStore {
         st.bind_text (6, spot.spotter);
         st.bind_text (7, spot.spotter_comment);
         st.bind_text (8, spot.activator_comment);
-        st.bind_text (9, spot.park_ref);
-        st.bind_text (10, spot.callsign);
-        st.bind_text (11, spot.mode);
-        st.bind_double (12, spot.frequency_khz);
-        st.bind_text (13, created_utc);
-        st.bind_text (14, spot.spotter);
+        bind_nullable_text (st, 9, spot.rst_sent);
+        bind_nullable_text (st, 10, spot.rst_rcvd);
+        st.bind_text (11, spot.park_ref);
+        st.bind_text (12, spot.callsign);
+        st.bind_text (13, spot.mode);
+        st.bind_double (14, spot.frequency_khz);
+        st.bind_text (15, created_utc);
+        st.bind_text (16, spot.spotter);
 
         if (st.step () != Sqlite.DONE) {
             db.exec ("ROLLBACK;");
@@ -1106,7 +1186,9 @@ public class SpotDb : Object, QsoStore, ParkStore {
                 created_utc = ?,
                 spotter = ?,
                 spotter_comment = ?,
-                activator_comment = ?
+                activator_comment = ?,
+                rst_sent = ?,
+                rst_rcvd = ?
             WHERE id = ?;
             """;
         if (db.prepare_v2 (QSO_SQL, -1, out st) != Sqlite.OK) {
@@ -1122,7 +1204,9 @@ public class SpotDb : Object, QsoStore, ParkStore {
         st.bind_text (6, spot.spotter);
         st.bind_text (7, spot.spotter_comment);
         st.bind_text (8, spot.activator_comment);
-        st.bind_int64 (9, qso_id);
+        bind_nullable_text (st, 9, spot.rst_sent);
+        bind_nullable_text (st, 10, spot.rst_rcvd);
+        st.bind_int64 (11, qso_id);
         if (st.step () != Sqlite.DONE) {
             db.exec ("ROLLBACK;");
             error = new DatabaseError.SQLITE_FAILED ("QSO update failed: %s".printf (db.errmsg ()));
@@ -1141,6 +1225,69 @@ public class SpotDb : Object, QsoStore, ParkStore {
         if (db.exec ("COMMIT;") != Sqlite.OK) {
             db.exec ("ROLLBACK;");
             error = new DatabaseError.SQLITE_FAILED ("COMMIT QSO update failed: %s".printf (db.errmsg ()));
+            return false;
+        }
+
+        return true;
+    }
+
+    public bool delete_qso (int64 qso_id, out Error? error) {
+        error = null;
+
+        if (db == null) {
+            error = new DatabaseError.DB_NOT_INITIALIZED ("DB not initialized");
+            return false;
+        }
+
+        if (qso_id <= 0) {
+            error = new DatabaseError.INVALID_ARGUMENT ("QSO id is invalid");
+            return false;
+        }
+
+        if (db.exec ("BEGIN IMMEDIATE;") != Sqlite.OK) {
+            error = new DatabaseError.SQLITE_FAILED ("BEGIN QSO delete transaction failed: %s".printf (db.errmsg ()));
+            return false;
+        }
+
+        Statement st;
+        const string OLD_PARK_SQL = "SELECT park_ref FROM qsos WHERE id = ?;";
+        string? old_park_ref = null;
+        if (db.prepare_v2 (OLD_PARK_SQL, -1, out st) != Sqlite.OK) {
+            db.exec ("ROLLBACK;");
+            error = new DatabaseError.SQLITE_FAILED ("Failed to prepare QSO delete park lookup: %s".printf (db.errmsg ()));
+            return false;
+        }
+        st.bind_int64 (1, qso_id);
+        if (st.step () == Sqlite.ROW)
+            old_park_ref = st.column_text (0);
+
+        if (old_park_ref == null) {
+            db.exec ("ROLLBACK;");
+            error = new DatabaseError.INVALID_ARGUMENT ("QSO does not exist");
+            return false;
+        }
+
+        const string DELETE_SQL = "DELETE FROM qsos WHERE id = ?;";
+        if (db.prepare_v2 (DELETE_SQL, -1, out st) != Sqlite.OK) {
+            db.exec ("ROLLBACK;");
+            error = new DatabaseError.SQLITE_FAILED ("Failed to prepare QSO delete: %s".printf (db.errmsg ()));
+            return false;
+        }
+        st.bind_int64 (1, qso_id);
+        if (st.step () != Sqlite.DONE) {
+            db.exec ("ROLLBACK;");
+            error = new DatabaseError.SQLITE_FAILED ("QSO delete failed: %s".printf (db.errmsg ()));
+            return false;
+        }
+
+        if (!refresh_park_qso_summary (old_park_ref, out error)) {
+            db.exec ("ROLLBACK;");
+            return false;
+        }
+
+        if (db.exec ("COMMIT;") != Sqlite.OK) {
+            db.exec ("ROLLBACK;");
+            error = new DatabaseError.SQLITE_FAILED ("COMMIT QSO delete failed: %s".printf (db.errmsg ()));
             return false;
         }
 
@@ -1499,7 +1646,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             return rows;
         }
         while (st.step () == Sqlite.ROW) {
-            rows.add (new QsoRow.from_statement (st, has_qso_delivery_status));
+            rows.add (new QsoRow.from_statement (st, has_qso_delivery_status, has_qso_signal_reports));
         }
         return rows;
     }
@@ -1532,7 +1679,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
         }
         st.bind_int (1, limit);
         while (st.step () == Sqlite.ROW) {
-            rows.add (new QsoRow.from_statement (st, has_qso_delivery_status));
+            rows.add (new QsoRow.from_statement (st, has_qso_delivery_status, has_qso_signal_reports));
         }
         return rows;
     }
@@ -1621,7 +1768,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
         st.bind_int (bind_index, offset);
 
         while (st.step () == Sqlite.ROW)
-            rows.add (new QsoRow.from_statement (st, has_qso_delivery_status));
+            rows.add (new QsoRow.from_statement (st, has_qso_delivery_status, has_qso_signal_reports));
 
         return new LogbookQsoPage (rows, total_count);
     }
@@ -1826,7 +1973,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
         st.bind_text (1, park_ref);
 
         while (st.step () == Sqlite.ROW) {
-            var row = new QsoRow.from_statement (st, has_qso_delivery_status);
+            var row = new QsoRow.from_statement (st, has_qso_delivery_status, has_qso_signal_reports);
             list.add (row);
         }
         return list;
@@ -1862,7 +2009,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
         st.bind_text (1, park_ref);
         QsoRow? row = null;
         if (st.step () == Sqlite.ROW)
-            row = new QsoRow.from_statement (st, has_qso_delivery_status);
+            row = new QsoRow.from_statement (st, has_qso_delivery_status, has_qso_signal_reports);
         return row;
     } /* latest_qso_for_park */
 

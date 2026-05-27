@@ -24,6 +24,9 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
     private unowned GeneralPreferencesPage general_page;
 
     [GtkChild]
+    private unowned MapPreferencesPage map_page;
+
+    [GtkChild]
     private unowned RadioPreferencesPage radio_page;
 
     [GtkChild]
@@ -38,6 +41,7 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
 
     construct {
         general_page.setup ();
+        map_page.setup ();
         radio_page.setup ();
         logging_page.setup ();
         wsjtx_page.setup ();

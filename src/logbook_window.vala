@@ -89,7 +89,7 @@ public sealed class LogbookParkItem : Object {
     public string raw_first_qso { get; construct; }
 
     public LogbookParkItem (HuntedParkRow park) {
-        var first = display_datetime (park.first_qso_date);
+        var first = display_datetime (park.first_qso_date, "%x");
         Object (
             reference: park.reference,
             park_name: park.park_name ?? "",
@@ -162,6 +162,10 @@ public sealed class LogbookWindow : Adw.Window {
     private Gtk.ColumnViewColumn parks_location_column;
     private Gtk.ColumnViewColumn parks_qsos_column;
     private Gtk.ColumnViewColumn parks_first_qso_column;
+    private Gtk.SingleSelection qso_selection;
+    private Gtk.Popover qso_context_popover;
+    private Gtk.Button qso_lookup_park_button;
+    private LogbookQsoItem? context_qso_item = null;
     private int qso_offset = 0;
     private int qso_total_count = 0;
     private int parks_offset = 0;
@@ -187,6 +191,7 @@ public sealed class LogbookWindow : Adw.Window {
         setup_qso_columns ();
         setup_parks_columns ();
         bind_models ();
+        setup_qso_context_menu ();
 
         search_entry.search_changed.connect (() => {
             qso_offset = 0;
@@ -203,8 +208,9 @@ public sealed class LogbookWindow : Adw.Window {
     }
 
     private void bind_models () {
-        qso_column_view.model = new Gtk.NoSelection (qso_store);
-        parks_column_view.model = new Gtk.NoSelection (parks_store);
+        qso_selection = new Gtk.SingleSelection (qso_store);
+        qso_column_view.model = qso_selection;
+        parks_column_view.model = new Gtk.SingleSelection (parks_store);
 
         var qso_sorter = qso_column_view.sorter as Gtk.ColumnViewSorter;
         if (qso_sorter != null)
@@ -226,19 +232,22 @@ public sealed class LogbookWindow : Adw.Window {
             qso_column_view,
             _("Date"),
             (item) => ((LogbookQsoItem)item).date,
-            (a, b) => compare_strings (((LogbookQsoItem)a).raw_date, ((LogbookQsoItem)b).raw_date)
+            (a, b) => compare_strings (((LogbookQsoItem)a).raw_date, ((LogbookQsoItem)b).raw_date),
+            true
         );
         qso_activator_column = append_text_column (
             qso_column_view,
             _("Activator"),
             (item) => ((LogbookQsoItem)item).activator,
-            (a, b) => compare_strings (((LogbookQsoItem)a).activator, ((LogbookQsoItem)b).activator)
+            (a, b) => compare_strings (((LogbookQsoItem)a).activator, ((LogbookQsoItem)b).activator),
+            true
         );
         qso_reference_column = append_text_column (
             qso_column_view,
             _("Reference"),
             (item) => ((LogbookQsoItem)item).reference,
-            (a, b) => compare_strings (((LogbookQsoItem)a).reference, ((LogbookQsoItem)b).reference)
+            (a, b) => compare_strings (((LogbookQsoItem)a).reference, ((LogbookQsoItem)b).reference),
+            true
         );
         qso_park_column = append_text_column (
             qso_column_view,
@@ -260,7 +269,8 @@ public sealed class LogbookWindow : Adw.Window {
             parks_column_view,
             _("Reference"),
             (item) => ((LogbookParkItem)item).reference,
-            (a, b) => compare_strings (((LogbookParkItem)a).reference, ((LogbookParkItem)b).reference)
+            (a, b) => compare_strings (((LogbookParkItem)a).reference, ((LogbookParkItem)b).reference),
+            true
         );
         parks_park_column = append_text_column (
             parks_column_view,
@@ -284,7 +294,8 @@ public sealed class LogbookWindow : Adw.Window {
             parks_column_view,
             _("First QSO"),
             (item) => ((LogbookParkItem)item).first_qso,
-            (a, b) => compare_strings (((LogbookParkItem)a).raw_first_qso, ((LogbookParkItem)b).raw_first_qso)
+            (a, b) => compare_strings (((LogbookParkItem)a).raw_first_qso, ((LogbookParkItem)b).raw_first_qso),
+            true
         );
     }
 
@@ -323,15 +334,20 @@ public sealed class LogbookWindow : Adw.Window {
         Gtk.ColumnView view,
         string title,
         CellTextFunc text_func,
-        ItemCompareFunc compare_func
+        ItemCompareFunc compare_func,
+        bool numeric = false
     ) {
         var factory = new Gtk.SignalListItemFactory ();
         factory.setup.connect ((object) => {
             var list_item = object as Gtk.ListItem;
-            list_item.child = new Gtk.Label ("") {
+            var label = new Gtk.Label ("") {
                 xalign = 0.0f,
+                hexpand = true,
                 ellipsize = Pango.EllipsizeMode.END
             };
+            if (numeric)
+                label.add_css_class ("numeric");
+            list_item.child = label;
         });
         factory.bind.connect ((object) => {
             var list_item = object as Gtk.ListItem;
@@ -359,8 +375,12 @@ public sealed class LogbookWindow : Adw.Window {
                 valign = Gtk.Align.CENTER
             });
             box.append (new Gtk.Label ("") {
-                xalign = 0.0f
+                xalign = 0.0f,
+                hexpand = true
             });
+            var label = box.get_last_child () as Gtk.Label;
+            if (label != null)
+                label.add_css_class ("numeric");
             list_item.child = box;
         });
         factory.bind.connect ((object) => {
@@ -387,6 +407,129 @@ public sealed class LogbookWindow : Adw.Window {
         ));
         qso_column_view.append_column (column);
         return column;
+    }
+
+    private void setup_qso_context_menu () {
+        qso_context_popover = new Gtk.Popover () {
+            has_arrow = true,
+            autohide = true
+        };
+        qso_context_popover.set_parent (qso_column_view);
+
+        var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
+            margin_top = 6,
+            margin_bottom = 6,
+            margin_start = 6,
+            margin_end = 6
+        };
+
+        qso_lookup_park_button = new Gtk.Button.with_label (_("Lookup Park")) {
+            has_frame = false,
+            halign = Gtk.Align.FILL,
+            hexpand = true
+        };
+        qso_lookup_park_button.clicked.connect (() => {
+            qso_context_popover.popdown ();
+            if (context_qso_item != null)
+                lookup_park_for_qso (context_qso_item);
+        });
+
+        var delete_button = new Gtk.Button.with_label (_("Delete")) {
+            has_frame = false,
+            halign = Gtk.Align.FILL,
+            hexpand = true
+        };
+        delete_button.add_css_class ("destructive-action");
+        delete_button.clicked.connect (() => {
+            qso_context_popover.popdown ();
+            if (context_qso_item != null)
+                confirm_delete_qso (context_qso_item);
+        });
+
+        box.append (qso_lookup_park_button);
+        box.append (delete_button);
+        qso_context_popover.child = box;
+
+        var click = new Gtk.GestureClick ();
+        click.button = Gdk.BUTTON_SECONDARY;
+        click.pressed.connect ((n_press, x, y) => {
+            var item = qso_selection.selected_item as LogbookQsoItem;
+            if (item == null)
+                return;
+
+            context_qso_item = item;
+            qso_lookup_park_button.sensitive = item.reference.strip () != "";
+            Gdk.Rectangle rect = { (int)x, (int)y, 1, 1 };
+            qso_context_popover.set_pointing_to (rect);
+            qso_context_popover.popup ();
+        });
+        qso_column_view.add_controller (click);
+    }
+
+    private void lookup_park_for_qso (LogbookQsoItem item) {
+        var reference = item.reference.strip ();
+        if (reference == "")
+            return;
+
+        Application.park_details_cache.get_details.begin (reference, (obj, res) => {
+            try {
+                var details = Application.park_details_cache.get_details.end (res);
+
+                Error? db_error = null;
+                if (!Application.spot_database.add_park (
+                    details.reference,
+                    details.name,
+                    null,
+                    details.location_desc,
+                    null,
+                    null,
+                    0,
+                    out db_error
+                )) {
+                    throw db_error ?? new IOError.FAILED ("Unable to save park details");
+                }
+
+                Application.show_toast (_("Park details updated"));
+                reload ();
+            } catch (Error err) {
+                present_error (_("Unable to Lookup Park"), err.message);
+            }
+        });
+    }
+
+    private void confirm_delete_qso (LogbookQsoItem item) {
+        var alert = new Adw.AlertDialog (_("Delete QSO?"), null);
+        alert.body = _("This removes the QSO from your local logbook.");
+        alert.add_response ("cancel", _("Cancel"));
+        alert.add_response ("delete", _("Delete"));
+        alert.set_response_appearance ("delete", Adw.ResponseAppearance.DESTRUCTIVE);
+        alert.set_default_response ("cancel");
+        alert.set_close_response ("cancel");
+        alert.response.connect ((response) => {
+            if (response == "delete")
+                delete_qso (item);
+        });
+        alert.present (this);
+    }
+
+    private void delete_qso (LogbookQsoItem item) {
+        Error? error = null;
+        if (!Application.spot_database.delete_qso (item.qso.id, out error)) {
+            present_error (_("Unable to Delete QSO"), error != null ? error.message : _("Unable to delete QSO"));
+            return;
+        }
+
+        Application.show_toast (_("QSO deleted"));
+        reload ();
+    }
+
+    private void present_error (string title, string message) {
+        var alert = new Adw.AlertDialog (title, null);
+        alert.format_body ("%s", message);
+        alert.add_response ("ok", _("OK"));
+        alert.set_default_response ("ok");
+        alert.set_close_response ("ok");
+        alert.present (this);
     }
 
     private void reload () {
@@ -486,7 +629,7 @@ public sealed class LogbookWindow : Adw.Window {
         if (item == null)
             return;
 
-        var dialog = new AddSpot.from_qso (item.qso);
+        var dialog = new QsoDialog (item.qso);
         dialog.qso_changed.connect (() => reload ());
         dialog.present (this);
     }
@@ -643,13 +786,37 @@ public sealed class LogbookWindow : Adw.Window {
     }
 }
 
-private string display_datetime (string? iso_utc) {
-    if ((iso_utc ?? "").strip () == "")
+private string display_datetime (string? iso_utc, string format = "%x %R UTC") {
+    var value = (iso_utc ?? "").strip ();
+    if (value == "")
         return "";
 
-    var dt = new DateTime.from_iso8601 (iso_utc, new TimeZone.utc ());
+    var dt = new DateTime.from_iso8601 (value, new TimeZone.utc ());
+    if (dt == null)
+        dt = date_only_as_utc (value);
     if (dt == null)
         return iso_utc;
 
-    return dt.to_utc ().format ("%Y-%m-%d %H:%M UTC");
+    return dt.to_utc ().format (format);
+}
+
+private DateTime? date_only_as_utc (string value) {
+    if (value.length != 10 ||
+        value.get_char (4) != '-' ||
+        value.get_char (7) != '-') {
+        return null;
+    }
+
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    unowned string unparsed;
+    if (!int.try_parse (value.substring (0, 4), out year, out unparsed) || unparsed != "")
+        return null;
+    if (!int.try_parse (value.substring (5, 2), out month, out unparsed) || unparsed != "")
+        return null;
+    if (!int.try_parse (value.substring (8, 2), out day, out unparsed) || unparsed != "")
+        return null;
+
+    return new DateTime.utc (year, month, day, 0, 0, 0);
 }

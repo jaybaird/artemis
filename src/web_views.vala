@@ -53,7 +53,7 @@ public class ParkDetailsView : Adw.Window {
         webview = new WebKit.WebView ();
         webview.load_uri (url);
         webview.notify["title"].connect (() => {
-          title_widget.title = "%s • Artemis".printf (webview.title);
+          title_widget.title = "%s • %s".printf (webview.title, Build.NAME);
         });
 
         scrolled.set_child (webview);

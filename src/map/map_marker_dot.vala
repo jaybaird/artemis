@@ -35,8 +35,8 @@ public class MapMarkerDot : Gtk.DrawingArea {
     }
 
     public MapMarkerDot (string band) {
-        width_request = 28;
-        height_request = 28;
+        width_request = 18;
+        height_request = 18;
         halign = Gtk.Align.CENTER;
         valign = Gtk.Align.CENTER;
 

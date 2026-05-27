@@ -323,7 +323,7 @@ public sealed class LeftSidebar : Gtk.Box {
     public void reset_vfo () {
         stop_vfo_animation ();
         has_displayed_radio_vfo = false;
-        radio_vfo.label = "";
+        radio_vfo.label = "––.–––.––";
         set_tx_active (false);
         set_rx_active (false);
     }

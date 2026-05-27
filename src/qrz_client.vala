@@ -37,7 +37,7 @@ public sealed class QrzClient : Object, QrzQsoUploader {
     construct {
         session = new Soup.Session () {
             timeout = 30,
-            user_agent = "Artemis/%s".printf (Build.VERSION)
+            user_agent = Build.USER_AGENT
         };
     }
 
@@ -71,6 +71,10 @@ public sealed class QrzClient : Object, QrzQsoUploader {
         }
 
         return params;
+    }
+
+    private static bool is_duplicate_upload_reason (string reason) {
+        return reason.down ().contains ("duplicate");
     }
 
     private async void upload_adif_payload (string adif) throws Error {
@@ -152,6 +156,9 @@ public sealed class QrzClient : Object, QrzQsoUploader {
         if (result == "AUTH") {
             throw new QrzLogbookError.AUTH_FAILED (reason);
         }
+
+        if (is_duplicate_upload_reason (reason))
+            return;
 
         throw new QrzLogbookError.API_FAILED (reason);
     }

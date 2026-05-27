@@ -89,6 +89,7 @@ test_callsign_cache = executable(
   [
     meson.project_source_root() / 'src/activator.vala',
     meson.project_source_root() / 'src/callsign_cache.vala',
+    meson.project_build_root() / 'src/build.vala',
     meson.project_source_root() / 'tests/test-callsign-cache.vala'
   ],
   dependencies: [
@@ -131,6 +132,7 @@ test('Weather Cache', test_weather_cache)
 test_database = executable(
   'test-database',
   [
+    meson.project_source_root() / 'src/frequency.vala',
     meson.project_source_root() / 'src/database.vala',
     meson.project_source_root() / 'tests/test-database.vala',
     compiled_resources
@@ -140,7 +142,8 @@ test_database = executable(
     dependency('gio-2.0'),
     dependency('glib-2.0'),
     dependency('gobject-2.0'),
-    dependency('sqlite3')
+    dependency('sqlite3'),
+    cc.find_library('m', required: true)
   ]
 )
 
@@ -174,6 +177,34 @@ test_spot_filter = executable(
 )
 
 test('Spot Filter', test_spot_filter)
+
+test_heatmap_model = executable(
+  'test-heatmap-model',
+  [
+    meson.project_source_root() / 'src/utils/maidenhead.vala',
+    meson.project_source_root() / 'src/frequency.vala',
+    meson.project_source_root() / 'src/models/heatmap_model.vala',
+    meson.project_source_root() / 'src/models/heatmap_point.vala',
+    meson.project_source_root() / 'src/models/signal_report.vala',
+    meson.project_source_root() / 'src/models/signal_report_bucket.vala',
+    meson.project_source_root() / 'src/psk_reporter_client.vala',
+    meson.project_source_root() / 'src/psk_reporter_decoder.vala',
+    meson.project_build_root() / 'src/build.vala',
+    meson.project_source_root() / 'tests/test-heatmap-model.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('json-glib-1.0'),
+    dependency('libsoup-3.0'),
+    dependency('libxml-2.0'),
+    cc.find_library('m', required: true)
+  ]
+)
+
+test('Heatmap Model', test_heatmap_model)
 
 test_wsjtx_logged_adif = executable(
   'test-wsjtx-logged-adif',

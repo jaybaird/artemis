@@ -3,9 +3,12 @@
   <gresource prefix="/com/k0vcz/artemis/">
     <file preprocess="xml-stripblanks">ui/preferences.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/general_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences/map_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/radio_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/logging_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/wsjtx_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/alerts_window.ui</file>
+    <file preprocess="xml-stripblanks">ui/first_run_setup_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/main_window.ui</file>
     <file preprocess="xml-stripblanks">ui/help_window.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_card.ui</file>
@@ -19,6 +22,7 @@
     <file preprocess="xml-stripblanks">ui/park_log_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/left_sidebar.ui</file>
     <file preprocess="xml-stripblanks">ui/logbook_window.ui</file>
+    <file preprocess="xml-stripblanks">ui/qso_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_detail.ui</file>
     <file preprocess="xml-stripblanks">ui/band_button.ui</file>
     <file compressed="true">icons/hicolor/symbolic/actions/arrow-circular-bottom-right-symbolic.svg</file>
@@ -36,6 +40,7 @@
     <file compressed="true">icons/hicolor/symbolic/actions/grid-filled-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/grid-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/user-home-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/map-layers-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/map-marker-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/map-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/media-playback-pause-symbolic.svg</file>

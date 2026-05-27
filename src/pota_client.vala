@@ -50,7 +50,7 @@ public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkD
 
         session = new Soup.Session () {
             timeout = 30,
-            user_agent = "Artemis/%s".printf (Build.VERSION)
+            user_agent = Build.USER_AGENT
         };
         session.add_feature (cache);
         location_lookup = new HashMap<string, PotaLocation?> ();

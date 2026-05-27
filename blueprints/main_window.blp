@@ -22,7 +22,7 @@ using Gtk 4.0;
 using Adw 1;
 
 template $AppWindow : Adw.ApplicationWindow {
-  title: _("Artemis");
+  title: _("Trailwave");
   default-width: 1280;
   default-height: 720;
   width-request: 360;
@@ -160,15 +160,19 @@ template $AppWindow : Adw.ApplicationWindow {
           }
 
           [top]
-          SearchBar search_bar {
-            SearchEntry search_entry {
-              hexpand: true;
-              input-hints: no_spellcheck;
-              placeholder-text: _("Search for Park or Callsign");
-              styles ["overlay-search-entry"]
-              accessibility {
-                label: _("Search for Park or Callsign");
-                role-description: _("search entry");
+          Box {
+            styles ["overlay-search-bar"]
+
+            SearchBar search_bar {
+              SearchEntry search_entry {
+                hexpand: true;
+                input-hints: no_spellcheck;
+                placeholder-text: _("Search for Park or Callsign");
+                styles ["overlay-search-entry"]
+                accessibility {
+                  label: _("Search for Park or Callsign");
+                  role-description: _("search entry");
+                }
               }
             }
           }
@@ -254,9 +258,21 @@ menu menu_app {
     }
 
     item {
+      label: _("Tune");
+      action: "app.tune";
+    }
+
+    item {
       label: _("Logbook");
       action: "app.logbook";
     }
+
+    item {
+      label: _("Alerts");
+      icon-name: "preferences-system-notifications-symbolic";
+      action: "app.alerts";
+    }
+
   }
 
   section {
@@ -277,7 +293,7 @@ menu menu_app {
 
 
     item {
-      label: _("About Artemis");
+      label: _("About Trailwave");
       action: "app.about";
     }
   }

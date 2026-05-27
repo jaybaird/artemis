@@ -1,174 +1,364 @@
 {
   "schemaVersion": 1,
-  "contentVersion": 1,
+  "contentVersion": 3,
   "sections": [
     {
       "id": "getting-started",
-      "title": "Getting Started",
+      "title": "Getting started",
       "articles": [
         {
-          "id": "what-is-artemis",
-          "title": "What is Artemis?",
-          "summary": "Artemis is a desktop app for tracking, filtering, mapping, and working live Parks on the Air spots.",
+          "id": "what-is-trailwave",
+          "title": "What is Trailwave?",
+          "summary": "Trailwave helps you find, review, map, spot, tune, and log live Parks on the Air activity.",
           "icon": null,
-          "badge": "Start Here",
+          "badge": "Start here",
           "paragraphs": [
-            "Artemis brings current POTA spots, map context, station tools, and local hunting history into one GTK desktop app.",
-            "The main window is organized around the active hunter workflow. Start in Cards or List to scan the feed, switch to Map when geography matters, and use the inspector to review park, activator, weather, and operating details before you act.",
-            "Optional integrations such as radio CAT control, WSJT-X listening, and QRZ logging can automate parts of your session without replacing the tools you already use."
+            "Trailwave is a desktop app for POTA hunters. It shows the live spot feed in card, list, and map views so you can quickly decide which activations to work.",
+            "Select a spot to open the Park Detail View. It shows the activator, park, frequency, mode, spot history, location, distance, bearing, weather, and sun or moon times when that information is available.",
+            "Optional station tools can tune a configured radio, listen for WSJT-X activity, save QSOs locally, write an ADIF backup log, and upload completed contacts to QRZ."
           ],
           "keywords": [
             "overview",
             "introduction",
             "spots",
             "map",
-            "artemis"
+            "trailwave",
+            "pota"
           ]
         },
         {
           "id": "first-setup",
           "title": "What should I configure first?",
-          "summary": "Set your callsign and location first, then review update, radio, WSJT-X, and QRZ settings as needed.",
+          "summary": "Set your callsign and grid square first, then decide how spots, logging, and station integrations should behave.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Open Preferences and start with your callsign and location. Your callsign is required for posting spots and QRZ logging, and your location enables distance and bearing calculations in the inspector.",
-            "Next, review the refresh interval and any spot filters you want Artemis to use by default when it starts.",
-            "If you use external tools, this is also the right time to configure radio control, WSJT-X listening, and QRZ upload."
+            "Open Preferences and start on the General page. Enter your callsign and station location. The location should be a Maidenhead grid square if you want distance and direction shown for parks.",
+            "Choose your default band and mode, update interval, stale-spot limit, default spot message, and display options. These settings control what Trailwave shows when it starts and how aggressively older spots are hidden.",
+            "Configure CAT Control only if you want Trailwave to connect to your radio. Configure Logging, WSJT-X, and Map signal report options only if you want those integrations active during your operating session."
           ],
           "keywords": [
             "setup",
             "preferences",
             "callsign",
             "location",
+            "grid",
             "radio",
             "wsjt-x"
+          ]
+        },
+        {
+          "id": "customize-spots",
+          "title": "How do I customize the spots view?",
+          "summary": "Use Preferences for startup behavior, then use the sidebar, search, view switcher, and refresh controls during a session.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Preferences to choose your default band, default mode, refresh interval, stale-spot limit, units, map scale, and whether Trailwave highlights unhunted parks. Those settings shape the main window when Trailwave opens.",
+            "During a session, use the sidebar to filter by band, mode, and POTA program. Use Search to match callsigns, park references, or park names, and switch between Cards, List, and Map depending on whether you want scanning density or geographic context.",
+            "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload."
+          ],
+          "keywords": [
+            "customize",
+            "layout",
+            "filters",
+            "refresh",
+            "preferences",
+            "search",
+            "cards",
+            "list",
+            "map"
+          ]
+        },
+        {
+          "id": "keyboard-shortcuts",
+          "title": "What keyboard shortcuts are available?",
+          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, tuning, and opening the logbook.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Keyboard Shortcuts from the application menu to see the current shortcut list.",
+            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Logbook, Toggle Sidebar, Help, Preferences, and Quit.",
+            "Shortcuts follow the same rules as the visible controls. For example, Tune still requires a selected spot and a connected radio."
+          ],
+          "keywords": [
+            "keyboard",
+            "shortcuts",
+            "search",
+            "refresh",
+            "tune",
+            "logbook"
           ]
         }
       ]
     },
     {
       "id": "spots-and-filters",
-      "title": "Spots and Filters",
+      "title": "Spots and filters",
       "articles": [
         {
           "id": "views-and-filters",
-          "title": "How do I work with the spots views?",
-          "summary": "Use the sidebar, search field, and Cards, List, or Map views together to narrow the live feed quickly.",
+          "title": "How do I work with the spot views?",
+          "summary": "Use Cards for scanning, List for compact rows, and Map for location context.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "The sidebar lets you filter by band, mode, and program. The search box filters visible spots by callsign or park details.",
-            "Cards is the default scanning view, List gives you a compact tabular pass over the feed, and Map helps when distance and location matter more than row density.",
-            "Pause updates when you want the visible set of spots to stop changing while you inspect or log a contact."
+            "Cards is the main scanning view. It groups each spot into an easy-to-read card with the activator, park reference, park name, location, grid, frequency, mode, age, spot count, and badges.",
+            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune and Re-Spot actions.",
+            "Map places spots with usable grid information on the map. Selecting a card, row, or marker selects the same spot everywhere and opens the Park Detail View."
           ],
           "keywords": [
             "cards",
             "list",
             "map",
+            "views",
+            "spot list",
+            "markers"
+          ]
+        },
+        {
+          "id": "filtering-searching",
+          "title": "How do filters and search work?",
+          "summary": "Filter by band, mode, program, age, QRT status, hunted status, or text search.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Use the sidebar to filter by band, mode, and POTA program. Program filtering uses the prefix in the park reference, such as K or VE.",
+            "Use Search to match visible spots by callsign, park reference, or park name. Search is combined with the active band, mode, program, and display filters.",
+            "Preferences can hide spots marked QRT, parks you have already hunted today, and spots older than the stale-spot limit. If a view is empty, Trailwave tells you whether there are no spots on that band or no spots matching your filters."
+          ],
+          "keywords": [
             "search",
             "filters",
-            "sidebar"
+            "band",
+            "mode",
+            "program",
+            "qrt",
+            "stale",
+            "hunted"
           ]
         },
         {
           "id": "spot-badges",
           "title": "What do the spot badges mean?",
-          "summary": "Badges indicate whether a park is new, already hunted today, a new band for you, or recently heard via WSJT-X.",
+          "summary": "Badges summarize local hunting history and recent WSJT-X activity.",
           "icon": null,
           "badge": null,
-          "paragraphs": [
-            "Artemis uses badges so you can judge a spot at a glance without opening the inspector every time.",
-            "A new park badge means you have not logged that park locally yet. Hunted today means you already worked it on the current UTC day. New band means you have worked the park before, but not on the displayed band.",
-            "If WSJT-X recently decoded the activator, Artemis can mark the spot so you know it has been heard locally through your digital setup."
+          "content": [
+            {
+              "type": "paragraph",
+              "text": "Badges help you judge a spot quickly without opening the Park Detail View."
+            },
+            {
+              "type": "spot-badge-list"
+            },
+            {
+              "type": "paragraph",
+              "text": "Badge availability depends on your local logbook, display preferences, and WSJT-X activity. Heard recently fades automatically after a short time."
+            }
           ],
           "keywords": [
             "badges",
             "new park",
             "hunted today",
+            "previously hunted",
             "new band",
-            "heard"
+            "heard recently",
+            "wsjt-x"
+          ]
+        },
+        {
+          "id": "updates-empty-states",
+          "title": "How do spot updates behave?",
+          "summary": "Trailwave refreshes spots on a schedule, can pause updates, and shows clear empty or error states.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Trailwave refreshes the live feed at the interval set in Preferences. The status bar shows the current UTC time, the next refresh timing, and how many spots are hidden by filters.",
+            "Use Pause when you want the current feed to stop changing while you review, tune, or log a contact. Resume updates when you are ready to return to the live feed.",
+            "If a refresh fails, Trailwave shows an error dialog with a Retry option. If no spots are available or no spots match your filters, the spot views show an empty-state message instead of a blank screen."
+          ],
+          "keywords": [
+            "refresh",
+            "pause",
+            "resume",
+            "empty",
+            "error",
+            "status bar"
           ]
         }
       ]
     },
     {
       "id": "map-and-inspector",
-      "title": "Map and Inspector",
+      "title": "Map and Park Detail View",
       "articles": [
         {
           "id": "inspector-details",
-          "title": "What does the inspector show?",
-          "summary": "The inspector expands a selected spot into park, activator, weather, location, and spotting context.",
+          "title": "What does the Park Detail View show?",
+          "summary": "The Park Detail View expands a selected spot into operating, park, activator, weather, and location details.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "When you select a spot, the inspector shows frequency, mode, spot count, location, weather, map coordinates, distance, bearing, and sunrise or moonrise context when the park has usable coordinates.",
-            "The inspector also exposes park history links and activator profile details when that data is available.",
-            "Use the dock button in the header bar if you want to hide the inspector temporarily and give more room to the main spot views."
+            "Select a spot to open the Park Detail View. The top section identifies the activator and park, then shows weather when it can be loaded for the park.",
+            "Operating Details includes frequency, mode, spot count, and activator comments when present. Location includes the park location, coordinates, distance, direction, sun times, moon times, and a link to park details when data is available.",
+            "Last Spot shows the spotter, age, spotter comment, and a Spot History link. The activator section can show profile details and a link to the activator profile when Trailwave can retrieve them."
           ],
           "keywords": [
+            "park detail",
             "inspector",
             "detail",
             "weather",
             "distance",
             "bearing",
-            "history"
+            "history",
+            "activator",
+            "park"
+          ]
+        },
+        {
+          "id": "spot-history",
+          "title": "What does spot history show?",
+          "summary": "Spot history shows previous spots for the same activator and park so you can judge recency and spotting patterns.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open View Spot History from the Park Detail View to see previous spots for the selected activator at the same park reference.",
+            "History is useful when you want to see whether an activation has been moving between bands or modes, whether different spotters have copied it, and how recent the activity appears.",
+            "Each history row can include the spotter, frequency, mode, UTC time, and comments when that data is available. If Trailwave cannot load the history or POTA returns no records, the dialog shows an error or empty message instead."
+          ],
+          "keywords": [
+            "spot history",
+            "history",
+            "previous spots",
+            "spotter",
+            "frequency",
+            "mode",
+            "comments"
           ]
         },
         {
           "id": "map-view",
           "title": "When should I use Map view?",
-          "summary": "Map view is useful when distance, location clustering, or directional context matters more than a compact list.",
+          "summary": "Map view is useful when geography, distance, and clustering matter.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Switch to Map view when you want to understand where an activation is relative to your QTH or compare several nearby parks at once.",
-            "Map view works best for parks that include coordinates or grid data that Artemis can translate into map positions.",
-            "The inspector stays useful in Map view, since it turns the selected marker back into a full operating summary."
+            "Switch to Map when you want to see where active parks are. Spots with usable grid information appear as markers, colored by band.",
+            "Selecting a marker opens the same spot in the Park Detail View. Selecting a spot in Cards or List also moves the map to that park when coordinates are available.",
+            "If you have a station grid set, the map starts near your QTH when no spot is selected. Otherwise it fits visible park markers when possible."
           ],
           "keywords": [
             "map",
             "markers",
             "location",
             "distance",
-            "grid"
+            "grid",
+            "qth"
+          ]
+        },
+        {
+          "id": "map-overlays",
+          "title": "What map overlays are available?",
+          "summary": "Map overlays show grayline, sun and moon positions, and optional PSKReporter signal reports.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Use the Overlays control in Map view to show or hide grayline, sun and moon markers, and signal reports. Clicking the main Overlays button toggles grayline visibility.",
+            "The Signal Reports overlay shows recent PSKReporter reports for your configured callsign as a heatmap. Preferences control how long reports remain visible, how wide the heatmap points appear, and whether recent history is loaded before the live stream starts.",
+            "Map scale and distance units follow the General preferences. The map also follows the app's light or dark appearance."
+          ],
+          "keywords": [
+            "map",
+            "overlays",
+            "grayline",
+            "sun",
+            "moon",
+            "signal reports",
+            "pskreporter",
+            "heatmap"
+          ]
+        },
+        {
+          "id": "signal-reports",
+          "title": "How do signal reports work?",
+          "summary": "Signal Reports shows where PSKReporter has heard your configured callsign.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Enable Signal Reports from the Map view Overlays menu. Trailwave uses your callsign from General preferences, so the overlay will not start until a callsign is configured.",
+            "When enabled, Trailwave can load recent PSKReporter reception reports and then listen for live reports. The map shows them as a heatmap, with stronger or denser recent reports appearing more prominently.",
+            "The status label on the map shows how many reports are currently visible and the age window being used. If it shows zero reports, PSKReporter may not have recent reports for your callsign, the reports may be outside the age window, or the network stream may not be connected yet.",
+            "Use Map preferences to change the maximum report age, heatmap spread, and whether Trailwave preloads recent reports before starting the live stream. Signal reports are propagation clues, not confirmation that a POTA activator is on frequency."
+          ],
+          "keywords": [
+            "signal reports",
+            "pskreporter",
+            "psk reporter",
+            "heatmap",
+            "propagation",
+            "callsign",
+            "mqtt",
+            "map",
+            "overlays"
           ]
         }
       ]
     },
     {
       "id": "spotting-and-logging",
-      "title": "Spotting and Logging",
+      "title": "Spotting and logging",
       "articles": [
         {
           "id": "posting-spots",
           "title": "How do I add or re-spot an activation?",
-          "summary": "Use Add Spot to create a spot manually or re-open the form from an existing spot to post a quicker follow-up.",
+          "summary": "Use Add Spot to save a QSO locally and optionally post a spot to POTA.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Choose Add Spot from the header bar to post a manual spot. Artemis fills in the right fields when you start from an existing spot and use the re-spot path.",
-            "Your configured callsign is required before posting is enabled.",
-            "Successful spot posts also feed Artemis local logging and can trigger optional downstream integrations such as QRZ upload."
+            "Choose Add Spot to enter the activator callsign, your spotter callsign, frequency, mode, park reference, RST sent and received, and comments. If a radio is connected, Trailwave can prefill the current frequency.",
+            "Use Re-Spot from an existing spot to prefill the activator, park reference, frequency, and mode. The activator and park reference are locked in that flow so the new spot stays tied to the selected activation.",
+            "When you submit, Trailwave saves the QSO locally first. It then posts the spot to POTA, writes the local ADIF backup log, and uploads to QRZ when those options are enabled."
           ],
           "keywords": [
             "add spot",
             "re-spot",
             "spotting",
+            "qso",
+            "pota",
             "callsign"
+          ]
+        },
+        {
+          "id": "default-spot-message",
+          "title": "What is the default spot message?",
+          "summary": "The default spot message is reusable comment text that Trailwave inserts into the Add Spot form.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Set a Default Spot Message in General preferences if you often use the same spotter comment, such as a short note about conditions, your antenna, or the activation.",
+            "When Add Spot or Re-Spot opens, Trailwave fills the Spotter Comments field with that saved message so you do not have to retype it each time.",
+            "You can still edit or replace the comment for any individual spot before submitting it."
+          ],
+          "keywords": [
+            "default spot message",
+            "spot message",
+            "comment",
+            "spotter comments",
+            "add spot",
+            "re-spot"
           ]
         },
         {
           "id": "local-logging",
           "title": "How does logging work?",
-          "summary": "Artemis keeps local QSO and hunted-park history and can extend that workflow to QRZ and WSJT-X automation.",
+          "summary": "Trailwave keeps local QSO and hunted-park history, with optional ADIF and QRZ output.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Artemis stores local QSO records and uses them to determine whether a park is new, already hunted today, or worked on a given band.",
-            "If WSJT-X logs a matching POTA QSO, Artemis can use that information to update local hunting history automatically.",
-            "If QRZ upload is enabled, Artemis can also serialize the logged contact as ADIF and send it to QRZ Logbook."
+            "Every submitted QSO is saved in the local database. Trailwave uses that history to mark new parks, hunted parks, hunted-today parks, and new bands.",
+            "Enable backup logging to append QSOs to a local ADIF file. Choose a custom ADIF path in Preferences or use the default path shown there.",
+            "Enable external logging and enter a QRZ API key if you want Trailwave to upload saved QSOs to QRZ Logbook. If QRZ upload fails, the QSO remains local and can be retried from the QSO editor when retry is available."
           ],
           "keywords": [
             "logging",
@@ -176,7 +366,47 @@
             "history",
             "qrz",
             "adif",
-            "wsjt-x"
+            "backup"
+          ]
+        },
+        {
+          "id": "logbook-window",
+          "title": "What can I do in the Logbook?",
+          "summary": "Use the Logbook to review, search, sort, page through, and edit saved QSOs and hunted parks.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Logbook from the application menu or shortcut. The QSOs tab shows locally saved contacts, and the Parks tab shows parks marked as hunted.",
+            "Use the search field to find matching QSOs or parks. Column headers sort the current tab, and the pager moves through larger logs in pages of 50 rows.",
+            "Activate a QSO row to edit it. Warning icons identify records with missing park details, failed POTA spot delivery, failed local ADIF writes, or QRZ uploads that can be retried."
+          ],
+          "keywords": [
+            "logbook",
+            "qsos",
+            "parks",
+            "search",
+            "sort",
+            "edit",
+            "retry"
+          ]
+        },
+        {
+          "id": "importing-pota-log",
+          "title": "How do I import hunted parks?",
+          "summary": "Import a POTA.app CSV file to seed Trailwave's hunted-park history.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "On the Logging preferences page, choose a POTA.app log CSV file from the Import POTA.app Log section, then select Import.",
+            "Imported parks appear in the Parks tab of the Logbook and are used when Trailwave decides whether a live spot is a new park or a previously hunted park.",
+            "If the import fails, Trailwave shows an alert. Check that the selected file is the CSV exported from POTA.app and try again."
+          ],
+          "keywords": [
+            "import",
+            "pota",
+            "csv",
+            "hunted parks",
+            "logbook"
           ]
         }
       ]
@@ -187,39 +417,85 @@
       "articles": [
         {
           "id": "radio-control",
-          "title": "What does radio control do?",
-          "summary": "Radio CAT control lets Artemis show your current radio state and tune directly to selected spots.",
+          "title": "What does CAT control do?",
+          "summary": "CAT control lets Trailwave show radio status and tune your radio to selected spots.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "If your radio is configured through Hamlib, Artemis can connect to it, show the current frequency and mode, and tune to a selected spot from the main window or inspector.",
-            "The power button in the sidebar controls the CAT connection state. Artemis updates the sidebar status as the rig connects, disconnects, or reports an error.",
-            "Radio control is optional. Artemis still works as a spot browser and logger without it."
+            "Configure CAT Control in Preferences, then use Connect in the sidebar to connect to your radio. Trailwave supports serial and network radio connections through the Hamlib-backed radio settings shown there.",
+            "When connected, the sidebar shows the radio frequency, mode, and TX or RX status. Tune buttons become available for selected spots and send the spot frequency to the radio.",
+            "Use Test Connection in Preferences if setup does not work. If Trailwave cannot connect from the main window, it shows a Radio Connection Failed dialog with the error message when one is available."
           ],
           "keywords": [
             "radio",
             "cat",
             "hamlib",
-            "tune"
+            "tune",
+            "serial",
+            "network"
+          ]
+        },
+        {
+          "id": "tune-controls",
+          "title": "How does Tune work?",
+          "summary": "Tune sends the selected spot frequency to the connected radio and tries to set a matching mode when possible.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "When Trailwave is connected to a configured radio, Tune buttons are available from spot cards, list rows when the Park Detail View is hidden, the Park Detail View, and the application menu.",
+            "Selecting Tune sends the spot frequency to the radio. If the spot mode is recognized, Trailwave also attempts to set a compatible radio mode, such as CW, AM, FM, sideband, or a digital sideband mode for FT8 and FT4.",
+            "If Tune controls are missing or disabled, the radio is not configured, not connected, or the current view does not have a selected spot. Check CAT Control preferences and the sidebar connection state."
+          ],
+          "keywords": [
+            "tune",
+            "frequency",
+            "mode",
+            "radio",
+            "cat",
+            "hamlib"
           ]
         },
         {
           "id": "wsjtx-help",
           "title": "What does WSJT-X integration do?",
-          "summary": "WSJT-X integration tracks recent decodes and can help Artemis recognize active digital POTA contacts.",
+          "summary": "WSJT-X integration highlights decoded activators, follows your current DX focus, and can use logged ADIF messages.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "When enabled, Artemis listens for WSJT-X UDP traffic and tracks recently decoded callsigns.",
-            "That lets Artemis highlight spots you have actually heard and can also support automatic local logging when WSJT-X logs a matching POTA QSO.",
-            "If the connection never appears, confirm that Artemis and WSJT-X are using the same address and port."
+            "Enable WSJT-X integration in Preferences and make sure Trailwave is listening on the same IP address and port that WSJT-X sends to.",
+            "When Trailwave receives decode text that matches an activator in the live spot feed, it marks that spot as Heard recently and can ask WSJT-X to highlight the matching callsign.",
+            "When WSJT-X reports that you are transmitting to a DX callsign that matches a visible activator, Trailwave can select the matching spot so the Park Detail View stays focused on the right park.",
+            "When WSJT-X reports that a POTA QSO was logged, Trailwave can use that logged contact with its local logging workflow. The WSJT-X preferences page shows whether the listener is inactive, listening, connected, or in an error state."
           ],
           "keywords": [
             "wsjt-x",
             "ft8",
             "ft4",
             "udp",
-            "decode"
+            "decode",
+            "heard recently",
+            "adif"
+          ]
+        },
+        {
+          "id": "external-data",
+          "title": "What outside data does Trailwave use?",
+          "summary": "Trailwave uses POTA spots and park data, optional QRZ data, weather, map tiles, and optional signal report data.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "The live spot feed, park details, spot history, and location names come from POTA services. Trailwave also caches some location data so labels can be more readable.",
+            "Activator profile details and avatars come from the callsign lookup path used by the app. QRZ upload only runs when external logging is enabled and an API key is configured.",
+            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access."
+          ],
+          "keywords": [
+            "data",
+            "pota",
+            "qrz",
+            "weather",
+            "map",
+            "pskreporter",
+            "network"
           ]
         }
       ]
@@ -231,31 +507,74 @@
         {
           "id": "spots-not-loading",
           "title": "Why aren't spots loading?",
-          "summary": "Check network connectivity first, then force a refresh or relaunch the app if the live feed stays empty.",
+          "summary": "Check network access, retry the refresh, and review any error dialog shown by Trailwave.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "If the spot views stay empty, first confirm the machine has working network access and that the POTA feed is reachable.",
-            "Use Refresh from the application menu or the keyboard shortcut to force a manual reload.",
-            "If the problem persists, restart Artemis to reset its live fetch cycle and clear transient network state."
+            "If every spot view stays empty, first confirm that your computer has network access and that POTA services are reachable.",
+            "Use Refresh from the application menu or shortcut to force a manual reload. If Trailwave shows an Unable to refresh spots dialog, choose Retry after checking the connection.",
+            "If spots load but disappear from the current view, check your band, mode, program, search text, Hide QRT, Hide Hunted, and Hide Stale settings."
           ],
           "keywords": [
             "empty",
             "refresh",
             "network",
-            "spots"
+            "spots",
+            "filters"
+          ]
+        },
+        {
+          "id": "radio-troubleshooting",
+          "title": "Why won't my radio connect or tune?",
+          "summary": "Verify the CAT settings, test the connection, and connect the radio before using Tune.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Preferences, choose CAT Control, and confirm the connection type, radio model, serial port or network host, port, baud rate, and serial settings.",
+            "Use Test Connection before returning to the main window. For network control, confirm that the rig control service is running and that the host and port match.",
+            "Tune buttons are disabled until a radio is configured, connected, and a spot is selected. If the connection fails, read the Radio Connection Failed message for the specific error."
+          ],
+          "keywords": [
+            "radio",
+            "cat",
+            "connect",
+            "tune",
+            "serial",
+            "network",
+            "test connection"
+          ]
+        },
+        {
+          "id": "wsjtx-troubleshooting",
+          "title": "Why isn't WSJT-X showing as connected?",
+          "summary": "Trailwave listens for WSJT-X packets and reports connected only after packets arrive.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Enable WSJT-X integration in Preferences and set the listen IP and port. Trailwave accepts unicast or multicast addresses, but the value must be a valid IP address.",
+            "In WSJT-X, confirm that UDP reporting is enabled and points to the same address and port. Trailwave shows Listening while it is waiting and Connected after it receives packets.",
+            "If packets stop arriving, Trailwave returns to Listening after a short timeout. Listener error messages usually mean the IP address, port, or local network permissions need attention."
+          ],
+          "keywords": [
+            "wsjt-x",
+            "udp",
+            "connected",
+            "listening",
+            "port",
+            "ip",
+            "error"
           ]
         },
         {
           "id": "where-to-get-help",
           "title": "Where can I get more help?",
-          "summary": "Start with this help window, then use the project links in About Artemis if you need more context.",
+          "summary": "Use this help window first, then check About Trailwave for project information.",
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Use the Artemis Help window to browse setup, workflow, and troubleshooting topics without leaving the app.",
-            "If you still need more context, open About Artemis for project metadata and links that are shipped with the application.",
-            "When reporting an issue, include the feature you were using and any visible error text so the problem can be traced more quickly."
+            "Use the Trailwave Help window for setup, operating, integration, and troubleshooting topics without leaving the app.",
+            "Open About Trailwave from the application menu for project metadata and links included with this build.",
+            "When reporting an issue, include what you were trying to do, the selected spot if one was involved, your relevant preferences, and any visible error text."
           ],
           "keywords": [
             "help",

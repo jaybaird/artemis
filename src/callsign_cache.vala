@@ -76,8 +76,8 @@ public sealed class CallsignCache : Object {
         cache.set_max_size (50 * 1024 * 1024);
 
         avatar_session = new Soup.Session () {
-            timeout = 3;
-            user_agent = "Artemis/1.0.0";
+            timeout = 30,
+            user_agent = Build.USER_AGENT
         };
         avatar_session.add_feature (cache);
     }

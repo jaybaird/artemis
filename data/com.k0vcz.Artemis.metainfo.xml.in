@@ -4,11 +4,13 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <name>Artemis</name>
-  <summary>Hunt Parks on the Air</summary>
+  <name>Trailwave</name>
+  <summary>Parks on the Air hunting companion</summary>
   <description>
-    <p>Artemis helps amateur radio operators hunt Parks on the Air activations with a fast desktop workflow for filtering spots, spotting, and tuning radios with one-click QSY.</p>
-    <p>Use live spot filtering by band, mode, and program, view parks on an interactive map, and coordinate your station with integrated CAT control through Hamlib.</p>
+    <p>Trailwave is a desktop companion for Parks on the Air hunters. Follow live POTA spots in card, list, or map views, filter activity by band, mode, program, and search text, and open a focused park detail view with operating context before you call.</p>
+    <p>Use the interactive map to see current park activity, grayline and sun or moon overlays, and recent signal reports that show where your transmitted signal is being heard. Weather, distance, bearing, coordinates, spot history, and hunted/new-park badges help you decide what is worth chasing next.</p>
+    <p>Trailwave can connect to supported radios through Hamlib for one-click tuning and mode control, listen to WSJT-X activity so decoded activators stand out, and help you add or re-spot activations without leaving the app.</p>
+    <p>Log QSOs locally, review and edit them later, track hunted parks, import POTA.app log exports, write an ADIF backup log, and upload completed contacts to QRZ when configured.</p>
   </description>
 
   <developer id="tld.vendor">
@@ -95,6 +97,20 @@
   </screenshots>
 
   <releases>
+    <release version="2.1" date="2026-05-27">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1</url>
+      <description>
+        <p>Artemis is now Trailwave! This release brings better logbook handling, map improvements, and many bugfixes and feature tweaks to make operating a breeze.</p>
+        <ul>
+          <li>New and improved map visualization: grayline visualization, sun/moon data, and signal reports so you can see where your transmitted signal is being heard.</li>
+          <li>Added a dedicated QSO view in the logbook with editing, park lookup, QRZ retry, and QSO deletion.</li>
+          <li>Better sideband and bandwidth setting when tuning.</li>
+          <li>Improved internationalization support with locale-aware date and time formatting</li>
+          <li>Refined preferences, help, and app metadata.</li>
+          <li>Improved internal map, logging, cache, and radio-control organization for better reliability and future maintenance.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.0.1" date="2026-05-15">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.0.1</url>
       <description>
@@ -165,7 +181,7 @@
     <release version="1.0.0" date="2026-02-14">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.0</url>
       <description translate="no">
-        <p>Initial public release of Artemis.</p>
+        <p>Initial public release of Trailwave.</p>
         <ul>
           <li>Live POTA spot filtering by band, mode, and program</li>
           <li>Integrated map view for park and spot visualization</li>

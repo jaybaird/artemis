@@ -35,6 +35,9 @@ public class MapView : Gtk.Box {
     private Scale map_scale;
     private Shumate.License map_license;
     private MapLayer map_layer;
+    private HeatmapModel signal_report_model;
+    private SignalReportHeatmapLayer signal_report_layer;
+    private SignalReportMqttSession signal_report_session;
     private GraylineOverlay grayline_overlay;
     private MarkerLayer marker_layer;
     private MarkerLayer astronomy_marker_layer;
@@ -48,6 +51,7 @@ public class MapView : Gtk.Box {
     private uint astronomy_refresh_timeout_id = 0;
     private bool grayline_visible = true;
     private bool astronomy_visible = true;
+    private bool signal_reports_visible = false;
 
     private BoundingBox bbox;
     private Coordinate qth_coordinate;
@@ -61,7 +65,13 @@ public class MapView : Gtk.Box {
     private GLib.SimpleActionGroup overlay_actions;
     private GLib.SimpleAction grayline_action;
     private GLib.SimpleAction astronomy_action;
+    private GLib.SimpleAction signal_reports_action;
     private Adw.SplitButton overlay_button;
+    private Gtk.Box signal_report_status;
+    private Gtk.Image signal_report_status_icon;
+    private Gtk.Label signal_report_status_title;
+    private Gtk.Label signal_report_status_detail;
+    private const int TOP_OVERLAY_MARGIN_OFFSET = 6;
 
     Gtk.Filter filter;
     Gtk.FilterListModel filtered;
@@ -75,6 +85,9 @@ public class MapView : Gtk.Box {
 
         current_map_is_dark = Adw.StyleManager.get_default ().dark;
         map_source = create_map_source (current_map_is_dark);
+        grayline_visible = Application.settings.get_boolean ("map-grayline-visible");
+        astronomy_visible = Application.settings.get_boolean ("map-astronomy-visible");
+        signal_reports_visible = Application.settings.get_boolean ("map-signal-reports-visible");
 
         map_widget = new Shumate.Map () {
             vexpand = true,
@@ -142,10 +155,11 @@ public class MapView : Gtk.Box {
         var menu = new GLib.Menu ();
         menu.append (_("Grayline"), "map.grayline-visible");
         menu.append (_("Sun and Moon"), "map.astronomy-visible");
+        menu.append (_("Signal Reports"), "map.signal-reports-visible");
 
         overlay_button = new Adw.SplitButton () {
             label = _("Overlays"),
-            icon_name = "filter-symbolic",
+            icon_name = "map-layers-symbolic",
             menu_model = menu,
             can_shrink = true,
             dropdown_tooltip = _("Overlay options")
@@ -164,7 +178,6 @@ public class MapView : Gtk.Box {
             margin_start = 6,
             margin_end = 6,
             margin_top = 6,
-            margin_bottom = 6,
             margin_bottom = 6
         };
 
@@ -173,7 +186,41 @@ public class MapView : Gtk.Box {
 
         overlay.add_overlay (right_box);
 
-        overlay.add_overlay (map_license);
+        signal_report_status_icon = new Gtk.Image.from_icon_name ("network-offline-symbolic") {
+            pixel_size = 16,
+            valign = Gtk.Align.CENTER
+        };
+        signal_report_status_title = new Gtk.Label ("") {
+            halign = Gtk.Align.START,
+            ellipsize = Pango.EllipsizeMode.END,
+            xalign = 0.0f
+        };
+        signal_report_status_title.add_css_class ("heading");
+        signal_report_status_detail = new Gtk.Label ("") {
+            halign = Gtk.Align.START,
+            ellipsize = Pango.EllipsizeMode.END,
+            xalign = 0.0f
+        };
+        signal_report_status_detail.add_css_class ("caption");
+
+        var signal_report_status_labels = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
+        signal_report_status_labels.append (signal_report_status_title);
+        signal_report_status_labels.append (signal_report_status_detail);
+
+        signal_report_status = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
+            can_target = false,
+            halign = Gtk.Align.START,
+            valign = Gtk.Align.START,
+            margin_start = 6,
+            margin_end = 6,
+            margin_top = 54,
+            margin_bottom = 6,
+            visible = false
+        };
+        signal_report_status.add_css_class ("map-signal-report-status");
+        signal_report_status.append (signal_report_status_icon);
+        signal_report_status.append (signal_report_status_labels);
+        overlay.add_overlay (signal_report_status);
 
         qth_coordinate = new Coordinate ();
         update_qth_coordinate ();
@@ -190,8 +237,24 @@ public class MapView : Gtk.Box {
         grayline_overlay = new GraylineOverlay (viewport);
         map_widget.insert_layer_above (grayline_overlay.layer, map_layer);
 
+        signal_report_model = new HeatmapModel ();
+        signal_report_layer = new SignalReportHeatmapLayer (viewport, signal_report_model);
+        signal_report_model.changed.connect (update_signal_report_status);
+        sync_signal_report_preferences ();
+        Application.settings.changed["signal-report-max-age-seconds"].connect (() => {
+            sync_signal_report_preferences ();
+        });
+        Application.settings.changed["signal-report-heatmap-radius"].connect (() => {
+            sync_signal_report_preferences ();
+        });
+        signal_report_session = new SignalReportMqttSession (signal_report_model, Application.settings);
+        signal_report_session.state_changed.connect (update_signal_report_status);
+        map_widget.insert_layer_above (signal_report_layer, grayline_overlay.layer);
+        if (signal_reports_visible)
+            signal_report_session.start ();
+
         astronomy_marker_layer = new MarkerLayer (viewport);
-        map_widget.insert_layer_above (astronomy_marker_layer, grayline_overlay.layer);
+        map_widget.insert_layer_above (astronomy_marker_layer, signal_report_layer);
 
         filter = new Gtk.CustomFilter ((item) => {
             var spot = item as Spot;
@@ -221,6 +284,7 @@ public class MapView : Gtk.Box {
         );
 
         sync_overlay_visibility ();
+        update_signal_report_status ();
 
         map_widget.map.connect (() => {
             if (loaded_after_map)
@@ -240,6 +304,8 @@ public class MapView : Gtk.Box {
             Source.remove (astronomy_refresh_timeout_id);
             astronomy_refresh_timeout_id = 0;
         }
+        if (signal_report_session != null)
+            signal_report_session.stop ();
     }
 
     private MapSource create_map_source (bool dark) {
@@ -254,7 +320,7 @@ public class MapView : Gtk.Box {
 
         return new Shumate.RasterRenderer.full_from_url (
             "mapbox-artemis-%s".printf (variant),
-            "Mapbox Artemis %s".printf (variant),
+            "Mapbox %s %s".printf (Build.NAME, variant),
             MAPBOX_LICENSE,
             MAPBOX_LICENSE_URI,
             0u,
@@ -293,13 +359,15 @@ public class MapView : Gtk.Box {
 
         if (grayline_overlay != null)
             map_widget.insert_layer_above (grayline_overlay.layer, map_layer);
+        if (signal_report_layer != null)
+            map_widget.insert_layer_above (signal_report_layer, grayline_overlay.layer);
         if (marker_layer != null)
-            map_widget.insert_layer_above (marker_layer, grayline_overlay.layer);
+            map_widget.insert_layer_above (marker_layer, signal_report_layer);
         if (astronomy_marker_layer != null) {
             if (marker_layer != null)
                 map_widget.insert_layer_above (astronomy_marker_layer, marker_layer);
             else
-                map_widget.insert_layer_above (astronomy_marker_layer, grayline_overlay.layer);
+                map_widget.insert_layer_above (astronomy_marker_layer, signal_report_layer);
         }
     }
 
@@ -562,10 +630,24 @@ public class MapView : Gtk.Box {
             set_astronomy_visible (value.get_boolean ());
         });
         overlay_actions.add_action (astronomy_action);
+
+        signal_reports_action = new GLib.SimpleAction.stateful (
+            "signal-reports-visible",
+            null,
+            new Variant.boolean (signal_reports_visible)
+        );
+        signal_reports_action.change_state.connect ((action, value) => {
+            if (value == null)
+                return;
+
+            set_signal_reports_visible (value.get_boolean ());
+        });
+        overlay_actions.add_action (signal_reports_action);
     }
 
     private void set_grayline_visible (bool visible) {
         grayline_visible = visible;
+        persist_overlay_visibility ("map-grayline-visible", visible);
         if (grayline_action != null)
             grayline_action.set_state (new Variant.boolean (visible));
         sync_overlay_visibility ();
@@ -573,16 +655,110 @@ public class MapView : Gtk.Box {
 
     private void set_astronomy_visible (bool visible) {
         astronomy_visible = visible;
+        persist_overlay_visibility ("map-astronomy-visible", visible);
         if (astronomy_action != null)
             astronomy_action.set_state (new Variant.boolean (visible));
         sync_overlay_visibility ();
     }
 
+    private void set_signal_reports_visible (bool visible) {
+        signal_reports_visible = visible;
+        persist_overlay_visibility ("map-signal-reports-visible", visible);
+        if (signal_reports_action != null)
+            signal_reports_action.set_state (new Variant.boolean (visible));
+        sync_overlay_visibility ();
+
+        if (signal_report_session == null)
+            return;
+
+        if (visible)
+            signal_report_session.start ();
+        else
+            signal_report_session.stop ();
+
+        update_signal_report_status ();
+    }
+
+    public void set_top_overlay_margin (int margin) {
+        if (signal_report_status != null)
+            signal_report_status.margin_top = margin + TOP_OVERLAY_MARGIN_OFFSET;
+    }
+
+    private void persist_overlay_visibility (string key, bool visible) {
+        if (Application.settings.get_boolean (key) != visible)
+            Application.settings.set_boolean (key, visible);
+    }
+
     private void sync_overlay_visibility () {
         if (grayline_overlay != null)
             grayline_overlay.visible = grayline_visible;
+        if (signal_report_layer != null)
+            signal_report_layer.visible = signal_reports_visible;
         if (astronomy_marker_layer != null)
             astronomy_marker_layer.visible = astronomy_visible;
+        if (signal_report_status != null)
+            signal_report_status.visible = signal_reports_visible;
+    }
+
+    private void update_signal_report_status () {
+        if (signal_report_status == null)
+            return;
+
+        signal_report_status.visible = signal_reports_visible;
+        if (!signal_reports_visible)
+            return;
+
+        var report_count = signal_report_model != null ? signal_report_model.report_count () : 0;
+
+        signal_report_status_title.label = ngettext (
+            "%u signal report",
+            "%u signal reports",
+            report_count
+        ).printf (report_count);
+
+        signal_report_status_detail.label = signal_report_age_window_text ();
+
+        signal_report_status_icon.icon_name = signal_report_stream_icon_name ();
+    }
+
+    private string signal_report_age_window_text () {
+        var minutes = Application.settings.get_int ("signal-report-max-age-seconds") / 60;
+
+        return ngettext (
+            "Last %d minute",
+            "Last %d minutes",
+            minutes
+        ).printf (minutes);
+    }
+
+    private string signal_report_stream_icon_name () {
+        if (signal_report_session == null || !signal_report_session.active)
+            return "network-offline-symbolic";
+
+        switch (signal_report_session.stream_state) {
+            case SignalReportStreamState.LIVE:
+            case SignalReportStreamState.RECEIVING:
+                return "network-idle-symbolic";
+            case SignalReportStreamState.CONNECTING:
+                return "network-workgroup-symbolic";
+            case SignalReportStreamState.FAILED:
+            case SignalReportStreamState.STOPPING:
+            case SignalReportStreamState.OFFLINE:
+            default:
+                return "network-offline-symbolic";
+        }
+    }
+
+    private void sync_signal_report_preferences () {
+        if (signal_report_model != null) {
+            signal_report_model.max_age_seconds =
+                (uint) Application.settings.get_int ("signal-report-max-age-seconds");
+        }
+
+        if (signal_report_layer != null) {
+            signal_report_layer.stamp_radius_pixels =
+                (uint) Application.settings.get_int ("signal-report-heatmap-radius");
+        }
     }
 
     private void ensure_body_marker (
@@ -673,7 +849,7 @@ public class MapView : Gtk.Box {
         }
         bbox.expand ();
 
-        map_widget.insert_layer_above (marker_layer, grayline_overlay.layer);
+        map_widget.insert_layer_above (marker_layer, signal_report_layer);
         sync_marker_selection (Application.state.current_spot_hash);
 
         if (Application.state.current_spot_hash == BLANK_HASH ||

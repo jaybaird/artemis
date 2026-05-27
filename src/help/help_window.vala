@@ -223,16 +223,87 @@ public sealed class HelpWindow : Adw.Window {
             article_body.append (summary);
         }
 
-        foreach (string paragraph in article.paragraphs) {
-            var label = new Gtk.Label (paragraph) {
-                xalign = 0.0f,
-                wrap = true,
-                max_width_chars = 64,
-                selectable = true
-            };
-            label.add_css_class ("body");
-            article_body.append (label);
+        foreach (HelpContentBlock block in article.content_blocks) {
+            switch (block.kind) {
+                case HelpContentKind.PARAGRAPH:
+                    article_body.append (build_paragraph (block.text));
+                    break;
+                case HelpContentKind.SPOT_BADGE_LIST:
+                    article_body.append (build_spot_badge_list ());
+                    break;
+                default:
+                    break;
+            }
         }
+    }
+
+    private Gtk.Widget build_paragraph (string paragraph) {
+        var label = new Gtk.Label (paragraph) {
+            xalign = 0.0f,
+            wrap = true,
+            max_width_chars = 64,
+            selectable = true
+        };
+        label.add_css_class ("body");
+        return label;
+    }
+
+    private Gtk.Widget build_spot_badge_list () {
+        var list = new Gtk.ListBox () {
+            selection_mode = Gtk.SelectionMode.NONE
+        };
+        list.add_css_class ("boxed-list");
+
+        foreach (SpotBadgeHelpInfo badge in spot_badge_help_items ())
+            list.append (build_spot_badge_row (badge));
+
+        return list;
+    }
+
+    private Gtk.Widget build_spot_badge_row (SpotBadgeHelpInfo badge) {
+        var row = new Gtk.ListBoxRow () {
+            activatable = false,
+            selectable = false
+        };
+
+        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
+            margin_top = 12,
+            margin_bottom = 12,
+            margin_start = 12,
+            margin_end = 12
+        };
+
+        var icon = new Gtk.Image.from_icon_name (badge.icon_name) {
+            pixel_size = 18,
+            valign = Gtk.Align.START,
+            margin_top = 2
+        };
+        icon.add_css_class ("spot-badge");
+        icon.add_css_class (badge.css_class);
+        box.append (icon);
+
+        var text_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 3) {
+            hexpand = true
+        };
+        var label = new Gtk.Label (badge.label) {
+            xalign = 0.0f,
+            wrap = true
+        };
+        label.add_css_class ("heading");
+        text_box.append (label);
+
+        var description = new Gtk.Label (badge.description) {
+            xalign = 0.0f,
+            wrap = true,
+            max_width_chars = 56
+        };
+        description.add_css_class ("body");
+        description.add_css_class ("dim-label");
+        text_box.append (description);
+
+        box.append (text_box);
+        row.child = box;
+        return row;
     }
 
     private void show_empty (string title_text, string body_text) {

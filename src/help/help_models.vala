@@ -24,6 +24,26 @@ public errordomain HelpError {
     INVALID_DATA
 }
 
+public enum HelpContentKind {
+    PARAGRAPH,
+    SPOT_BADGE_LIST
+}
+
+public class HelpContentBlock {
+    public HelpContentKind kind { get; private set; }
+    public string text { get; private set; }
+
+    public HelpContentBlock.paragraph (string text) {
+        this.kind = HelpContentKind.PARAGRAPH;
+        this.text = text;
+    }
+
+    public HelpContentBlock.spot_badge_list () {
+        this.kind = HelpContentKind.SPOT_BADGE_LIST;
+        this.text = "";
+    }
+}
+
 public sealed class HelpArticle : Object {
     public string id { get; construct; }
     public string title { get; construct; }
@@ -31,6 +51,7 @@ public sealed class HelpArticle : Object {
     public string? icon { get; construct; }
     public string? badge { get; construct; }
     public ArrayList<string> paragraphs { get; construct; }
+    public ArrayList<HelpContentBlock> content_blocks { get; construct; }
     public ArrayList<string> keywords { get; construct; }
 
     public HelpArticle (
@@ -40,6 +61,7 @@ public sealed class HelpArticle : Object {
         string? icon,
         string? badge,
         ArrayList<string> paragraphs,
+        ArrayList<HelpContentBlock> content_blocks,
         ArrayList<string> keywords
     ) {
         Object (
@@ -49,6 +71,7 @@ public sealed class HelpArticle : Object {
             icon: icon,
             badge: badge,
             paragraphs: paragraphs,
+            content_blocks: content_blocks,
             keywords: keywords
         );
     }
@@ -170,9 +193,10 @@ public sealed class HelpDocument : Object {
         string? badge = nullable_string_member (object, "badge");
 
         var paragraphs = new ArrayList<string> ();
+        var content_blocks = new ArrayList<HelpContentBlock> ();
         var paragraphs_node = object.get_member ("paragraphs");
         if ((paragraphs_node != null) && (paragraphs_node.get_node_type () == Json.NodeType.ARRAY)) {
-            append_string_array (paragraphs, paragraphs_node.get_array ());
+            append_paragraph_array (paragraphs, content_blocks, paragraphs_node.get_array ());
         }
 
         var content_node = object.get_member ("content");
@@ -186,15 +210,19 @@ public sealed class HelpDocument : Object {
                 string type = content_object.get_string_member_with_default ("type", "");
                 if (type == "paragraph") {
                     string text = content_object.get_string_member_with_default ("text", "").strip ();
-                    if (text != "")
+                    if (text != "") {
                         paragraphs.add (text);
+                        content_blocks.add (new HelpContentBlock.paragraph (text));
+                    }
+                } else if (type == "spot-badge-list") {
+                    content_blocks.add (new HelpContentBlock.spot_badge_list ());
                 }
             }
         }
 
-        if (paragraphs.size == 0) {
+        if (content_blocks.size == 0) {
             throw new HelpError.INVALID_DATA (
-                "Help article '%s' does not contain any paragraphs".printf (id)
+                "Help article '%s' does not contain any content".printf (id)
             );
         }
 
@@ -204,7 +232,16 @@ public sealed class HelpDocument : Object {
             append_string_array (keywords, keywords_node.get_array ());
         }
 
-        return new HelpArticle (id, title, summary, icon, badge, paragraphs, keywords);
+        return new HelpArticle (
+            id,
+            title,
+            summary,
+            icon,
+            badge,
+            paragraphs,
+            content_blocks,
+            keywords
+        );
     }
 
     private static void append_string_array (ArrayList<string> target, Json.Array array) {
@@ -212,6 +249,20 @@ public sealed class HelpDocument : Object {
             string value = array.get_string_element (i).strip ();
             if (value != "")
                 target.add (value);
+        }
+    }
+
+    private static void append_paragraph_array (
+        ArrayList<string> paragraphs,
+        ArrayList<HelpContentBlock> content_blocks,
+        Json.Array array
+    ) {
+        for (uint i = 0; i < array.get_length (); i++) {
+            string value = array.get_string_element (i).strip ();
+            if (value != "") {
+                paragraphs.add (value);
+                content_blocks.add (new HelpContentBlock.paragraph (value));
+            }
         }
     }
 

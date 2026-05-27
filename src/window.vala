@@ -339,6 +339,8 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private void set_search_content_margin (int margin) {
         band_view.margin_top = margin;
         list_container.margin_top = margin;
+        if (map_view != null)
+            map_view.set_top_overlay_margin (margin);
     }
 
     private void animate_search_content_margins () {
@@ -832,7 +834,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     private void update_clock_label () {
-        var now = new GLib.DateTime.now_utc ().format ("%H:%M UTC");
+        var now = new GLib.DateTime.now_utc ().format ("%R UTC");
         status_bar.set_time (now);
     }
 

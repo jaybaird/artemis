@@ -1,7 +1,7 @@
 project(
   'com.k0vcz.Artemis', 
   ['c', 'vala'],
-  version: '2.0.1',
+  version: '2.1',
   meson_version: '>= 1.0.0',
   default_options: [
     'warning_level=2',
@@ -35,11 +35,12 @@ config.set('BINDIR', join_paths(get_option('prefix'), get_option('bindir')))
 config.set('LOCALEDIR', join_paths(get_option('prefix'), get_option('localedir')))
 config.set('DATADIR', join_paths(get_option('prefix'), get_option('datadir')))
 config.set('DOMAIN', meson.project_name ())
-config.set('G_LOG_DOMAIN', 'Artemis')
+config.set('G_LOG_DOMAIN', 'Trailwave')
 config.set('RESOURCES', '/' + '/'.join(meson.project_name().split('.')) + '/')
 config.set('VERSION', meson.project_version())
 config.set('PREFIX', get_option('prefix'))
-config.set('NAME', 'Artemis')
+config.set('NAME', 'Trailwave')
+config.set('TARGET', host_machine.system())
 config.set('WEBSITE', 'https://artemispota.app')
 config.set('DONATE_WEBSITE', 'https://buymeacoffee.com/k0vcz')
 config.set('TRANSLATE_WEBSITE', '')
@@ -94,7 +95,9 @@ if is_windows
 endif
 
 link_deps = [
-  libradiocontrol
+  libradiocontrol,
+  libartemismqtt,
+  libheatmap
 ]
 
 if is_windows
@@ -102,9 +105,9 @@ if is_windows
 endif
 
 if devel
-  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir]
+  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map']
 else
-  vala_args = ['--pkg=RadioControl', '--vapidir='+srcdir]
+  vala_args = ['--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map']
 endif
 
 artemis_exe = executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,

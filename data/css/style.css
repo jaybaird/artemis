@@ -129,8 +129,8 @@
 
 .map-marker-content,
 .map-marker-dot {
-    min-width: 28px;
-    min-height: 28px;
+    min-width: 24px;
+    min-height: 24px;
 }
 
 .map-marker-heard-icon {
@@ -269,6 +269,18 @@
     padding: 4px 12px;
 }
 
+.overlay-search-bar {
+    background-color: var(--window_bg_color);
+}
+
+searchbar.overlay-search-bar,
+.overlay-search-bar searchbar,
+.overlay-search-bar searchbar > revealer,
+.overlay-search-bar searchbar > revealer > box,
+.overlay-search-bar searchbar > revealer > box > * {
+    background-color: var(--window_bg_color);
+}
+
 .overlay-search-entry {
     background-color: var(--window_bg_color);
 }
@@ -334,6 +346,26 @@
   color: var(--light-4);
 }
 
+.map-signal-report-status {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background-color: rgba(16, 24, 40, 0.78);
+  color: var(--light-1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+
+.map-signal-report-status label {
+  color: var(--light-1);
+}
+
+.map-signal-report-status .caption {
+  color: alpha(var(--light-1), 0.72);
+}
+
+.map-signal-report-status image {
+  color: alpha(var(--light-1), 0.96);
+}
+
 .radio-power-button {
     padding: 0;
     margin-top: 15px;
@@ -370,6 +402,18 @@
 
 .logbook-table row {
     background-color: transparent;
+}
+
+.logbook-table row:hover {
+    background-color: alpha(var(--accent-bg-color), 0.16);
+}
+
+.logbook-table row:selected {
+    background-color: alpha(var(--accent-bg-color), 0.30);
+}
+
+.logbook-table row:selected label {
+    color: var(--window-fg-color);
 }
 
 .logbook-table row:not(:selected):not(:hover):nth-child(even) {
