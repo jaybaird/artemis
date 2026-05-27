@@ -43,6 +43,17 @@ public class LogbookImportResult {
 }
 
 public sealed class LogbookImportService : Object {
+    private const int HUNTER_COLUMN_COUNT = 7;
+    private const string[] HUNTER_HEADER = {
+        "DX Entity",
+        "Location",
+        "HASC",
+        "Reference",
+        "Park Name",
+        "First QSO Date",
+        "QSOs"
+    };
+
     public ParkStore park_store { get; construct; }
 
     public LogbookImportService (ParkStore park_store) {
@@ -53,41 +64,40 @@ public sealed class LogbookImportService : Object {
         if (file == null)
             throw new IOError.INVALID_ARGUMENT ("Import file is empty");
 
-        var stream = file.read ();
-        var data = new DataInputStream (stream);
-        var line = data.read_line ();     // skip column titles
+        var parser = new CsvParser ();
+        return import_hunter_park_rows (parser.parse_file (file));
+    }
+
+    private LogbookImportResult import_hunter_park_rows (
+        ArrayList<ArrayList<string>> rows
+    ) throws Error {
+        if (rows.size == 0)
+            throw new IOError.INVALID_DATA ("CSV file is empty");
+
+        validate_hunter_header (rows[0]);
         var num_parks = 0;
-
-        while ((line = data.read_line ()) != null) {
-            var raw_columns = new ArrayList<string>.wrap (line.split (","));
-            var columns = new ArrayList<string> ();
-            foreach (var column in raw_columns)
-                columns.add (strip_quotes (column));
-
-            if (columns.size < 7) {
+        for (var i = 1; i < rows.size; i++) {
+            var row = rows[i];
+            var csv_row = i + 1;
+            if (row.size != HUNTER_COLUMN_COUNT) {
                 throw new IOError.INVALID_DATA (
-                    "CSV row has %d columns; expected at least 7".printf (columns.size)
-                );
-            }
-
-            int qso_count = 0;
-            unowned string unparsed;
-            if (!int.try_parse (columns.get (6), out qso_count, out unparsed) ||
-                unparsed != "") {
-                throw new IOError.INVALID_DATA (
-                    "CSV row has invalid QSO count '%s'".printf (columns.get (6))
+                    "CSV row %d has %d columns; expected %d".printf (
+                        csv_row,
+                        row.size,
+                        HUNTER_COLUMN_COUNT
+                    )
                 );
             }
 
             Error? error = null;
             park_store.add_park (
-                columns.get (3),
-                columns.get (4),
-                columns.get (0),
-                columns.get (1),
-                columns.get (2),
-                normalize_first_qso_date (columns.get (5)),
-                qso_count,
+                row[3],
+                row[4],
+                row[0],
+                row[1],
+                row[2],
+                normalize_first_qso_date (normalize_optional_string (row[5])),
+                parse_qsos (row[6], csv_row),
                 out error
             );
             if (error != null)
@@ -99,8 +109,44 @@ public sealed class LogbookImportService : Object {
         return new LogbookImportResult (num_parks);
     }
 
-    private static string? normalize_first_qso_date (string value) throws Error {
-        var trimmed = value.strip ();
+    private static void validate_hunter_header (ArrayList<string> header) throws Error {
+        if (header.size != HUNTER_COLUMN_COUNT) {
+            throw new IOError.INVALID_DATA (
+                "CSV header has %d columns; expected %d".printf (
+                    header.size,
+                    HUNTER_COLUMN_COUNT
+                )
+            );
+        }
+
+        for (var i = 0; i < HUNTER_COLUMN_COUNT; i++) {
+            if (header[i] != HUNTER_HEADER[i]) {
+                throw new IOError.INVALID_DATA (
+                    "CSV header column %d is '%s'; expected '%s'".printf (
+                        i + 1,
+                        header[i],
+                        HUNTER_HEADER[i]
+                    )
+                );
+            }
+        }
+    }
+
+    private static int parse_qsos (string value, int csv_row) throws Error {
+        var qso_text = value.strip ();
+        int qsos = 0;
+        unowned string unparsed;
+        if (!int.try_parse (qso_text, out qsos, out unparsed) || unparsed != "") {
+            throw new IOError.INVALID_DATA (
+                "CSV row %d has invalid QSOs value '%s'".printf (csv_row, value)
+            );
+        }
+
+        return qsos;
+    }
+
+    private static string? normalize_first_qso_date (string? value) throws Error {
+        var trimmed = (value ?? "").strip ();
         if (trimmed == "")
             return null;
 
@@ -108,30 +154,15 @@ public sealed class LogbookImportService : Object {
         if (parsed != null)
             return parsed.to_utc ().format ("%Y-%m-%dT%H:%M:%SZ");
 
-        if (trimmed.length == 10 &&
-            trimmed.get_char (4) == '-' &&
-            trimmed.get_char (7) == '-') {
-            int year = 0;
-            int month = 0;
-            int day = 0;
-            unowned string unparsed;
-            if (int.try_parse (trimmed.substring (0, 4), out year, out unparsed) &&
-                unparsed == "" &&
-                int.try_parse (trimmed.substring (5, 2), out month, out unparsed) &&
-                unparsed == "" &&
-                int.try_parse (trimmed.substring (8, 2), out day, out unparsed) &&
-                unparsed == "") {
-                var date = new DateTime.utc (year, month, day, 0, 0, 0);
-                return date.format ("%Y-%m-%dT%H:%M:%SZ");
-            }
-        }
+        var date_only = parse_date_only_utc (trimmed);
+        if (date_only != null)
+            return date_only.format ("%Y-%m-%dT%H:%M:%SZ");
 
         throw new IOError.INVALID_DATA ("CSV row has invalid first QSO date '%s'".printf (value));
     }
 
-    private static string strip_quotes (string s) {
-        if (s.has_prefix ("\"") && s.has_suffix ("\"") && (s.length >= 2))
-            return s.substring (1, s.length - 2);
-        return s;
+    private static string? normalize_optional_string (string value) {
+        var stripped = value.strip ();
+        return stripped == "" ? null : stripped;
     }
 }

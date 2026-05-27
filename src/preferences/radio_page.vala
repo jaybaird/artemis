@@ -189,23 +189,6 @@ public sealed class RadioPreferencesPage : Adw.PreferencesPage {
             row_network_port.text = current_port;
     }
 
-    private static bool try_parse_port (string text, out int port) {
-        port = 0;
-        var stripped = text.strip ();
-        if (stripped.length == 0)
-            return false;
-
-        int64 parsed_port64 = 0;
-        if (!int64.try_parse (stripped, out parsed_port64))
-            return false;
-
-        if (parsed_port64 < 1 || parsed_port64 > 65535)
-            return false;
-
-        port = (int)parsed_port64;
-        return true;
-    }
-
     private void bind_combo_to_string_setting (string setting_key, Adw.ComboRow combo_row) {
         var model = combo_row.model as Gtk.StringList;
         if (model == null)

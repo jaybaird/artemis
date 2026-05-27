@@ -86,23 +86,6 @@ public sealed class WsjtxPreferencesPage : Adw.PreferencesPage {
             row_wsjtx_listen_port.text = current_port;
     }
 
-    private static bool try_parse_port (string text, out int port) {
-        port = 0;
-        var stripped = text.strip ();
-        if (stripped.length == 0)
-            return false;
-
-        int64 parsed_port64 = 0;
-        if (!int64.try_parse (stripped, out parsed_port64))
-            return false;
-
-        if (parsed_port64 < 1 || parsed_port64 > 65535)
-            return false;
-
-        port = (int)parsed_port64;
-        return true;
-    }
-
     private void update_wsjtx_status () {
         if (Application.wsjtx_session == null)
             return;

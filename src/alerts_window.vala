@@ -29,6 +29,7 @@ public sealed class AlertsWindow : Adw.Window {
     private unowned Gtk.TextBuffer keyword_buffer;
 
     private bool syncing_keywords = false;
+    private ulong keyword_handler = 0;
 
     public AlertsWindow (Gtk.Application app) {
         Object (application: app);
@@ -44,7 +45,8 @@ public sealed class AlertsWindow : Adw.Window {
 
         load_keywords ();
         keyword_buffer.changed.connect (store_keywords);
-        Application.settings.changed["spot-alert-keywords"].connect (() => {
+
+        keyword_handler = Application.settings.changed["spot-alert-keywords"].connect (() => {
             if (!syncing_keywords)
                 load_keywords ();
         });

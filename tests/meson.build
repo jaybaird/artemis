@@ -51,12 +51,30 @@ test_frequency = executable(
 
 test('Frequency Parser/Formatter', test_frequency)
 
+test_csv_parser = executable(
+  'test-csv-parser',
+  [
+    meson.project_source_root() / 'src/csv/csv_parser.vala',
+    meson.project_source_root() / 'tests/test-csv-parser.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0')
+  ]
+)
+
+test('CSV Parser', test_csv_parser)
+
 test_logbook_import = executable(
   'test-logbook-import',
-  [
-    meson.project_source_root() / 'src/logbook_import_service.vala',
-    meson.project_source_root() / 'tests/test-logbook-import.vala'
-  ],
+	  [
+	    meson.project_source_root() / 'src/csv/csv_parser.vala',
+	    meson.project_source_root() / 'src/input_parsing.vala',
+	    meson.project_source_root() / 'src/logbook_import_service.vala',
+	    meson.project_source_root() / 'tests/test-logbook-import.vala'
+	  ],
   dependencies: [
     dependency('gee-0.8'),
     dependency('gio-2.0'),

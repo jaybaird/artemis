@@ -793,30 +793,9 @@ private string display_datetime (string? iso_utc, string format = "%x %R UTC") {
 
     var dt = new DateTime.from_iso8601 (value, new TimeZone.utc ());
     if (dt == null)
-        dt = date_only_as_utc (value);
+        dt = parse_date_only_utc (value);
     if (dt == null)
         return iso_utc;
 
     return dt.to_utc ().format (format);
-}
-
-private DateTime? date_only_as_utc (string value) {
-    if (value.length != 10 ||
-        value.get_char (4) != '-' ||
-        value.get_char (7) != '-') {
-        return null;
-    }
-
-    int year = 0;
-    int month = 0;
-    int day = 0;
-    unowned string unparsed;
-    if (!int.try_parse (value.substring (0, 4), out year, out unparsed) || unparsed != "")
-        return null;
-    if (!int.try_parse (value.substring (5, 2), out month, out unparsed) || unparsed != "")
-        return null;
-    if (!int.try_parse (value.substring (8, 2), out day, out unparsed) || unparsed != "")
-        return null;
-
-    return new DateTime.utc (year, month, day, 0, 0, 0);
 }
