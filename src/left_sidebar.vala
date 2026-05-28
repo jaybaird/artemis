@@ -243,7 +243,7 @@ public sealed class LeftSidebar : Gtk.Box {
     public void set_data_active (bool active) {
         if (active) {
             data_light.add_css_class ("pulse-green");
-            data_light.tooltip_text = _("WSJT-X connected…");
+            data_light.tooltip_text = _("WSJT-X connected");
         } else {
             data_light.remove_css_class ("pulse-green");
             data_light.tooltip_text = "";

@@ -44,7 +44,7 @@ static string? iso8601_from_borrowed_utc (DateTime? dt) {
 }
 
 static void bind_nullable_text (Sqlite.Statement st, int index, string? value) {
-    if ((value == null) || (value.strip () == ""))
+    if (is_empty_or_whitespace (value))
         st.bind_null (index);
     else
         st.bind_text (index, value);
@@ -1213,11 +1213,13 @@ public class SpotDb : Object, QsoStore, ParkStore {
             return false;
         }
 
-        if (old_park_ref != null && !refresh_park_qso_summary (old_park_ref, out error)) {
+        if (has_text (old_park_ref) &&
+            !refresh_park_qso_summary (old_park_ref, out error)) {
             db.exec ("ROLLBACK;");
             return false;
         }
-        if (!refresh_park_qso_summary (spot.park_ref, out error)) {
+        if (has_text (spot.park_ref) &&
+            !refresh_park_qso_summary (spot.park_ref, out error)) {
             db.exec ("ROLLBACK;");
             return false;
         }
@@ -1297,6 +1299,9 @@ public class SpotDb : Object, QsoStore, ParkStore {
     private bool refresh_park_qso_summary (string park_ref, out Error? error) {
         error = null;
 
+        if (is_empty_or_whitespace (park_ref))
+            return true;
+
         const string SQL =
             """
             UPDATE parks
@@ -1344,7 +1349,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             error = new DatabaseError.DB_NOT_INITIALIZED ("DB not initialized");
             return false;
         }
-        if ((reference == null) || (reference.strip () == "")) {
+        if (is_empty_or_whitespace (reference)) {
             error = new DatabaseError.INVALID_ARGUMENT ("Park reference cannot be empty");
             return false;
         }
@@ -1381,7 +1386,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             first_qso_index = 4;
             qso_count_index = 5;
         }
-        if ((first_qso_date != null) && (first_qso_date.strip () != ""))
+        if (has_text (first_qso_date))
             st.bind_text (first_qso_index, first_qso_date);
         else
             st.bind_null (first_qso_index);
@@ -1400,7 +1405,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             error = new DatabaseError.DB_NOT_INITIALIZED ("DB not initialized");
             return null;
         }
-        if ((reference == null) || (reference.strip () == "")) {
+        if (is_empty_or_whitespace (reference)) {
             error = new DatabaseError.INVALID_ARGUMENT ("Park reference cannot be empty");
             return null;
         }
@@ -1437,7 +1442,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             error = new DatabaseError.DB_NOT_INITIALIZED ("DB not initialized");
             return false;
         }
-        if ((park_reference == null) || (park_reference.strip () == "")) {
+        if (is_empty_or_whitespace (park_reference)) {
             error = new DatabaseError.INVALID_ARGUMENT ("Park reference cannot be empty");
             return false;
         }
@@ -1500,7 +1505,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
 
         while (st.step () == Sqlite.ROW) {
             var park_ref = st.column_text (0);
-            if ((park_ref != null) && (park_ref.strip () != ""))
+            if (has_text (park_ref))
                 snapshot.hunted_parks.add (park_ref);
         }
 
@@ -1536,7 +1541,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
         st.bind_text (2, next_iso);
         while (st.step () == Sqlite.ROW) {
             var park_ref = st.column_text (0);
-            if ((park_ref != null) && (park_ref.strip () != ""))
+            if (has_text (park_ref))
                 snapshot.hunted_today.add (park_ref);
         }
 
@@ -1565,7 +1570,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
 
         while (st.step () == Sqlite.ROW) {
             var park_ref = st.column_text (0);
-            if ((park_ref == null) || (park_ref.strip () == ""))
+            if (is_empty_or_whitespace (park_ref))
                 continue;
 
             var band = band_from_khz (st.column_double (1));
@@ -1588,7 +1593,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             return null;
         }
 
-        if ((park_ref == null) || (park_ref.strip () == "")) {
+        if (is_empty_or_whitespace (park_ref)) {
             error = new DatabaseError.INVALID_ARGUMENT ("Park reference cannot be empty");
             return null;
         }
@@ -1633,6 +1638,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
           JOIN (
             SELECT park_ref, MAX(created_utc) AS maxc
             FROM qsos
+            WHERE park_ref != ''
             GROUP BY park_ref
           ) t
             ON q.park_ref = t.park_ref AND q.created_utc = t.maxc
@@ -1794,7 +1800,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
                 ORDER BY created_utc DESC, id DESC
                 LIMIT 1
               )
-            WHERE p.qso_count > 0
+            WHERE p.qso_count > 0 AND p.reference != ''
             ORDER BY q.created_utc DESC, p.reference ASC;
             """ :
             """
@@ -1809,7 +1815,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
                 ORDER BY created_utc DESC, id DESC
                 LIMIT 1
               )
-            WHERE p.qso_count > 0
+            WHERE p.qso_count > 0 AND p.reference != ''
             ORDER BY q.created_utc DESC, p.reference ASC;
             """;
 
@@ -1870,7 +1876,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             """
             SELECT COUNT(*)
             FROM parks p
-            WHERE p.qso_count > 0
+            WHERE p.qso_count > 0 AND p.reference != ''
             %s;
             """.printf (search_sql);
         var total_count = count_rows (count_sql, search_pattern, true, out error);
@@ -1890,7 +1896,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
                 ORDER BY created_utc DESC, id DESC
                 LIMIT 1
               )
-            WHERE p.qso_count > 0
+            WHERE p.qso_count > 0 AND p.reference != ''
             %s
             ORDER BY %s
             LIMIT ?
@@ -1908,7 +1914,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
                 ORDER BY created_utc DESC, id DESC
                 LIMIT 1
               )
-            WHERE p.qso_count > 0
+            WHERE p.qso_count > 0 AND p.reference != ''
             %s
             ORDER BY %s
             LIMIT ?

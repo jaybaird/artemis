@@ -136,7 +136,7 @@ public sealed class QrzClient : Object, QrzQsoUploader {
         var params = parse_response_body (body);
         var result = lookup_response_value (params, "RESULT");
 
-        if ((result == null) || (result == "")) {
+        if (is_empty_or_whitespace (result)) {
             throw new QrzLogbookError.PARSE_FAILED (
                 "QRZ log upload returned an unexpected response"
             );
@@ -146,10 +146,10 @@ public sealed class QrzClient : Object, QrzQsoUploader {
             return;
 
         var reason = lookup_response_value (params, "REASON");
-        if ((reason == null) || (reason == "")) {
+        if (is_empty_or_whitespace (reason)) {
             reason = lookup_response_value (params, "DATA");
         }
-        if ((reason == null) || (reason == "")) {
+        if (is_empty_or_whitespace (reason)) {
             reason = "Unknown QRZ API error";
         }
 

@@ -20,6 +20,7 @@
 
 public interface LoggingPreferences : Object {
     public abstract bool enable_qrz_logging { get; }
+    public abstract bool forward_wsjtx_qsos_to_qrz { get; }
     public abstract string qrz_api_key { owned get; }
     public abstract string station_callsign { owned get; }
     public abstract string spot_message { owned get; }
@@ -32,6 +33,10 @@ public sealed class SettingsLoggingPreferences : Object, LoggingPreferences {
 
     public bool enable_qrz_logging {
         get { return settings.get_boolean ("enable-logging"); }
+    }
+
+    public bool forward_wsjtx_qsos_to_qrz {
+        get { return settings.get_boolean ("forward-wsjtx-qsos-to-qrz"); }
     }
 
     public string qrz_api_key {

@@ -217,10 +217,6 @@ public sealed class BandView : Gtk.Box {
         }
     }
 
-    public uint get_n_items () {
-        return sorted.get_n_items ();
-    }
-
     public void set_band_filter (string band) {
         band_label = band;
         icon_name = @"band-$band";

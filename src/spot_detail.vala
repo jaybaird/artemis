@@ -83,10 +83,6 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
 
         child = box;
     }
-
-    public void add_value_css_class (string css_class) {
-        value_label.add_css_class (css_class);
-    }
 }
 
 public sealed class DetailTimePairRow : Gtk.ListBoxRow {
@@ -270,6 +266,7 @@ public sealed class SpotDetail : Gtk.Box {
     private DetailFieldRow detail_location_row;
     private DetailFieldRow detail_bearing_row;
     private DetailFieldRow detail_distance_row;
+    private DetailFieldRow detail_coordinate_row;
     private DetailFieldRow detail_grid_row;
     private DetailTimePairRow detail_sun_row;
     private DetailTimePairRow detail_moon_row;
@@ -329,10 +326,10 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_list.append (detail_activator_link_row);
 
         detail_frequency_row = new DetailFieldRow (_("Frequency"));
-        detail_frequency_row.add_value_css_class ("numeric");
+        detail_frequency_row.add_css_class ("numeric");
         detail_mode_row = new DetailFieldRow (_("Mode"));
         detail_spot_count_row = new DetailFieldRow (_("Spots"));
-        detail_spot_count_row.add_value_css_class ("numeric");
+        detail_spot_count_row.add_css_class ("numeric");
         detail_activator_comment_row = new DetailFieldRow (_("Activator Comments"), true);
         detail_operating_list.append (detail_frequency_row);
         detail_operating_list.append (detail_mode_row);
@@ -342,8 +339,10 @@ public sealed class SpotDetail : Gtk.Box {
         detail_location_row = new DetailFieldRow (_("Location"), true);
         detail_bearing_row = new DetailFieldRow (_("Direction"));
         detail_distance_row = new DetailFieldRow (_("Distance"));
-        detail_grid_row = new DetailFieldRow (_("Coordinates"));
-        detail_grid_row.add_value_css_class ("numeric");
+        detail_grid_row = new DetailFieldRow (_("Grid"));
+        detail_grid_row.add_css_class ("numeric");
+        detail_coordinate_row = new DetailFieldRow (_("Coordinates"));
+        detail_coordinate_row.add_css_class ("numeric");
         detail_sun_row = new DetailTimePairRow (
             _("Sun"),
             "daytime-sunrise-symbolic",
@@ -359,6 +358,7 @@ public sealed class SpotDetail : Gtk.Box {
         detail_location_list.append (detail_bearing_row);
         detail_location_list.append (detail_distance_row);
         detail_location_list.append (detail_grid_row);
+        detail_location_list.append (detail_coordinate_row);
         detail_location_list.append (detail_sun_row);
         detail_location_list.append (detail_moon_row);
         detail_location_list.append (detail_park_row);
@@ -429,9 +429,14 @@ public sealed class SpotDetail : Gtk.Box {
         }
         detail_location_row.value = loc_str;
 
-        detail_grid_row.visible = spot.coordinate != null;
-        if (spot.coordinate != null) {
-            detail_grid_row.value = "%.4f, %.4f".printf (
+        detail_grid_row.visible = has_text (spot.grid6) || has_text (spot.grid4);
+        if (detail_grid_row.visible) {
+            detail_grid_row.value = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
+        }
+
+        detail_coordinate_row.visible = spot.coordinate != null;
+        if (detail_coordinate_row.visible) {
+            detail_coordinate_row.value = "%.4f, %.4f".printf (
                 spot.coordinate.latitude,
                 spot.coordinate.longitude
             );
@@ -447,7 +452,7 @@ public sealed class SpotDetail : Gtk.Box {
             detail_moon_row.first_value = format_time_label (moon_times.rise);
             detail_moon_row.second_value = format_time_label (moon_times.set);
         } else {
-            detail_grid_row.value = "";
+            detail_coordinate_row.value = "";
             detail_sun_row.visible = false;
             detail_sun_row.first_value = "";
             detail_sun_row.second_value = "";

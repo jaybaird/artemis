@@ -33,13 +33,14 @@ public sealed class LogbookQsoItem : Object {
     public LogbookQsoItem (QsoRow qso) {
         var display_date = display_datetime (qso.created_utc);
         var qso_band = band_from_khz (qso.frequency_khz);
-        var missing_park = (qso.park_name ?? "").strip () == "";
+        var missing_park_ref = is_empty_or_whitespace (qso.park_ref);
+        var missing_park = missing_park_ref || is_empty_or_whitespace (qso.park_name);
         var qrz_retry = !qso.qrz_uploaded &&
-            (qso.qrz_error ?? "").strip () != "" &&
+            has_text (qso.qrz_error) &&
             Application.logging_service.preferences.enable_qrz_logging &&
             Application.logging_service.preferences.qrz_api_key != "";
-        var local_error = (qso.local_adif_error ?? "").strip () != "";
-        var pota_error = (qso.pota_error ?? "").strip () != "";
+        var local_error = has_text (qso.local_adif_error);
+        var pota_error = has_text (qso.pota_error);
         Object (
             qso: qso,
             date: display_date,
@@ -50,18 +51,21 @@ public sealed class LogbookQsoItem : Object {
             band: qso_band,
             mode: qso.mode ?? "",
             has_actionable_items: missing_park || qrz_retry || local_error || pota_error,
-            action_tooltip: action_tooltip_for (missing_park, qrz_retry, local_error, pota_error)
+            action_tooltip: action_tooltip_for (missing_park_ref, missing_park, qrz_retry, local_error, pota_error)
         );
     }
 
     private static string action_tooltip_for (
+        bool missing_park_ref,
         bool missing_park,
         bool qrz_retry,
         bool local_error,
         bool pota_error
     ) {
         var actions = new Gee.ArrayList<string> ();
-        if (missing_park)
+        if (missing_park_ref)
+            actions.add (_("Park reference is missing"));
+        else if (missing_park)
             actions.add (_("Park details are missing"));
         if (qrz_retry)
             actions.add (_("QRZ upload can be retried"));

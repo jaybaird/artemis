@@ -63,8 +63,9 @@ public sealed class LoggingPreferencesPage : Adw.PreferencesPage {
     }
 
     private void sync_local_adif_log_path_row () {
-        row_local_adif_log_path.subtitle = FileLocalAdifWriter.resolve_path (
-            Application.settings.get_string ("local-adif-log-path")
+        row_local_adif_log_path.subtitle = Artemis.LocalAdif.resolve_path (
+            Application.settings.get_string ("local-adif-log-path"),
+            Build.DOMAIN
         );
     }
 
@@ -128,8 +129,9 @@ public sealed class LoggingPreferencesPage : Adw.PreferencesPage {
     }
 
     private void on_choose_local_adif_log_path () {
-        var current_path = FileLocalAdifWriter.resolve_path (
-            Application.settings.get_string ("local-adif-log-path")
+        var current_path = Artemis.LocalAdif.resolve_path (
+            Application.settings.get_string ("local-adif-log-path"),
+            Build.DOMAIN
         );
         var current_file = File.new_for_path (current_path);
         var parent = current_file.get_parent ();
@@ -157,7 +159,7 @@ public sealed class LoggingPreferencesPage : Adw.PreferencesPage {
                     return;
 
                 var path = file.get_path ();
-                if ((path != null) && path.strip () != "")
+                if (has_text (path))
                     Application.settings.set_string ("local-adif-log-path", path);
             } catch (Error e) {
                 warning ("Failed to select ADIF log file: %s", e.message);

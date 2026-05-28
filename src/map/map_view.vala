@@ -23,7 +23,10 @@ using Shumate;
 
 public class MapView : Gtk.Box {
     private const uint ASTRONOMY_REFRESH_INTERVAL_SECONDS = 60;
-    private const double DEFAULT_QTH_ZOOM_LEVEL = 6.0;
+    private const double DEFAULT_QTH_ZOOM_LEVEL = 5.0;
+    private const double AUTO_SPOT_MIN_ZOOM_LEVEL = 5.0;
+    private const double AUTO_SPOT_MAX_ZOOM_LEVEL = 8.0;
+    private const double AUTO_BOUNDS_MAX_ZOOM_LEVEL = 7.0;
     private const string MAPBOX_LICENSE = "© Mapbox © OpenStreetMap";
     private const string MAPBOX_LICENSE_URI = "https://www.mapbox.com/about/maps/";
 
@@ -52,6 +55,7 @@ public class MapView : Gtk.Box {
     private bool grayline_visible = true;
     private bool astronomy_visible = true;
     private bool signal_reports_visible = false;
+    private bool active = false;
 
     private BoundingBox bbox;
     private Coordinate qth_coordinate;
@@ -122,7 +126,7 @@ public class MapView : Gtk.Box {
         viewport = map_widget.get_viewport ();
         viewport.set_reference_map_source (map_source);
         viewport.set_max_zoom_level (19);
-        viewport.set_min_zoom_level (2);
+        viewport.set_min_zoom_level (3);
 
         map_scale = new Scale (viewport) {
             visible = Application.settings.get_boolean ("show-map-scale"),
@@ -250,8 +254,6 @@ public class MapView : Gtk.Box {
         signal_report_session = new SignalReportMqttSession (signal_report_model, Application.settings);
         signal_report_session.state_changed.connect (update_signal_report_status);
         map_widget.insert_layer_above (signal_report_layer, grayline_overlay.layer);
-        if (signal_reports_visible)
-            signal_report_session.start ();
 
         astronomy_marker_layer = new MarkerLayer (viewport);
         map_widget.insert_layer_above (astronomy_marker_layer, signal_report_layer);
@@ -551,8 +553,10 @@ public class MapView : Gtk.Box {
         var coordinate = spot.coordinate;
         if (coordinate == null)
             return;
-        const double TARGET_ZOOM = 9.0;
-        var zoom = double.max (viewport.zoom_level, TARGET_ZOOM);
+        var zoom = double.min (
+            double.max (viewport.zoom_level, AUTO_SPOT_MIN_ZOOM_LEVEL),
+            AUTO_SPOT_MAX_ZOOM_LEVEL
+        );
         map_widget.go_to_full (coordinate.latitude, coordinate.longitude, zoom);
     }
 
@@ -671,7 +675,23 @@ public class MapView : Gtk.Box {
         if (signal_report_session == null)
             return;
 
-        if (visible)
+        if (visible && active)
+            signal_report_session.start ();
+        else
+            signal_report_session.stop ();
+
+        update_signal_report_status ();
+    }
+
+    public void set_active (bool active) {
+        if (this.active == active)
+            return;
+
+        this.active = active;
+        if (signal_report_session == null)
+            return;
+
+        if (active && signal_reports_visible)
             signal_report_session.start ();
         else
             signal_report_session.stop ();
@@ -867,10 +887,11 @@ public class MapView : Gtk.Box {
             } else if ((spot_count > 0) && bbox.is_valid ()) {
                 var center = bbox.center ();
                 var zoom_level = get_zoom_level_fitting_bounds (bbox);
+                zoom_level = double.min (zoom_level, AUTO_BOUNDS_MAX_ZOOM_LEVEL);
 
                 map_widget.go_to_full (center.latitude, center.longitude, zoom_level);
             } else {
-                map_widget.go_to_full (0.0, 0.0, 2.0);
+                map_widget.go_to_full (0.0, 0.0, viewport.min_zoom_level);
             }
         }
 

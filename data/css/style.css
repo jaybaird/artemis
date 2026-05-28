@@ -269,6 +269,27 @@
     padding: 4px 12px;
 }
 
+.toolbar-status-badge {
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 999px;
+    margin-top: 1px;
+    margin-right: 1px;
+    background-color: var(--insensitive_fg_color);
+    box-shadow: 0 0 0 1px var(--window_bg_color);
+}
+
+.toolbar-status-badge.enabled {
+    background-color: var(--green-2);
+}
+
+.wsjtx-status {
+    font-size: 0.78em;
+    font-weight: 400;
+    margin-top: -2px;
+    opacity: 0.72;
+}
+
 .overlay-search-bar {
     background-color: var(--window_bg_color);
 }
@@ -291,15 +312,15 @@ searchbar.overlay-search-bar,
 }
 
 .tx-light.active {
-    color: var(--accent-red);
+    color: var(--red-2);
 }
 
 .rx-light.active {
-    color: var(--accent-green);
+    color: var(--green-2);
 }
 
 .pulse-green {
-    color: var(--accent-green);
+    color: var(--green-2);
 }
 
 .detail-time-icon {

@@ -19,7 +19,7 @@
  */
 
 using Gee;
-public sealed class SpotRepo : Object {
+public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     public GLib.ListStore store { get; construct; }
 
     public signal void busy_changed (bool busy);

@@ -277,7 +277,7 @@ public sealed class QsoDialog : Adw.Dialog {
     }
 
     private static DateTime? parse_qso_time (string? iso_utc) {
-        if ((iso_utc ?? "").strip () == "")
+        if (is_empty_or_whitespace (iso_utc))
             return null;
         return new DateTime.from_iso8601 (iso_utc, new TimeZone.utc ());
     }

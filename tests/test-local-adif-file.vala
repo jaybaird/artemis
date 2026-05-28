@@ -15,17 +15,17 @@ private string temp_path (string suffix) {
 
 private void test_resolve_path_uses_configured_path () {
     var configured = "  /tmp/custom-artemis-log.adi  ";
-    assert (resolve_local_adif_path (configured, TEST_DOMAIN) == "/tmp/custom-artemis-log.adi");
+    assert (Artemis.LocalAdif.resolve_path (configured, TEST_DOMAIN) == "/tmp/custom-artemis-log.adi");
 }
 
 private void test_resolve_path_uses_default_location () {
     var expected = Path.build_filename (
         Environment.get_user_data_dir (),
         TEST_DOMAIN,
-        LOCAL_ADIF_DEFAULT_FILENAME
+        Artemis.LocalAdif.DEFAULT_FILENAME
     );
-    assert (LOCAL_ADIF_DEFAULT_FILENAME == "artemis-log.adi");
-    assert (resolve_local_adif_path ("", TEST_DOMAIN) == expected);
+    assert (Artemis.LocalAdif.DEFAULT_FILENAME == "artemis-log.adi");
+    assert (Artemis.LocalAdif.resolve_path ("", TEST_DOMAIN) == expected);
 }
 
 private void test_append_text_uses_default_location_for_empty_path () {
@@ -33,10 +33,10 @@ private void test_append_text_uses_default_location_for_empty_path () {
         var expected = Path.build_filename (
             test_data_root,
             TEST_DOMAIN,
-            LOCAL_ADIF_DEFAULT_FILENAME
+            Artemis.LocalAdif.DEFAULT_FILENAME
         );
 
-        append_local_adif_text ("DEFAULT-PATH<eor>", "", TEST_DOMAIN);
+        Artemis.LocalAdif.append_text ("DEFAULT-PATH<eor>", "", TEST_DOMAIN);
 
         string read_back;
         assert (FileUtils.get_contents (expected, out read_back));
@@ -52,13 +52,13 @@ private void test_append_text_creates_and_appends () {
         var path = temp_path ("append");
         var contents = "BEGIN-ADIF<eor>";
 
-        append_local_adif_text (contents, path, TEST_DOMAIN);
+        Artemis.LocalAdif.append_text (contents, path, TEST_DOMAIN);
 
         string read_back;
         assert (FileUtils.get_contents (path, out read_back));
         assert (read_back == contents + "\n");
 
-        append_local_adif_text ("SECOND-RECORD<eor>", path, TEST_DOMAIN);
+        Artemis.LocalAdif.append_text ("SECOND-RECORD<eor>", path, TEST_DOMAIN);
         assert (FileUtils.get_contents (path, out read_back));
         assert (read_back == contents + "\nSECOND-RECORD<eor>\n");
     } catch (Error err) {
@@ -75,7 +75,7 @@ private void test_append_text_creates_parent_directories () {
             "log.adi"
         );
 
-        append_local_adif_text ("NESTED-RECORD<eor>", nested_path, TEST_DOMAIN);
+        Artemis.LocalAdif.append_text ("NESTED-RECORD<eor>", nested_path, TEST_DOMAIN);
 
         string read_back;
         assert (FileUtils.get_contents (nested_path, out read_back));

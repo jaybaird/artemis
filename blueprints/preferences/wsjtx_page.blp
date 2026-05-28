@@ -42,6 +42,15 @@ template $WsjtxPreferencesPage : Adw.PreferencesPage {
         role-description: _("text entry");
       }
     }
+
+    Adw.SwitchRow row_forward_qrz {
+      title: _("Forward WSJT-X QSOs to QRZ");
+      subtitle: _("Upload accepted WSJT-X logged contacts to QRZ when an API key is configured");
+      accessibility {
+        label: _("Forward WSJT-X QSOs to QRZ");
+        role-description: _("switch");
+      }
+    }
   }
 
   Adw.PreferencesGroup wsjtx_status_group {

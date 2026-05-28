@@ -4,34 +4,58 @@
  */
 
 namespace Artemis.Wsjtx {
+    public interface SpotLookup : Object {
+        public abstract Spot? get_spot_for_callsign (string callsign);
+    }
+
     public sealed class LoggedAdifHandler : Object {
+        private const int64 CQ_POTA_CACHE_SECONDS = 30 * 60;
+
         public LoggingService logging_service { get; construct; }
-        public SpotRepo spot_repo { get; construct; }
+        public SpotLookup spot_lookup { get; construct; }
         public LoggingPreferences preferences { get; construct; }
+        private Gee.HashMap<string, int64?> recent_cq_pota_callsigns = new Gee.HashMap<string, int64?> ();
 
         public signal void user_message (string message);
 
         public LoggedAdifHandler (
             LoggingService logging_service,
-            SpotRepo spot_repo,
+            SpotLookup spot_lookup,
             LoggingPreferences preferences
         ) {
             Object (
                 logging_service: logging_service,
-                spot_repo: spot_repo,
+                spot_lookup: spot_lookup,
                 preferences: preferences
             );
         }
 
-        public async void handle (LoggedAdifPacket packet) {
+        public void remember_cq_pota_decode (string decode_text, int64 now_seconds = -1) {
+            prune_recent_cq_pota_callsigns (now_seconds);
+
+            var callsign = cq_pota_callsign_from_decode (decode_text);
+            if (callsign == "")
+                return;
+
+            recent_cq_pota_callsigns[callsign] = normalized_now_seconds (now_seconds);
+        }
+
+        public async bool handle (LoggedAdifPacket packet) {
             ParsedLoggedAdif? parsed = Artemis.Wsjtx.parse_logged_adif (
                 packet.adif,
                 preferences
             );
             if (parsed == null)
-                return;
+                return false;
 
-            var active_spot = spot_repo.get_spot_for_callsign (parsed.call);
+            prune_recent_cq_pota_callsigns ();
+
+            var active_spot = spot_lookup.get_spot_for_callsign (parsed.call);
+            var matched_live_spot = active_spot != null;
+            var matched_recent_cq_pota = has_recent_cq_pota_callsign (parsed.call);
+            if (!matched_live_spot && !matched_recent_cq_pota)
+                return false;
+
             var park_ref = active_spot != null ? active_spot.park_ref : "";
             var mode = parsed.mode != "" ? parsed.mode : active_spot != null ? active_spot.mode : "";
             var frequency_khz = parsed.frequency_khz > 0.0 ?
@@ -40,17 +64,17 @@ namespace Artemis.Wsjtx {
             var dedupe_key = "%s|%s|%s".printf (
                 parsed.dedupe_key,
                 park_ref,
-                mode
+                matched_live_spot ? "spot" : "cq-pota"
             );
 
             if (logging_service.has_completed_logged_adif (dedupe_key))
-                return;
+                return false;
 
             if ((mode == "") || (frequency_khz <= 0.0) ||
                 (parsed.station_callsign == "") || (parsed.spot_time == null)) {
                 warning ("Skipping WSJT-X logged QSO for %s: ADIF record missing required fields",
                     parsed.call);
-                return;
+                return false;
             }
 
             var draft = new QsoDraft (
@@ -66,9 +90,12 @@ namespace Artemis.Wsjtx {
             );
 
             try {
-                var result = yield logging_service.submit_qso_draft (
+                var result = yield logging_service.submit_qso_draft_with_qrz_mode (
                     draft,
-                    park_ref != ""
+                    park_ref != "",
+                    preferences.forward_wsjtx_qsos_to_qrz ?
+                        QrzUploadMode.ENABLED :
+                        QrzUploadMode.DISABLED
                 );
                 logging_service.mark_logged_adif_completed (dedupe_key);
                 if (result.local_adif_error != null)
@@ -77,11 +104,61 @@ namespace Artemis.Wsjtx {
                     user_message (_("WSJT-X QSO saved locally; POTA spot failed"));
                 if (result.qrz_error != null)
                     user_message (_("WSJT-X QSO saved locally; QRZ upload failed"));
+                return true;
             } catch (Error err) {
                 warning ("Unable to auto spot WSJT-X POTA contact %s: %s",
                     parsed.call,
                     err.message);
             }
+
+            return false;
+        }
+
+        private bool has_recent_cq_pota_callsign (string callsign) {
+            var normalized = normalize_callsign (callsign);
+            return normalized != "" && recent_cq_pota_callsigns.has_key (normalized);
+        }
+
+        private void prune_recent_cq_pota_callsigns (int64 now_seconds = -1) {
+            var now = normalized_now_seconds (now_seconds);
+            var expired = new Gee.ArrayList<string> ();
+            foreach (var entry in recent_cq_pota_callsigns.entries) {
+                if (now - entry.value > CQ_POTA_CACHE_SECONDS)
+                    expired.add (entry.key);
+            }
+
+            foreach (var callsign in expired)
+                recent_cq_pota_callsigns.unset (callsign);
+        }
+
+        private static int64 normalized_now_seconds (int64 now_seconds) {
+            if (now_seconds >= 0)
+                return now_seconds;
+
+            return GLib.get_monotonic_time () / 1000000;
+        }
+
+        private static string cq_pota_callsign_from_decode (string decode_text) {
+            var normalized = decode_text.strip ().up ();
+            if (normalized == "")
+                return "";
+
+            var tokens = new Gee.ArrayList<string> ();
+            foreach (var token in normalized.split (" ")) {
+                if (token != "")
+                    tokens.add (token);
+            }
+
+            for (var i = 0; i + 2 < tokens.size; i++) {
+                if (tokens[i] == "CQ" && tokens[i + 1] == "POTA")
+                    return normalize_callsign (tokens[i + 2]);
+            }
+
+            return "";
+        }
+
+        private static string normalize_callsign (string callsign) {
+            return callsign.strip ().up ();
         }
 
     }

@@ -145,6 +145,12 @@
         <range min="1" max="65535"/>
         </key>
 
+        <key name="forward-wsjtx-qsos-to-qrz" type="b">
+        <default>false</default>
+        <summary>Forward WSJT-X QSOs to QRZ</summary>
+        <description>Upload accepted WSJT-X logged contacts to QRZ when an API key is configured.</description>
+        </key>
+
         <key name="radio-baud-rate" type="i">
         <default>9600</default>
         <summary>Serial baud rate</summary>

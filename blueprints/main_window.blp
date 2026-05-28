@@ -138,6 +138,37 @@ template $AppWindow : Adw.ApplicationWindow {
                 }
               }
 
+              Button {
+                tooltip-text: _("Alerts");
+                action-name: "app.alerts";
+                styles ["image-button", "flat"]
+
+                Overlay {
+                  Image {
+                    icon-name: "preferences-system-notifications-symbolic";
+                  }
+
+                  [overlay]
+                  Box alerts_badge {
+                    width-request: 8;
+                    height-request: 8;
+                    halign: end;
+                    valign: start;
+                    visible: false;
+                    styles ["toolbar-status-badge", "enabled"]
+                    accessibility {
+                      label: _("Spot Alerts Enabled");
+                      role-description: _("status indicator");
+                    }
+                  }
+                }
+
+                accessibility {
+                  label: _("Alerts");
+                  role-description: _("button");
+                }
+              }
+
               ToggleButton inspector_toggle {
                 icon-name: "dock-right-symbolic";
                 tooltip-text: _("Show Inspector");

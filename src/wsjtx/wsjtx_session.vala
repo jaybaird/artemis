@@ -228,7 +228,9 @@ namespace Artemis.Wsjtx {
                 case MessageType.LOGGED_ADIF:
                     var logged_adif = packet.get_logged_adif ();
                     logged_adif_received (logged_adif);
-                    logged_adif_handler.handle.begin (logged_adif);
+                    logged_adif_handler.handle.begin (logged_adif, (obj, res) => {
+                        logged_adif_handler.handle.end (res);
+                    });
                     break;
                 default:
                     break;
@@ -266,6 +268,8 @@ namespace Artemis.Wsjtx {
         }
 
         private void handle_decode (DecodePacket decode) {
+            logged_adif_handler.remember_cq_pota_decode (decode.text);
+
             var spot = Application.spot_repo.get_spot_for_decode_text (decode.text);
             if (spot == null)
                 return;

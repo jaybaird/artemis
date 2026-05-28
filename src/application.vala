@@ -204,11 +204,11 @@ public sealed class Application : Adw.Application {
     }
 
     public void send_spot_alert (Spot spot) {
-        var title = _("POTA spot alert: %s").printf (spot.callsign);
+        var title = _("Spot alert: %s").printf (spot.callsign);
         var body = _("%s on %s %s").printf (spot.park_ref, spot.band, spot.mode);
         var notification = new GLib.Notification (title);
         notification.set_body (body);
-        notification.set_icon (new ThemedIcon ("preferences-system-notifications-symbolic"));
+        notification.set_icon (new ThemedIcon ("com.k0vcz.Artemis"));
         notification.set_priority (GLib.NotificationPriority.NORMAL);
 
         send_notification ("spot-alert-%u".printf ((uint) spot.hash), notification);

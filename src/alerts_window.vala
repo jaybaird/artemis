@@ -26,57 +26,91 @@ public sealed class AlertsWindow : Adw.Window {
     private unowned Adw.SwitchRow enabled_row;
 
     [GtkChild]
-    private unowned Gtk.TextBuffer keyword_buffer;
+    private unowned Adw.PreferencesGroup keywords_group;
 
-    private bool syncing_keywords = false;
-    private ulong keyword_handler = 0;
+    [GtkChild]
+    private unowned Gtk.Button add_keyword_button;
+
+    [GtkChild]
+    private unowned Gtk.Button cancel_button;
+
+    [GtkChild]
+    private unowned Gtk.Button save_button;
+
+    private ArrayList<Adw.EntryRow> keyword_rows = new ArrayList<Adw.EntryRow> ();
 
     public AlertsWindow (Gtk.Application app) {
         Object (application: app);
     }
 
     construct {
-        Application.settings.bind (
-            "spot-alerts-enabled",
-            enabled_row,
-            "active",
-            SettingsBindFlags.DEFAULT
-        );
+        load_settings ();
 
-        load_keywords ();
-        keyword_buffer.changed.connect (store_keywords);
+        add_keyword_button.clicked.connect (() => add_keyword_row ("", true));
 
-        keyword_handler = Application.settings.changed["spot-alert-keywords"].connect (() => {
-            if (!syncing_keywords)
-                load_keywords ();
+        cancel_button.clicked.connect (() => {
+            load_settings ();
+            close ();
+        });
+
+        save_button.clicked.connect (() => {
+            save_settings ();
+            close ();
         });
     }
 
-    private void load_keywords () {
-        syncing_keywords = true;
-        keyword_buffer.text = string.joinv ("\n", Application.settings.get_strv (
-            "spot-alert-keywords"
-        ));
-        syncing_keywords = false;
+    private void load_settings () {
+        enabled_row.active = Application.settings.get_boolean ("spot-alerts-enabled");
+        load_keywords ();
     }
 
-    private void store_keywords () {
-        if (syncing_keywords)
-            return;
+    private void load_keywords () {
+        clear_keyword_rows ();
+        foreach (var keyword in Application.settings.get_strv ("spot-alert-keywords"))
+            add_keyword_row (keyword);
+    }
 
-        Gtk.TextIter start;
-        Gtk.TextIter end;
-        keyword_buffer.get_bounds (out start, out end);
-        var text = keyword_buffer.get_text (start, end, false);
+    private void save_settings () {
+        Application.settings.set_boolean ("spot-alerts-enabled", enabled_row.active);
+        Application.settings.set_strv ("spot-alert-keywords", collect_keywords ());
+    }
+
+    private void add_keyword_row (string keyword, bool focus = false) {
+        var row = new Adw.EntryRow ();
+        row.title = _("Keyword");
+        row.text = keyword;
+
+        var delete_button = new Gtk.Button.from_icon_name ("edit-delete-symbolic");
+        delete_button.tooltip_text = _("Remove Keyword");
+        delete_button.valign = Gtk.Align.CENTER;
+        delete_button.add_css_class ("flat");
+        row.add_suffix (delete_button);
+
+        delete_button.clicked.connect (() => {
+            keywords_group.remove (row);
+            keyword_rows.remove (row);
+        });
+
+        keyword_rows.add (row);
+        keywords_group.add (row);
+        if (focus)
+            row.grab_focus ();
+    }
+
+    private void clear_keyword_rows () {
+        foreach (var row in keyword_rows)
+            keywords_group.remove (row);
+        keyword_rows.clear ();
+    }
+
+    private string[] collect_keywords () {
         string[] keywords = {};
-        foreach (var line in text.split ("\n")) {
-            var keyword = line.strip ();
+        foreach (var row in keyword_rows) {
+            var keyword = row.text.strip ();
             if (keyword != "")
                 keywords += keyword;
         }
 
-        syncing_keywords = true;
-        Application.settings.set_strv ("spot-alert-keywords", keywords);
-        syncing_keywords = false;
+        return keywords;
     }
 }

@@ -185,10 +185,6 @@ public sealed class SpotListView : Gtk.Box {
         filter.changed (Gtk.FilterChange.DIFFERENT);
     }
 
-    public uint get_n_items () {
-        return sorted.get_n_items ();
-    }
-
     public void set_row_actions_visible (bool visible) {
         row_actions_visible = visible;
 

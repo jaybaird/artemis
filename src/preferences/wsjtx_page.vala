@@ -33,6 +33,9 @@ public sealed class WsjtxPreferencesPage : Adw.PreferencesPage {
     private unowned Adw.EntryRow row_wsjtx_listen_port;
 
     [GtkChild]
+    private unowned Adw.SwitchRow row_forward_qrz;
+
+    [GtkChild]
     private unowned Adw.ActionRow wsjtx_status_row;
 
     [GtkChild]
@@ -52,6 +55,8 @@ public sealed class WsjtxPreferencesPage : Adw.PreferencesPage {
         update_controls_sensitivity ();
         Application.settings.bind ("wsjtx-listen-ip", row_wsjtx_listen_ip, "text",
             SettingsBindFlags.DEFAULT);
+        Application.settings.bind ("forward-wsjtx-qsos-to-qrz", row_forward_qrz, "active",
+            SettingsBindFlags.DEFAULT);
         bind_wsjtx_port_entry ();
         Application.wsjtx_session.status_changed.connect (update_wsjtx_status);
         update_wsjtx_status ();
@@ -60,6 +65,7 @@ public sealed class WsjtxPreferencesPage : Adw.PreferencesPage {
     private void update_controls_sensitivity () {
         row_wsjtx_listen_ip.sensitive = wsjtx_active.active;
         row_wsjtx_listen_port.sensitive = wsjtx_active.active;
+        row_forward_qrz.sensitive = wsjtx_active.active;
         wsjtx_status_group.sensitive = wsjtx_active.active;
     }
 

@@ -58,7 +58,7 @@ public class MapMarkerDot : Gtk.DrawingArea {
                 cr.fill ();
 
             if (selected) {
-                cr.set_line_width (2.0);
+                cr.set_line_width (2.5);
                 cr.set_source_rgba (0.98, 0.98, 0.98, 0.98);
                 cr.stroke ();
             }

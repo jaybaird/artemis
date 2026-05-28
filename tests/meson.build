@@ -151,6 +151,7 @@ test_database = executable(
   'test-database',
   [
     meson.project_source_root() / 'src/frequency.vala',
+    meson.project_source_root() / 'src/string_utils.vala',
     meson.project_source_root() / 'src/database.vala',
     meson.project_source_root() / 'tests/test-database.vala',
     compiled_resources
@@ -230,8 +231,12 @@ test_wsjtx_logged_adif = executable(
     meson.project_source_root() / 'src/adif/adif_types.vala',
     meson.project_source_root() / 'src/adif/adif_parser.vala',
     meson.project_source_root() / 'src/frequency.vala',
+    meson.project_source_root() / 'src/string_utils.vala',
+    meson.project_source_root() / 'src/logging_service.vala',
     meson.project_source_root() / 'src/logging_preferences.vala',
+    meson.project_source_root() / 'src/wsjtx/wsjtx_packet.vala',
     meson.project_source_root() / 'src/wsjtx/wsjtx_logged_adif_parser.vala',
+    meson.project_source_root() / 'src/wsjtx/wsjtx_logged_adif_handler.vala',
     meson.project_source_root() / 'tests/test-wsjtx-logged-adif.vala'
   ],
   dependencies: [

@@ -75,6 +75,9 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private unowned Gtk.ToggleButton inspector_toggle;
 
     [GtkChild]
+    private unowned Gtk.Widget alerts_badge;
+
+    [GtkChild]
     private unowned StatusBar status_bar;
 
     [GtkChild]
@@ -89,8 +92,8 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private bool refresh_in_progress = false;
 
     private bool update_paused = false;
-    private MapView map_view;
-    private SpotListView list_view;
+    private MapView? map_view = null;
+    private SpotListView? list_view = null;
     private bool radio_connect_inflight = false;
     private Quark map_centered_spot_hash = BLANK_HASH;
     private string? pending_initial_band = null;
@@ -157,7 +160,9 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             BindingFlags.BIDIRECTIONAL | BindingFlags.SYNC_CREATE
         );
         search_bar.notify["search-mode-enabled"].connect (animate_search_content_margins);
-        views.notify["visible-child-name"].connect (update_detail_action_buttons);
+        views.notify["visible-child-name"].connect (on_visible_view_changed);
+        sync_alerts_badge ();
+        Application.settings.changed["spot-alerts-enabled"].connect (sync_alerts_badge);
 
         Application.settings.changed["update-interval"].connect (() => {
             reset_refresh_schedule ();
@@ -234,7 +239,9 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             update_status_bar ();
         });
 
-        Application.spot_repo.current_spot_changed.connect (on_spot_selected);
+        Application.spot_repo.current_spot_changed.connect ((spot_hash) => {
+            sync_selected_spot (spot_hash, true);
+        });
 
         Application.spot_repo.update_error.connect ((error) => {
             var error_key = "%s:%d".printf (error.domain.to_string (), error.code);
@@ -308,22 +315,12 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             Application.state.current_program_filter
         );
 
-        map_view = new MapView () {
-            hexpand = true,
-            vexpand = true
-        };
-        map_container.append (map_view);
-
-        list_view = new SpotListView () {
-            hexpand = true,
-            vexpand = true
-        };
-        list_container.append (list_view);
         Application.app.radio_connection_state_changed.connect (() => {
-            list_view.set_row_actions_visible (!inspector_split.show_sidebar);
+            if (list_view != null)
+                list_view.set_row_actions_visible (!inspector_split.show_sidebar);
         });
 
-        update_detail_action_buttons ();
+        on_visible_view_changed ();
 
         set_refresh_button_state (update_paused);
 
@@ -341,6 +338,64 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         list_container.margin_top = margin;
         if (map_view != null)
             map_view.set_top_overlay_margin (margin);
+    }
+
+    private void sync_alerts_badge () {
+        alerts_badge.visible = Application.settings.get_boolean ("spot-alerts-enabled");
+    }
+
+    private void on_visible_view_changed () {
+        var visible_child_name = views.visible_child_name;
+
+        if (visible_child_name == "list") {
+            ensure_list_view ();
+        } else if (visible_child_name == "map") {
+            ensure_map_view ();
+            if (map_view != null)
+                map_view.set_active (true);
+        }
+
+        if (visible_child_name != "map" && map_view != null)
+            map_view.set_active (false);
+
+        spot_detail.set_action_buttons_visible (views.visible_child_name != "cards");
+    }
+
+    private void ensure_list_view () {
+        if (list_view != null)
+            return;
+
+        list_view = new SpotListView () {
+            hexpand = true,
+            vexpand = true
+        };
+        list_container.append (list_view);
+        list_view.set_row_actions_visible (!inspector_split.show_sidebar);
+        list_view.count_changed.connect (() => update_status_bar ());
+        list_view.set_current_spot (Application.state.current_spot_hash);
+        update_status_bar ();
+    }
+
+    private void ensure_map_view () {
+        if (map_view != null)
+            return;
+
+        map_view = new MapView () {
+            hexpand = true,
+            vexpand = true
+        };
+        map_container.append (map_view);
+        map_view.set_top_overlay_margin (band_view.margin_top);
+        map_view.bounce_filter ();
+
+        if (Application.state.current_spot_hash == BLANK_HASH)
+            return;
+
+        var spot = Application.spot_repo.get_spot (Application.state.current_spot_hash);
+        if (spot != null) {
+            map_view.go_to_spot (spot);
+            map_centered_spot_hash = Application.state.current_spot_hash;
+        }
     }
 
     private void animate_search_content_margins () {
@@ -372,10 +427,6 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         search_margin_animation.play ();
     }
 
-    private void on_spot_selected (Quark spot_hash) {
-        sync_selected_spot (spot_hash, true);
-    }
-
     private void sync_selected_spot (Quark spot_hash, bool reveal_inspector) {
         var spot = Application.spot_repo.get_spot (spot_hash);
         spot_detail.set_spot (spot);
@@ -396,7 +447,8 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             map_centered_spot_hash = spot_hash;
         }
 
-        sync_band_view_to_spot (spot_hash, spot);
+        band_view.set_current_spot (spot_hash);
+
         if (list_view != null)
             list_view.set_current_spot (spot_hash);
     }
@@ -451,18 +503,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             !sidebar_split.show_sidebar;
     }
 
-    private void update_detail_action_buttons () {
-        spot_detail.set_action_buttons_visible (views.visible_child_name != "cards");
-    }
-
-    private void sync_band_view_to_spot (Quark spot_hash, Spot spot) {
-        band_view.set_current_spot (spot_hash);
-    }
-
     private void update_status_bar () {
-        if (list_view == null)
-            return;
-
         var current_band = Application.state.current_band_filter ?? "All";
         int total_available = 0;
         if (current_band == "All") {
@@ -471,12 +512,23 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             total_available = Application.spot_repo.get_band_count (current_band);
         }
 
-        int total_visible = (int)list_view.get_n_items ();
+        int total_visible = count_visible_spots ();
         int filtered_count = total_available - total_visible;
         if (filtered_count < 0)
             filtered_count = 0;
 
         status_bar.set_filtered_text ((uint)filtered_count, (uint)total_visible);
+    }
+
+    private int count_visible_spots () {
+        var current_band = Application.state.current_band_filter ?? "All";
+        var count = 0;
+        for (uint i = 0; i < Application.spot_repo.store.get_n_items (); i++) {
+            var spot = Application.spot_repo.store.get_item (i) as Spot;
+            if (spot != null && spot_matches_current_filters (spot, current_band))
+                count++;
+        }
+        return count;
     }
 
     private void bounce_map_filter_if_ready () {

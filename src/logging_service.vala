@@ -24,6 +24,12 @@ public errordomain LoggingError {
     REMOTE_FAILED
 }
 
+public enum QrzUploadMode {
+    DEFAULT,
+    ENABLED,
+    DISABLED
+}
+
 public interface QsoStore : Object {
     public abstract bool add_qso_from_spot (Spot spot, out Error? error);
     public abstract bool update_qso_delivery_status (
@@ -182,13 +188,43 @@ public sealed class LoggingService : Object {
         QsoDraft draft,
         bool post_to_pota = true
     ) throws Error {
+        return yield submit_qso_draft_with_qrz_mode (
+            draft,
+            post_to_pota,
+            QrzUploadMode.DEFAULT
+        );
+    }
+
+    public async LoggingResult submit_qso_draft_with_qrz_mode (
+        QsoDraft draft,
+        bool post_to_pota,
+        QrzUploadMode qrz_upload_mode
+    ) throws Error {
         if (draft == null)
             throw new LoggingError.INVALID_CONTACT ("QSO is empty");
 
-        return yield submit_spot_qso (draft.to_spot (), post_to_pota);
+        return yield submit_spot_qso_with_qrz_mode (
+            draft.to_spot (),
+            post_to_pota,
+            qrz_upload_mode
+        );
     }
 
-    public async LoggingResult submit_spot_qso (Spot spot, bool post_to_pota = true) throws Error {
+    public async LoggingResult submit_spot_qso (
+        Spot spot, bool post_to_pota = true
+    ) throws Error {
+        return yield submit_spot_qso_with_qrz_mode (
+            spot,
+            post_to_pota,
+            QrzUploadMode.DEFAULT
+        );
+    }
+
+    public async LoggingResult submit_spot_qso_with_qrz_mode (
+        Spot spot,
+        bool post_to_pota,
+        QrzUploadMode qrz_upload_mode
+    ) throws Error {
         validate_spot_qso (spot);
 
         Error? db_error = null;
@@ -232,7 +268,7 @@ public sealed class LoggingService : Object {
             }
         }
 
-        if (preferences.enable_qrz_logging && preferences.qrz_api_key != "") {
+        if (should_upload_to_qrz (qrz_upload_mode)) {
             try {
                 yield qrz_uploader.upload_spot_qso (spot);
                 qrz_uploaded = true;
@@ -272,6 +308,21 @@ public sealed class LoggingService : Object {
         return result;
     }
 
+    private bool should_upload_to_qrz (QrzUploadMode mode) {
+        if (preferences.qrz_api_key == "")
+            return false;
+
+        switch (mode) {
+            case QrzUploadMode.ENABLED:
+                return true;
+            case QrzUploadMode.DISABLED:
+                return false;
+            case QrzUploadMode.DEFAULT:
+            default:
+                return preferences.enable_qrz_logging;
+        }
+    }
+
     public bool has_completed_logged_adif (string key) {
         return completed_logged_adif_keys.contains (key);
     }
@@ -285,13 +336,13 @@ public sealed class LoggingService : Object {
         if (spot == null) {
             throw new LoggingError.INVALID_CONTACT ("QSO is empty");
         }
-        if (spot.callsign.strip () == "") {
+        if (is_empty_or_whitespace (spot.callsign)) {
             throw new LoggingError.INVALID_CONTACT ("Activator callsign is required");
         }
-        if (spot.spotter.strip () == "") {
+        if (is_empty_or_whitespace (spot.spotter)) {
             throw new LoggingError.INVALID_CONTACT ("Your callsign is required");
         }
-        if (spot.mode.strip () == "") {
+        if (is_empty_or_whitespace (spot.mode)) {
             throw new LoggingError.INVALID_CONTACT ("Mode is required");
         }
         if (spot.frequency_khz <= 0.0) {

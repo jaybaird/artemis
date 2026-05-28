@@ -438,6 +438,88 @@ private void test_database_persists_qso_signal_reports () {
     }
 }
 
+private void test_database_keeps_blank_park_qsos_out_of_park_summaries () {
+    try {
+        reset_database_dir ();
+
+        Error? error = null;
+        var spot_db = new SpotDb ();
+        assert (spot_db.init (out error));
+        assert (error == null);
+
+        var unresolved = new Spot (
+            "K1ABC",
+            "",
+            "",
+            "",
+            "FT8",
+            14074,
+            new DateTime.from_iso8601 ("2026-01-02T00:00:00Z", new TimeZone.utc ()),
+            "K0VCZ"
+        );
+        assert (spot_db.add_qso_from_spot (unresolved, out error));
+        assert (error == null);
+
+        var qso_page = spot_db.load_qso_page (
+            10,
+            0,
+            "",
+            LogbookQsoSortColumn.DATE,
+            LogbookSortDirection.DESC,
+            out error
+        );
+        assert (error == null);
+        assert (qso_page.total_count == 1);
+        assert (qso_page.rows.size == 1);
+        assert (qso_page.rows[0].park_ref == "");
+
+        var park_page = spot_db.load_hunted_park_page (
+            10,
+            0,
+            "",
+            HuntedParkSortColumn.FIRST_QSO,
+            LogbookSortDirection.DESC,
+            out error
+        );
+        assert (error == null);
+        assert (park_page.total_count == 0);
+        assert (park_page.rows.size == 0);
+
+        var latest_per_park = spot_db.latest_qso_per_park (out error);
+        assert (error == null);
+        assert (latest_per_park.size == 0);
+
+        var resolved = new Spot (
+            "K1ABC",
+            "US-0001",
+            "Acadia",
+            "US-ME",
+            "FT8",
+            14074,
+            new DateTime.from_iso8601 ("2026-01-02T00:00:00Z", new TimeZone.utc ()),
+            "K0VCZ"
+        );
+        assert (spot_db.update_qso_from_spot (qso_page.rows[0].id, resolved, out error));
+        assert (error == null);
+
+        park_page = spot_db.load_hunted_park_page (
+            10,
+            0,
+            "",
+            HuntedParkSortColumn.FIRST_QSO,
+            LogbookSortDirection.DESC,
+            out error
+        );
+        assert (error == null);
+        assert (park_page.total_count == 1);
+        assert (park_page.rows.size == 1);
+        assert (park_page.rows[0].reference == "US-0001");
+    } catch (Error err) {
+        warning ("%s", err.message);
+        assert_not_reached ();
+    }
+}
+
 private void test_database_migrates_date_only_park_first_qso_dates () {
     try {
         reset_database_dir ();
@@ -554,6 +636,8 @@ public int main (string[] args) {
     Test.add_func ("/database/local-park-details-lookup", test_database_park_details_lookup_uses_local_rows);
     Test.add_func ("/database/logbook-pages-search-and-sort", test_database_logbook_pages_search_and_sort);
     Test.add_func ("/database/persist-qso-signal-reports", test_database_persists_qso_signal_reports);
+    Test.add_func ("/database/blank-park-qso-summary-exclusion",
+        test_database_keeps_blank_park_qsos_out_of_park_summaries);
     Test.add_func ("/database/migrate-date-only-park-first-qso-dates",
         test_database_migrates_date_only_park_first_qso_dates);
     Test.add_func ("/database/delete-qso-updates-park-summary", test_database_delete_qso_updates_park_summary);
