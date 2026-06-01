@@ -264,6 +264,12 @@ public sealed class Application : Adw.Application {
             return;
         }
 
+        if (settings.get_string ("callsign").strip () != "" &&
+            settings.get_string ("location").strip () != "") {
+            settings.set_boolean ("first-run-setup-complete", true);
+            return;
+        }
+
         setup_dialog_active = true;
         var dialog = new FirstRunSetupDialog ();
         dialog.completed.connect ((save, callsign, location, use_metric) => {
