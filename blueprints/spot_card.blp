@@ -291,7 +291,6 @@ template $SpotCard : Box {
       margin-end: 6;
       margin-bottom: 6;
       orientation: horizontal;
-      spacing: 6;
 
       Box badge_box {
         orientation: horizontal;
@@ -300,26 +299,31 @@ template $SpotCard : Box {
         valign: center;
       }
 
-      Button tune_button {
-        label: _("Tune");
-        tooltip-text: _("Tune your radio to this frequency");
-        visible: false;
-        styles ["flat"]
+      Box {
+        orientation: horizontal;
+        styles ["linked"]
 
-        accessibility {
+        Button tune_button {
           label: _("Tune");
-          role-description: _("button");
+          tooltip-text: _("Tune your radio to this frequency");
+          visible: false;
+          styles ["flat"]
+
+          accessibility {
+            label: _("Tune");
+            role-description: _("button");
+          }
         }
-      }
 
-      Button spot_button {
-        label: _("Re-Spot");
-        tooltip-text: _("Add your spot for this park");
-        styles ["flat"]
+        Button spot_button {
+          label: _("Spot");
+          tooltip-text: _("Add your spot for this park");
+          styles ["flat"]
 
-        accessibility {
-          label: _("Re-Spot");
-          role-description: _("button");
+          accessibility {
+            label: _("Spot");
+            role-description: _("button");
+          }
         }
       }
     }

@@ -370,6 +370,7 @@ struct _RadioControl {
   DexFuture       *watcher;
 
   gboolean        is_connected;
+  guint           connect_generation;
   double          frequency_khz;
   enum RadioMode  mode;
   gboolean        tx_active;
@@ -644,6 +645,8 @@ connect_worker(gpointer user_data)
   RadioConfiguration *config = (RadioConfiguration *)data->config;
 
   g_autoptr (GError) error = NULL;
+  RIG *rig = NULL;
+  guint connect_generation;
 
   g_mutex_lock(&self->rig_mutex);
 
@@ -657,36 +660,37 @@ connect_worker(gpointer user_data)
   self->frequency_khz = -1;
   self->mode = RADIO_MODE_UNKNOWN;
   self->tx_active = FALSE;
+  connect_generation = ++self->connect_generation;
+  g_mutex_unlock(&self->rig_mutex);
 
-  self->rig = rig_init(config->model_id);
+  rig = rig_init(config->model_id);
 
-  if (self->rig == NULL)
+  if (rig == NULL)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Failed to initialize radio model %d", config->model_id);
-    g_mutex_unlock(&self->rig_mutex);
     return dex_future_new_for_error(g_steal_pointer(&error));
   }
 
   if (g_strcmp0(config->connection_type, "serial") == 0) 
   {
-    if (!try_set_rig_conf(self->rig, "rig_pathname", config->device_path, TRUE, &error))
+    if (!try_set_rig_conf(rig, "rig_pathname", config->device_path, TRUE, &error))
       goto connect_fail;
 
     if (config->baud_rate > 0) {
       char baudstr[16];
       g_snprintf(baudstr, sizeof baudstr, "%d", config->baud_rate);
-      try_set_rig_conf(self->rig, "serial_speed", baudstr, FALSE, NULL);
+      try_set_rig_conf(rig, "serial_speed", baudstr, FALSE, NULL);
     }
 
     if (config->data_bits == 7 || config->data_bits == 8) {
       char datastr[16];
       g_snprintf(datastr, sizeof datastr, "%u", config->data_bits);
-      try_set_rig_conf(self->rig, "data_bits", datastr, FALSE, NULL);
+      try_set_rig_conf(rig, "data_bits", datastr, FALSE, NULL);
     }
     if (config->stop_bits == 1 || config->stop_bits == 2) {
       char stopstr[16];
       g_snprintf(stopstr, sizeof stopstr, "%u", config->stop_bits);
-      try_set_rig_conf(self->rig, "stop_bits", stopstr, FALSE, NULL);
+      try_set_rig_conf(rig, "stop_bits", stopstr, FALSE, NULL);
     }
     
     const char *handshake_str = NULL;
@@ -704,12 +708,12 @@ connect_worker(gpointer user_data)
         handshake_str = "None";
         break;
     }
-    try_set_rig_conf(self->rig, "serial_handshake", handshake_str, FALSE, NULL);
+    try_set_rig_conf(rig, "serial_handshake", handshake_str, FALSE, NULL);
   } else if (g_strcmp0(config->connection_type, "network") == 0) {
       char hostport[256];
       g_snprintf(hostport, sizeof hostport, "%s:%u", config->network_host, config->network_port);
 
-      if (!try_set_rig_conf(self->rig, "rig_pathname", hostport, TRUE, &error))
+      if (!try_set_rig_conf(rig, "rig_pathname", hostport, TRUE, &error))
         goto connect_fail;
   } else {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_INVALID_ARGUMENT,
@@ -718,24 +722,38 @@ connect_worker(gpointer user_data)
     goto connect_fail;
   }
 
-  try_set_rig_conf(self->rig, "timeout", "3000", FALSE, NULL);
+  try_set_rig_conf(rig, "timeout", "3000", FALSE, NULL);
   
-  int result = rig_open(self->rig);
+  int result = rig_open(rig);
 
   if (result != RIG_OK)
   {
     g_set_error(&error, G_IO_ERROR, G_IO_ERROR_CONNECTION_REFUSED,
                 "Failed to connect to radio: %s", rigerror(result));
+    rig_close(rig);
+    rig_cleanup(rig);
+    return dex_future_new_for_error(g_steal_pointer(&error));
+  }
+
+  g_mutex_lock(&self->rig_mutex);
+  if (connect_generation != self->connect_generation)
+  {
+    g_mutex_unlock(&self->rig_mutex);
+    rig_close(rig);
+    rig_cleanup(rig);
+    g_set_error(&error, G_IO_ERROR, G_IO_ERROR_CANCELLED,
+                "Radio connection was cancelled");
+    return dex_future_new_for_error(g_steal_pointer(&error));
+  }
+
+  if (self->rig != NULL)
+  {
     rig_close(self->rig);
     rig_cleanup(self->rig);
     self->rig = NULL;
-    self->is_connected = FALSE;
-    self->frequency_khz = -1;
-    self->mode = RADIO_MODE_UNKNOWN;
-    self->tx_active = FALSE;
-    g_mutex_unlock(&self->rig_mutex);
-    return dex_future_new_for_error(g_steal_pointer(&error));
   }
+  self->rig = rig;
+  rig = NULL;
   self->is_connected = TRUE;
   self->frequency_khz = -1;
   self->mode = RADIO_MODE_UNKNOWN;
@@ -753,20 +771,15 @@ connect_worker(gpointer user_data)
   return dex_future_new_true();
 
   connect_fail:
-    if (self->rig != NULL) {
-      rig_cleanup(self->rig);
-      self->rig = NULL;
+    if (rig != NULL) {
+      rig_cleanup(rig);
+      rig = NULL;
     }
-    self->is_connected = FALSE;
-    self->frequency_khz = -1;
-    self->mode = RADIO_MODE_UNKNOWN;
-    self->tx_active = FALSE;
 
     if (error == NULL) {
       g_set_error(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Radio connection setup failed");
     }
 
-    g_mutex_unlock(&self->rig_mutex);
     return dex_future_new_for_error(g_steal_pointer(&error));
 }
 
@@ -793,6 +806,7 @@ disconnect_worker(gpointer user_data)
   RadioControl *self = ARTEMIS_RADIO_CONTROL(user_data);
 
   g_mutex_lock(&self->rig_mutex);
+  self->connect_generation++;
   self->is_connected = FALSE;
   self->frequency_khz = -1;
   self->mode = RADIO_MODE_UNKNOWN;

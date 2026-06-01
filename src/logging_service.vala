@@ -57,6 +57,7 @@ public interface PotaSpotPoster : Object {
 
 public interface QrzQsoUploader : Object {
     public abstract async void upload_spot_qso (Spot spot) throws Error;
+    public abstract async void upload_adif_record (string adif) throws Error;
 }
 
 [Compact (opaque=true)]
@@ -162,6 +163,9 @@ public class LoggingResult {
 public sealed class LoggingService : Object {
     private Gee.HashSet<string> completed_logged_adif_keys = new Gee.HashSet<string> ();
 
+    public signal void qso_changed ();
+    public signal void qso_added (Spot spot);
+
     public QsoStore qso_store { get; construct; }
     public PotaSpotPoster pota_poster { get; construct; }
     public QrzQsoUploader qrz_uploader { get; construct; }
@@ -198,7 +202,8 @@ public sealed class LoggingService : Object {
     public async LoggingResult submit_qso_draft_with_qrz_mode (
         QsoDraft draft,
         bool post_to_pota,
-        QrzUploadMode qrz_upload_mode
+        QrzUploadMode qrz_upload_mode,
+        string? qrz_adif = null
     ) throws Error {
         if (draft == null)
             throw new LoggingError.INVALID_CONTACT ("QSO is empty");
@@ -206,7 +211,8 @@ public sealed class LoggingService : Object {
         return yield submit_spot_qso_with_qrz_mode (
             draft.to_spot (),
             post_to_pota,
-            qrz_upload_mode
+            qrz_upload_mode,
+            qrz_adif
         );
     }
 
@@ -223,7 +229,8 @@ public sealed class LoggingService : Object {
     public async LoggingResult submit_spot_qso_with_qrz_mode (
         Spot spot,
         bool post_to_pota,
-        QrzUploadMode qrz_upload_mode
+        QrzUploadMode qrz_upload_mode,
+        string? qrz_adif = null
     ) throws Error {
         validate_spot_qso (spot);
 
@@ -233,6 +240,8 @@ public sealed class LoggingService : Object {
                 db_error != null ? db_error.message : "Unable to save QSO locally"
             );
         }
+        qso_changed ();
+        qso_added (spot);
 
         bool pota_posted = false;
         bool qrz_uploaded = false;
@@ -270,7 +279,10 @@ public sealed class LoggingService : Object {
 
         if (should_upload_to_qrz (qrz_upload_mode)) {
             try {
-                yield qrz_uploader.upload_spot_qso (spot);
+                if (has_text (qrz_adif))
+                    yield qrz_uploader.upload_adif_record (qrz_adif);
+                else
+                    yield qrz_uploader.upload_spot_qso (spot);
                 qrz_uploaded = true;
             } catch (Error err) {
                 qrz_error = err.message;

@@ -114,12 +114,27 @@ template $AppWindow : Adw.ApplicationWindow {
                 }
               }
 
-              ToggleButton refresh_toggle {
-                icon-name: "media-playback-pause-symbolic";
-                tooltip-text: _("Pause");
-                accessibility {
-                  label: _("Pause Updates");
-                  role-description: _("toggle button");
+              Stack refresh_button_stack {
+                transition-type: crossfade;
+                transition-duration: 250;
+                visible-child-name: "refresh_spinner";
+                
+                Adw.Spinner refresh_spinner {
+                  width-request: 24;
+                  height-request: 24;
+
+                  accessibility {
+                    label: _("Loading");
+                  }
+                }
+              
+                ToggleButton refresh_toggle {
+                  icon-name: "media-playback-pause-symbolic";
+                  tooltip-text: _("Pause");
+                  accessibility {
+                    label: _("Pause Updates");
+                    role-description: _("toggle button");
+                  }
                 }
               }
             }
@@ -191,7 +206,9 @@ template $AppWindow : Adw.ApplicationWindow {
           }
 
           [top]
-          Box {
+          Adw.Bin {
+            margin-start: 16;
+            margin-end: 16;
             styles ["overlay-search-bar"]
 
             SearchBar search_bar {
@@ -296,6 +313,7 @@ menu menu_app {
     item {
       label: _("Logbook");
       action: "app.logbook";
+      hidden-when: "action-disabled";
     }
 
     item {

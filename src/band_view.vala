@@ -112,17 +112,6 @@ public sealed class BandView : Gtk.Box {
             }
         });
         band_spot_cards.selected_children_changed.connect (() => {
-            for (var child = band_spot_cards.get_first_child ();
-                     child != null;
-                     child = child.get_next_sibling ()) {
-                var flow_child = child as Gtk.FlowBoxChild;
-                if (flow_child == null)
-                    continue;
-
-                var spot_card = flow_child.get_child () as SpotCard;
-                spot_card.selected = false;
-            }
-
             var selected = band_spot_cards.get_selected_children ();
             if ((selected != null) && (selected.length () > 0)) {
                 var child = selected.nth_data (0) as Gtk.FlowBoxChild;
@@ -132,9 +121,11 @@ public sealed class BandView : Gtk.Box {
                     if (spot_hash != Application.state.current_spot_hash) {
                         Application.state.current_spot_hash = spot_hash;
                         just_selected = true;
-                        spot_card.selected = true;
                     }
+                    sync_card_selection (spot_hash);
                 }
+            } else {
+                sync_card_selection (BLANK_HASH);
             }
         });
 
@@ -162,31 +153,51 @@ public sealed class BandView : Gtk.Box {
             var current_hash = pending_selection_hash;
 
             if (current_hash == BLANK_HASH) {
+                sync_card_selection (BLANK_HASH);
                 band_spot_cards.unselect_all ();
                 return Source.REMOVE;
             }
 
-            for (var child = band_spot_cards.get_first_child () ; child != null
-                 ;
-                 child = child.get_next_sibling ()) {
-                var fbchild = child as Gtk.FlowBoxChild;
-                if (fbchild == null)
-                    continue;
-
-                var spot_card = fbchild.get_child () as SpotCard;
-                if ((spot_card != null) && (spot_card.spot.hash == current_hash)) {
-                    band_spot_cards.select_child (fbchild);
-                    Idle.add (() => {
-                        scroll_to_child (fbchild);
-                        return Source.REMOVE;
-                    });
+            var selected_child = sync_card_selection (current_hash);
+            if (selected_child != null) {
+                band_spot_cards.select_child (selected_child);
+                Idle.add (() => {
+                    scroll_to_child (selected_child);
                     return Source.REMOVE;
-                }
+                });
+                return Source.REMOVE;
             }
 
             band_spot_cards.unselect_all ();
             return Source.REMOVE;
         });
+    }
+
+    private Gtk.FlowBoxChild? sync_card_selection (Quark current_hash) {
+        Gtk.FlowBoxChild? selected_child = null;
+
+        for (var child = band_spot_cards.get_first_child ();
+             child != null;
+             child = child.get_next_sibling ()) {
+            var flow_child = child as Gtk.FlowBoxChild;
+            if (flow_child == null)
+                continue;
+
+            var spot_card = flow_child.get_child () as SpotCard;
+            if (spot_card == null)
+                continue;
+
+            var is_selected = (
+                current_hash != BLANK_HASH &&
+                spot_card.spot.hash == current_hash
+            );
+            spot_card.selected = is_selected;
+
+            if (is_selected)
+                selected_child = flow_child;
+        }
+
+        return selected_child;
     }
 
     private void scroll_to_child (Gtk.Widget child) {

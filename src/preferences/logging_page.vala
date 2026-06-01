@@ -110,7 +110,7 @@ public sealed class LoggingPreferencesPage : Adw.PreferencesPage {
         filter_list.append (csv_filter);
 
         var file_dialog = new Gtk.FileDialog () {
-            title = _("Select Logbook CSV File"),
+            title = _("Select POTA Log CSV File"),
             filters = filter_list
         };
 

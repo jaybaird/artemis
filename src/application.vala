@@ -18,9 +18,22 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+public sealed class AppNotification : Object {
+    public string message { get; construct; }
+    public DateTime timestamp { get; construct; }
+
+    public AppNotification (string message, DateTime timestamp) {
+        Object (
+            message: message,
+            timestamp: timestamp
+        );
+    }
+}
+
 public sealed class Application : Adw.Application {
     public signal void radio_connection_state_changed ();
     public signal void toast_requested (string message);
+    public signal void notification_history_changed ();
 
     public static AppState state { get; private set; }
     public static LoggingService logging_service { get; private set; }
@@ -46,6 +59,8 @@ public sealed class Application : Adw.Application {
     private HelpWindow? help_window = null;
     private LogbookWindow? logbook_window = null;
     private bool setup_dialog_active = false;
+    private GLib.ListStore notification_history_store;
+    private const uint MAX_NOTIFICATION_HISTORY = 25;
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -102,7 +117,6 @@ public sealed class Application : Adw.Application {
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
         set_accels_for_action ("app.alerts", { "<primary><shift>a" });
-        set_accels_for_action ("app.logbook", { "<primary>l" });
         set_accels_for_action ("app.help", { "F1" });
         set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
@@ -114,12 +128,14 @@ public sealed class Application : Adw.Application {
         add_action_entries (APP_ENTRIES, this);
 
         state = new AppState ();
+        notification_history_store = new GLib.ListStore (typeof (AppNotification));
         state.current_spot_changed.connect ((spot_hash) => {
             if (spot_repo != null)
                 spot_repo.current_spot_changed (spot_hash);
         });
 
         settings = new Settings (Build.DOMAIN);
+        settings.changed["show-logbook"].connect (sync_logbook_ui);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
         park_details_cache = new ParkDetailsCache (pota_client);
@@ -139,6 +155,9 @@ public sealed class Application : Adw.Application {
             new FileLocalAdifWriter (),
             new SettingsLoggingPreferences (settings)
         );
+        logging_service.qso_added.connect ((spot) => {
+            spot_repo.refresh_log_status_for_added_qso (spot);
+        });
         logbook_import_service = new LogbookImportService (spot_database);
         weather_cache = new WeatherCache (new SettingsWeatherUnitsProvider (settings));
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
@@ -156,13 +175,36 @@ public sealed class Application : Adw.Application {
             radio_connection_state_changed ();
         });
         app = this;
+        sync_logbook_ui ();
     }
 
-    public static void show_toast (string message) {
+    public static void show_toast (string message, bool log_message = true) {
         if ((app == null) || (message.strip () == ""))
             return;
 
+        if (log_message)
+            app.add_notification_history (message);
         app.toast_requested (message);
+    }
+
+    public GLib.ListModel get_notification_history () {
+        return notification_history_store;
+    }
+
+    public void clear_notification_history () {
+        notification_history_store.remove_all ();
+        notification_history_changed ();
+    }
+
+    private void add_notification_history (string message) {
+        notification_history_store.append (
+            new AppNotification (message.strip (), new DateTime.now_local ())
+        );
+
+        while (notification_history_store.get_n_items () > MAX_NOTIFICATION_HISTORY)
+            notification_history_store.remove (0);
+
+        notification_history_changed ();
     }
 
     public override void activate () {
@@ -254,6 +296,9 @@ public sealed class Application : Adw.Application {
     }
 
     private void on_logbook_action () {
+        if (!settings.get_boolean ("show-logbook"))
+            return;
+
         if (logbook_window == null) {
             logbook_window = new LogbookWindow (win);
             logbook_window.close_request.connect (() => {
@@ -263,6 +308,18 @@ public sealed class Application : Adw.Application {
         }
 
         logbook_window.present ();
+    }
+
+    private void sync_logbook_ui () {
+        var show_logbook = settings.get_boolean ("show-logbook");
+        var action = lookup_action ("logbook") as SimpleAction;
+        if (action != null)
+            action.set_enabled (show_logbook);
+
+        if (show_logbook)
+            set_accels_for_action ("app.logbook", { "<primary>l" });
+        else
+            set_accels_for_action ("app.logbook", {});
     }
 
     private void on_alerts_action () {
@@ -351,7 +408,8 @@ public sealed class Application : Adw.Application {
         general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
         general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
         general.add (new Adw.ShortcutsItem.from_action (_("Tune"), "app.tune"));
-        general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
+        if (settings.get_boolean ("show-logbook"))
+            general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
         general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
         dialog.add (general);
 

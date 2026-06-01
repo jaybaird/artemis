@@ -245,6 +245,24 @@ public sealed class SpotDetail : Gtk.Box {
     [GtkChild]
     private unowned Gtk.Button detail_spot_button;
 
+    [GtkChild]
+    private unowned Gtk.Button open_map_button;
+
+    [GtkChild]
+    private unowned Gtk.Revealer detail_buttons_revealer;
+
+    [GtkChild]
+    private unowned Gtk.Revealer open_map_revealer;
+
+    [GtkChild]
+    private unowned Gtk.Stack weather_stack;
+
+    [GtkChild]
+    private unowned Gtk.Box weather_loading_card;
+
+    [GtkChild]
+    private unowned Gtk.Box weather_unavailable_card;
+
     private Spot? current_spot = null;
     private string? park_url = null;
     private string? activator_url = null;
@@ -288,6 +306,9 @@ public sealed class SpotDetail : Gtk.Box {
         build_detail_lists ();
         detail_tune_button.clicked.connect (on_tune_clicked);
         detail_spot_button.clicked.connect (on_spot_clicked);
+        open_map_button.clicked.connect (on_open_map_clicked);
+        detail_buttons_revealer.reveal_child = false;
+
         detail_last_spot_list.row_activated.connect ((row) => {
             if (row == detail_history_row)
                 on_history_clicked ();
@@ -338,7 +359,9 @@ public sealed class SpotDetail : Gtk.Box {
 
         detail_location_row = new DetailFieldRow (_("Location"), true);
         detail_bearing_row = new DetailFieldRow (_("Direction"));
+        detail_bearing_row.add_css_class ("numeric");
         detail_distance_row = new DetailFieldRow (_("Distance"));
+        detail_distance_row.add_css_class ("numeric");
         detail_grid_row = new DetailFieldRow (_("Grid"));
         detail_grid_row.add_css_class ("numeric");
         detail_coordinate_row = new DetailFieldRow (_("Coordinates"));
@@ -496,7 +519,7 @@ public sealed class SpotDetail : Gtk.Box {
 
     private string format_time_label (DateTime? time) {
         if (time == null)
-            return "—";
+            return "––:––";
 
         return time.to_utc ().format ("%R UTC");
     }
@@ -557,23 +580,20 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void set_weather_loading () {
-        weather_summary_card.visible = false;
-        wx_conditions.icon_name = "clouds-outline-symbolic";
-        wx_conditions_txt.label = _("Loading weather…");
-        wx_temp.label = "—";
-        wx_humidity.label = "—";
+        weather_stack.visible_child = weather_loading_card;
     }
 
     private void set_weather_unavailable () {
-        weather_summary_card.visible = false;
+        weather_stack.visible_child = weather_unavailable_card;
     }
 
     private void apply_weather (WeatherData data) {
-        weather_summary_card.visible = true;
         wx_conditions.icon_name = weather_icon_name (data);
         wx_conditions_txt.label = data.condition;
         wx_temp.label = weather_temperature_label (data.temperature);
         wx_humidity.label = _("%d%%").printf (data.relative_humidity);
+
+        weather_stack.visible_child = weather_summary_card;
     }
 
     private async void load_weather (Spot spot, uint request_serial) {
@@ -618,14 +638,28 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     public void set_action_buttons_visible (bool visible) {
+        detail_buttons_revealer.reveal_child = visible;
         detail_tune_button.visible = visible && Application.is_radio_configured;
-        detail_spot_button.visible = visible;
         update_tune_button_state ();
+    }
+
+    public void set_open_map_button_visible (bool visible) {
+        open_map_revealer.reveal_child = visible;
     }
 
     private void update_tune_button_state () {
         detail_tune_button.sensitive = detail_tune_button.visible &&
             Application.radio_control.is_rig_connected;
+    }
+
+    private void on_open_map_clicked () {
+        if (current_spot == null)
+            return;
+        var win = Application.win as AppWindow;
+        if (win == null)
+            return;
+
+        win.open_map ();
     }
 
     private void on_tune_clicked () {

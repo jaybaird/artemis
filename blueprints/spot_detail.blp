@@ -88,85 +88,148 @@ template $SpotDetail : Box {
                 styles ["title-2"]
               }
 
-              Box weather_summary_card {
-                halign: center;
-                orientation: horizontal;
-                spacing: 4;
-                styles ["card", "weather-summary-card"]
+              Stack weather_stack {
+                margin-top: 12;
+                transition-type: crossfade;
+                transition-duration: 250;
 
-                Image wx_conditions {
-                  icon-name: "storm-outline-symbolic";
-                  valign: baseline;
-                  styles ["weather-summary-icon"]
-                  accessibility {
-                    label: _("Weather Conditions");
-                    role-description: _("icon");
+                Box weather_unavailable_card {
+                  spacing: 4;
+                  halign: center;
+                  styles ["card", "weather-summary-card"]
+
+                  Image {
+                    icon-name: "cloud-disabled-symbolic";
+                    width-request: 24;
+                    height-request: 24;
+
+                    accessibility {
+                      label: _("Weather unavailable");
+                    }
+                  }
+
+                  Label {
+                    label: _("Weather unavailable");
                   }
                 }
 
-                Label wx_conditions_txt {
-                  label: _("Thunderstorms");
-                  ellipsize: end;
-                  max-width-chars: 18;
-                }
+                Box weather_loading_card {
+                  spacing: 4;
+                  halign: center;
+                  styles ["card", "weather-summary-card"]
 
-                Image {
-                  icon-name: "thermometer-symbolic";
-                  valign: baseline;
-                  styles ["weather-summary-icon"]
-                  accessibility {
-                    label: _("Temperature");
-                    role-description: _("icon");
+                  Adw.Spinner {
+                    width-request: 24;
+                    height-request: 24;
+                  }
+
+                  Label {
+                    label: _("Loading weather…");
                   }
                 }
 
-                Label wx_temp {
-                  label: _("48");
-                  styles ["numeric"]
-                }
+                Box weather_summary_card {
+                  halign: center;
+                  orientation: horizontal;
+                  spacing: 4;
+                  styles ["card", "weather-summary-card"]
 
-                Image {
-                  icon-name: "drop-hollow-symbolic";
-                  valign: baseline;
-                  styles ["weather-summary-icon"]
-                  accessibility {
-                    label: _("Relative Humidity");
-                    role-description: _("icon");
+                  Image wx_conditions {
+                    icon-name: "storm-outline-symbolic";
+                    valign: baseline;
+                    styles ["weather-summary-icon"]
+                    accessibility {
+                      label: _("Weather Conditions");
+                      role-description: _("icon");
+                    }
                   }
-                }
 
-                Label wx_humidity {
-                  label: _("60%");
-                  tooltip-text: _("Relative humidity");
-                  styles ["numeric"]
+                  Label wx_conditions_txt {
+                    label: _("Thunderstorms");
+                    ellipsize: end;
+                    max-width-chars: 18;
+                  }
+
+                  Image {
+                    icon-name: "thermometer-symbolic";
+                    valign: baseline;
+                    styles ["weather-summary-icon"]
+                    accessibility {
+                      label: _("Temperature");
+                      role-description: _("icon");
+                    }
+                  }
+
+                  Label wx_temp {
+                    label: _("48");
+                    styles ["numeric"]
+                  }
+
+                  Image {
+                    icon-name: "drop-hollow-symbolic";
+                    valign: baseline;
+                    styles ["weather-summary-icon"]
+                    accessibility {
+                      label: _("Relative Humidity");
+                      role-description: _("icon");
+                    }
+                  }
+
+                  Label wx_humidity {
+                    label: _("60%");
+                    tooltip-text: _("Relative humidity");
+                    styles ["numeric"]
+                  }
                 }
               }
             }
           
-            Box {
-              orientation: horizontal;
-              spacing: 4;
+            Revealer detail_buttons_revealer {
+              transition-type: fade_slide_down;
+              transition-duration: 250;
 
-              Button detail_tune_button {
-                label: _("Tune");
-                tooltip-text: _("Tune your radio to this frequency");
-                hexpand: true;
-                visible: false;
-                accessibility {
+              Box {
+                orientation: horizontal;
+                styles ["linked"]
+
+
+                Button detail_tune_button {
                   label: _("Tune");
-                  role-description: _("button");
+                  tooltip-text: _("Tune your radio to this frequency");
+                  hexpand: true;
+                  visible: false;
+                  accessibility {
+                    label: _("Tune");
+                    role-description: _("button");
+                  }
+                }
+
+                Button detail_spot_button {
+                  label: _("Spot");
+                  tooltip-text: _("Add your spot for this park");
+                  hexpand: true;
+                  visible: true;
+                  styles ["suggested-action"]
+                  accessibility {
+                    label: _("Spot");
+                    role-description: _("button");
+                  }
                 }
               }
+            }
 
-              Button detail_spot_button {
-                label: _("Re-Spot");
-                tooltip-text: _("Add your spot for this park");
-                hexpand: true;
-                visible: false;
-                styles ["suggested-action"]
+            Revealer open_map_revealer {
+              transition-type: fade_slide_down;
+              transition-duration: 250;
+
+              Button open_map_button {
+                Adw.ButtonContent {
+                  icon-name: "map-symbolic";
+                  label: _("Open Map");
+                }
+
                 accessibility {
-                  label: _("Re-Spot");
-                  role-description: _("button");
+                  label: _("Open map with the current spot");
                 }
               }
             }

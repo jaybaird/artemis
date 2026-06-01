@@ -524,6 +524,7 @@ public sealed class LogbookWindow : Adw.Window {
         }
 
         Application.show_toast (_("QSO deleted"));
+        Application.spot_repo.refresh_log_status ();
         reload ();
     }
 

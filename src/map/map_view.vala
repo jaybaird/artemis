@@ -70,7 +70,7 @@ public class MapView : Gtk.Box {
     private GLib.SimpleAction grayline_action;
     private GLib.SimpleAction astronomy_action;
     private GLib.SimpleAction signal_reports_action;
-    private Adw.SplitButton overlay_button;
+    private Gtk.MenuButton overlay_button;
     private Gtk.Box signal_report_status;
     private Gtk.Image signal_report_status_icon;
     private Gtk.Label signal_report_status_title;
@@ -161,50 +161,47 @@ public class MapView : Gtk.Box {
         menu.append (_("Sun and Moon"), "map.astronomy-visible");
         menu.append (_("Signal Reports"), "map.signal-reports-visible");
 
-        overlay_button = new Adw.SplitButton () {
+        overlay_button = new Gtk.MenuButton () {
             label = _("Overlays"),
             icon_name = "map-layers-symbolic",
             menu_model = menu,
             can_shrink = true,
-            dropdown_tooltip = _("Overlay options")
+            direction = Gtk.ArrowType.DOWN,
+            always_show_arrow = true
         };
         overlay_button.add_css_class ("flat");
-        overlay_button.clicked.connect (() => {
-            set_grayline_visible (!grayline_visible);
-        });
 
-        var right_box = new Gtk.Box (
-            Gtk.Orientation.VERTICAL,
-            8
-        ) {
+        var right_box = new Adw.Bin () {
             halign = Gtk.Align.END,
             valign = Gtk.Align.END,
             margin_start = 6,
             margin_end = 6,
             margin_top = 6,
-            margin_bottom = 6
+            margin_bottom = 6,
+            child = map_license
         };
-
-        right_box.append (overlay_button);
-        right_box.append (map_license);
-
         overlay.add_overlay (right_box);
 
         signal_report_status_icon = new Gtk.Image.from_icon_name ("network-offline-symbolic") {
+            can_target = false,
             pixel_size = 16,
             valign = Gtk.Align.CENTER
         };
         signal_report_status_title = new Gtk.Label ("") {
+            can_target = false,
             halign = Gtk.Align.START,
             ellipsize = Pango.EllipsizeMode.END,
             xalign = 0.0f
         };
         signal_report_status_title.add_css_class ("heading");
+        signal_report_status_title.add_css_class ("numeric");
         signal_report_status_detail = new Gtk.Label ("") {
+            can_target = false,
             halign = Gtk.Align.START,
             ellipsize = Pango.EllipsizeMode.END,
             xalign = 0.0f
         };
+        signal_report_status_detail.add_css_class ("numeric");
         signal_report_status_detail.add_css_class ("caption");
 
         var signal_report_status_labels = new Gtk.Box (Gtk.Orientation.VERTICAL, 0);
@@ -212,18 +209,20 @@ public class MapView : Gtk.Box {
         signal_report_status_labels.append (signal_report_status_detail);
 
         signal_report_status = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 8) {
-            can_target = false,
+            can_target = true,
             halign = Gtk.Align.START,
             valign = Gtk.Align.START,
             margin_start = 6,
             margin_end = 6,
             margin_top = 54,
             margin_bottom = 6,
-            visible = false
         };
         signal_report_status.add_css_class ("map-signal-report-status");
+        signal_report_status.add_css_class ("linked");
+        signal_report_status.add_css_class ("card");
         signal_report_status.append (signal_report_status_icon);
         signal_report_status.append (signal_report_status_labels);
+        signal_report_status.append (overlay_button);
         overlay.add_overlay (signal_report_status);
 
         qth_coordinate = new Coordinate ();
@@ -545,6 +544,15 @@ public class MapView : Gtk.Box {
             dot.selected = true;
         selected_marker = marker;
         selected_marker_hash = spot_hash;
+        raise_selected_marker ();
+    }
+
+    private void raise_selected_marker () {
+        if (marker_layer == null || selected_marker == null)
+            return;
+
+        marker_layer.remove_marker (selected_marker);
+        marker_layer.add_marker (selected_marker);
     }
 
     public void go_to_spot (Spot? spot) {
@@ -601,8 +609,10 @@ public class MapView : Gtk.Box {
         );
 
         var moon_tooltip = "%s\n%s".printf (
-            _("Moon"),
-            Astronomy.moon_phase_display_name (bodies.moon_phase)
+            Astronomy.moon_phase_display_name (bodies.moon_phase),
+            _("%.0f%% illuminated").printf (
+                Astronomy.moon_illuminated_fraction (now)
+            )
         );
         if (moon_marker != null && moon_marker.child != null)
             moon_marker.child.tooltip_text = moon_tooltip;
@@ -724,7 +734,6 @@ public class MapView : Gtk.Box {
         if (signal_report_status == null)
             return;
 
-        signal_report_status.visible = signal_reports_visible;
         if (!signal_reports_visible)
             return;
 

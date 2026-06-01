@@ -62,8 +62,11 @@
     <file compressed="true">icons/hicolor/symbolic/actions/daytime-sunset-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/moonrise-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/moonset-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/logs-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/radio-console-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/verified-checkmark-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/cloud-disabled-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/sun-with-moon-symbolic.svg</file>
     <file compressed="true">icons/hicolor/scalable/status/band-All.svg</file>
     <file compressed="true">icons/hicolor/scalable/status/band-160m.svg</file>
     <file compressed="true">icons/hicolor/scalable/status/band-80m.svg</file>

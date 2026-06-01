@@ -20,10 +20,13 @@
 
 using Gee;
 public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
+    private const int64 HEARD_CACHE_SECONDS = Spot.HEARD_RECENTLY_TIMEOUT_SECONDS;
+
     public GLib.ListStore store { get; construct; }
 
     public signal void busy_changed (bool busy);
     public signal void refreshed (uint spots_updated);
+    public signal void log_status_refreshed ();
     public signal void update_error (Error err);
     public signal void current_spot_changed (Quark spot_hash);
 
@@ -35,6 +38,7 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     private bool update_in_progress = false;
     private bool update_pending = false;
     private HashSet<uint> notified_alert_hashes;
+    private HashMap<string, int64?> heard_callsign_times;
 
     public SpotRepo () {
         Object ();
@@ -46,6 +50,7 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
         mode_model = new Gtk.StringList ({});
         band_counts = new HashMap<string, int> ();
         notified_alert_hashes = new HashSet<uint> ();
+        heard_callsign_times = new HashMap<string, int64?> ();
     }
 
     public Spot? get_spot (Quark spot_hash) {
@@ -129,6 +134,113 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
         spot.set_log_status (was_hunted_today, is_new_park, is_new_band);
     }
 
+    public void mark_spot_heard (Spot spot) {
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign))
+            heard_callsign_times[key] = now;
+
+        spot.mark_heard_recently ();
+    }
+
+    private void apply_heard_status (Spot spot) {
+        prune_heard_callsigns ();
+
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign)) {
+            if (!heard_callsign_times.has_key (key))
+                continue;
+
+            var age = now - heard_callsign_times[key];
+            if (age >= HEARD_CACHE_SECONDS)
+                continue;
+
+            spot.mark_heard_recently ((uint) (HEARD_CACHE_SECONDS - age));
+            return;
+        }
+    }
+
+    public void refresh_log_status () {
+        Error? snapshot_error = null;
+        var log_status_snapshot = Application.spot_database.load_log_status_snapshot (
+            new DateTime.now_utc (),
+            out snapshot_error
+        );
+        if (snapshot_error != null) {
+            warning ("Unable to refresh spot log status snapshot: %s",
+                snapshot_error.message);
+            return;
+        }
+
+        for (uint i = 0; i < store.get_n_items (); i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot != null)
+                annotate_spot_log_status (spot, log_status_snapshot);
+        }
+
+        log_status_refreshed ();
+    }
+
+    public void refresh_log_status_for_added_qso (Spot logged_spot) {
+        if (logged_spot == null || logged_spot.park_ref.strip () == "")
+            return;
+
+        var logged_park_ref = logged_spot.park_ref.strip ();
+        var logged_band = logged_spot.band;
+        var logged_today = logged_spot.spot_time.to_utc ().format ("%Y-%m-%d") ==
+            new DateTime.now_utc ().format ("%Y-%m-%d");
+        var changed = false;
+
+        for (uint i = 0; i < store.get_n_items (); i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot == null || spot.park_ref.strip () != logged_park_ref)
+                continue;
+
+            var was_hunted_today = spot.was_hunted_today || logged_today;
+            var is_new_park = false;
+            var is_new_band = spot.band == logged_band
+                ? false
+                : spot.is_new_park || spot.is_new_band;
+
+            if (spot.was_hunted_today != was_hunted_today ||
+                spot.is_new_park != is_new_park ||
+                spot.is_new_band != is_new_band) {
+                changed = true;
+            }
+
+            spot.set_log_status (was_hunted_today, is_new_park, is_new_band);
+        }
+
+        if (changed)
+            log_status_refreshed ();
+    }
+
+    private void prune_heard_callsigns () {
+        var now = monotonic_seconds ();
+        var expired = new ArrayList<string> ();
+        foreach (var entry in heard_callsign_times.entries) {
+            if (now - entry.value >= HEARD_CACHE_SECONDS)
+                expired.add (entry.key);
+        }
+
+        foreach (var key in expired)
+            heard_callsign_times.unset (key);
+    }
+
+    private static ArrayList<string> callsign_cache_keys (string callsign) {
+        var keys = new ArrayList<string> ();
+        var exact = callsign.strip ().up ();
+        var profile = pota_profile_callsign (callsign).strip ().up ();
+        if (exact != "")
+            keys.add (exact);
+        if (profile != "" && profile != exact)
+            keys.add (profile);
+        return keys;
+    }
+
+    private static int64 monotonic_seconds () {
+        return GLib.get_monotonic_time () / 1000000;
+    }
+
     public async void update_spots () {
         if (update_in_progress) {
             update_pending = true;
@@ -174,6 +286,7 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
                             } else {
                                 parsed_band_counts[spot.band] = 1;
                             }
+                            apply_heard_status (spot);
                             parsed_spots.add (spot);
                         } catch (Error err) {
                             warning ("Skipping malformed POTA spot at index %u: %s",
@@ -298,15 +411,13 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     }
 
     private bool spot_matches_keywords (Spot spot, ArrayList<string> keywords) {
-        var haystack = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s".printf (
+        var haystack = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s".printf (
             spot.callsign,
             spot.park_ref,
             spot.park_name,
             spot.location_desc,
             spot.grid4,
             spot.grid6,
-            spot.band,
-            spot.mode,
             spot.activator_comment,
             spot.spotter_comment
         ).down ();

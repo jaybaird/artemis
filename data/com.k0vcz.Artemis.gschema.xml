@@ -89,6 +89,12 @@
         <description>API key for QRZ.com lookups.</description>
         </key>
 
+        <key name="show-logbook" type="b">
+        <default>false</default>
+        <summary>Show logbook UI</summary>
+        <description>Show the experimental Logbook window and related shortcuts.</description>
+        </key>
+
         <!-- Radio Settings -->
         <key name="radio-connection-type" type="s">
         <default>"none"</default>

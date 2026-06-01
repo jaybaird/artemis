@@ -73,12 +73,12 @@
         {
           "id": "keyboard-shortcuts",
           "title": "What keyboard shortcuts are available?",
-          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, tuning, and opening the logbook.",
+          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, and tuning.",
           "icon": null,
           "badge": null,
           "paragraphs": [
             "Open Keyboard Shortcuts from the application menu to see the current shortcut list.",
-            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Logbook, Toggle Sidebar, Help, Preferences, and Quit.",
+            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Toggle Sidebar, Help, Preferences, and Quit.",
             "Shortcuts follow the same rules as the visible controls. For example, Tune still requires a selected spot and a connected radio."
           ],
           "keywords": [
@@ -87,7 +87,7 @@
             "search",
             "refresh",
             "tune",
-            "logbook"
+            "spot"
           ]
         }
       ]
@@ -104,7 +104,7 @@
           "badge": null,
           "paragraphs": [
             "Cards is the main scanning view. It groups each spot into an easy-to-read card with the activator, park reference, park name, location, grid, frequency, mode, age, spot count, and badges.",
-            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune and Re-Spot actions.",
+            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune and Spot actions.",
             "Map places spots with usable grid information on the map. Selecting a card, row, or marker selects the same spot everywhere and opens the Park Detail View."
           ],
           "keywords": [
@@ -154,7 +154,7 @@
             },
             {
               "type": "paragraph",
-              "text": "Badge availability depends on your local logbook, display preferences, and WSJT-X activity. Heard recently fades automatically after a short time."
+              "text": "Badge availability depends on your local hunted history, display preferences, and WSJT-X activity. Heard recently fades automatically after a short time."
             }
           ],
           "keywords": [
@@ -311,13 +311,13 @@
       "articles": [
         {
           "id": "posting-spots",
-          "title": "How do I add or re-spot an activation?",
+          "title": "How do I add or spot an activation?",
           "summary": "Use Add Spot to save a QSO locally and optionally post a spot to POTA.",
           "icon": null,
           "badge": null,
           "paragraphs": [
             "Choose Add Spot to enter the activator callsign, your spotter callsign, frequency, mode, park reference, RST sent and received, and comments. If a radio is connected, Trailwave can prefill the current frequency.",
-            "Use Re-Spot from an existing spot to prefill the activator, park reference, frequency, and mode. The activator and park reference are locked in that flow so the new spot stays tied to the selected activation.",
+            "Use Spot from an existing spot to prefill the activator, park reference, frequency, and mode. The activator and park reference are locked in that flow so the new spot stays tied to the selected activation.",
             "When you submit, Trailwave saves the QSO locally first. It then posts the spot to POTA, writes the local ADIF backup log, and uploads to QRZ when those options are enabled."
           ],
           "keywords": [
@@ -337,7 +337,7 @@
           "badge": null,
           "paragraphs": [
             "Set a Default Spot Message in General preferences if you often use the same spotter comment, such as a short note about conditions, your antenna, or the activation.",
-            "When Add Spot or Re-Spot opens, Trailwave fills the Spotter Comments field with that saved message so you do not have to retype it each time.",
+            "When Add Spot or Spot opens, Trailwave fills the Spotter Comments field with that saved message so you do not have to retype it each time.",
             "You can still edit or replace the comment for any individual spot before submitting it."
           ],
           "keywords": [
@@ -358,7 +358,7 @@
           "paragraphs": [
             "Every submitted QSO is saved in the local database. Trailwave uses that history to mark new parks, hunted parks, hunted-today parks, and new bands.",
             "Enable backup logging to append QSOs to a local ADIF file. Choose a custom ADIF path in Preferences or use the default path shown there.",
-            "Enable external logging and enter a QRZ API key if you want Trailwave to upload saved QSOs to QRZ Logbook. If QRZ upload fails, the QSO remains local and can be retried from the QSO editor when retry is available."
+            "Enable external logging and enter a QRZ API key if you want Trailwave to upload saved QSOs to QRZ Logbook. If QRZ upload fails, the QSO remains local and Trailwave reports the failure."
           ],
           "keywords": [
             "logging",
@@ -370,27 +370,6 @@
           ]
         },
         {
-          "id": "logbook-window",
-          "title": "What can I do in the Logbook?",
-          "summary": "Use the Logbook to review, search, sort, page through, and edit saved QSOs and hunted parks.",
-          "icon": null,
-          "badge": null,
-          "paragraphs": [
-            "Open Logbook from the application menu or shortcut. The QSOs tab shows locally saved contacts, and the Parks tab shows parks marked as hunted.",
-            "Use the search field to find matching QSOs or parks. Column headers sort the current tab, and the pager moves through larger logs in pages of 50 rows.",
-            "Activate a QSO row to edit it. Warning icons identify records with missing park details, failed POTA spot delivery, failed local ADIF writes, or QRZ uploads that can be retried."
-          ],
-          "keywords": [
-            "logbook",
-            "qsos",
-            "parks",
-            "search",
-            "sort",
-            "edit",
-            "retry"
-          ]
-        },
-        {
           "id": "importing-pota-log",
           "title": "How do I import hunted parks?",
           "summary": "Import a POTA.app CSV file to seed Trailwave's hunted-park history.",
@@ -398,7 +377,7 @@
           "badge": null,
           "paragraphs": [
             "On the Logging preferences page, choose a POTA.app log CSV file from the Import POTA.app Log section, then select Import.",
-            "Imported parks appear in the Parks tab of the Logbook and are used when Trailwave decides whether a live spot is a new park or a previously hunted park.",
+            "Imported parks are used when Trailwave decides whether a live spot is a new park or a previously hunted park.",
             "If the import fails, Trailwave shows an alert. Check that the selected file is the CSV exported from POTA.app and try again."
           ],
           "keywords": [
@@ -406,7 +385,7 @@
             "pota",
             "csv",
             "hunted parks",
-            "logbook"
+            "hunted history"
           ]
         }
       ]
@@ -423,7 +402,7 @@
           "badge": null,
           "paragraphs": [
             "Configure CAT Control in Preferences, then use Connect in the sidebar to connect to your radio. Trailwave supports serial and network radio connections through the Hamlib-backed radio settings shown there.",
-            "When connected, the sidebar shows the radio frequency, mode, and TX or RX status. Tune buttons become available for selected spots and send the spot frequency to the radio.",
+            "When connected, the sidebar shows the radio frequency, mode, and TX or RX status. Tune buttons become available for selected spots and send the spot frequency and a matching mode to the radio when possible.",
             "Use Test Connection in Preferences if setup does not work. If Trailwave cannot connect from the main window, it shows a Radio Connection Failed dialog with the error message when one is available."
           ],
           "keywords": [

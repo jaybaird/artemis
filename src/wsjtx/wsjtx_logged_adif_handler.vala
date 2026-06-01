@@ -90,12 +90,16 @@ namespace Artemis.Wsjtx {
             );
 
             try {
+                var qrz_adif = preferences.forward_wsjtx_qsos_to_qrz ?
+                    build_qrz_adif (packet.adif, parsed, park_ref) :
+                    null;
                 var result = yield logging_service.submit_qso_draft_with_qrz_mode (
                     draft,
                     park_ref != "",
                     preferences.forward_wsjtx_qsos_to_qrz ?
                         QrzUploadMode.ENABLED :
-                        QrzUploadMode.DISABLED
+                        QrzUploadMode.DISABLED,
+                    qrz_adif
                 );
                 logging_service.mark_logged_adif_completed (dedupe_key);
                 if (result.local_adif_error != null)
@@ -159,6 +163,54 @@ namespace Artemis.Wsjtx {
 
         private static string normalize_callsign (string callsign) {
             return callsign.strip ().up ();
+        }
+
+        private static string build_qrz_adif (
+            string adif_text,
+            ParsedLoggedAdif parsed,
+            string park_ref
+        ) throws Artemis.Adif.Error {
+            var normalized = adif_text.strip ();
+            if (!normalized.down ().contains ("<eor>"))
+                normalized += "<eor>";
+
+            var document = Artemis.Adif.Parser.from_string (normalized);
+            if (document.records.size == 0)
+                throw new Artemis.Adif.Error.INVALID_VALUE ("ADIF document has no QSO record");
+
+            var record = document.records[0];
+            set_record_field_if_missing (record, "CALL", parsed.call);
+            set_record_field_if_missing (record, "STATION_CALLSIGN", parsed.station_callsign);
+            set_record_field_if_missing (record, "MODE", parsed.mode);
+            if (parsed.frequency_khz > 0.0) {
+                set_record_field_if_missing (
+                    record,
+                    "FREQ",
+                    format_frequency_mhz_from_khz (parsed.frequency_khz)
+                );
+            }
+            if (has_text (parsed.comment))
+                set_record_field_if_missing (record, "COMMENT", parsed.comment);
+
+            if (has_text (park_ref)) {
+                set_record_field_if_missing (record, "SIG", "POTA");
+                set_record_field_if_missing (record, "SIG_INFO", park_ref);
+                set_record_field_if_missing (record, "POTA_REF", park_ref);
+                set_record_field_if_missing (record, "NOTES", "POTA - %s".printf (park_ref));
+            }
+
+            return Artemis.Adif.Generator.to_string (document);
+        }
+
+        private static void set_record_field_if_missing (
+            Artemis.Adif.Record record,
+            string name,
+            string value
+        ) throws Artemis.Adif.Error {
+            if (has_text (record.get (name)) || !has_text (value))
+                return;
+
+            record.set (name, value);
         }
 
     }

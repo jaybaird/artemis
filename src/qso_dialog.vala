@@ -121,6 +121,7 @@ public sealed class QsoDialog : Adw.Dialog {
         }
 
         qso_changed ();
+        Application.spot_repo.refresh_log_status ();
         Application.show_toast (_("QSO saved"));
         close ();
     }
@@ -153,6 +154,7 @@ public sealed class QsoDialog : Adw.Dialog {
         }
 
         qso_changed ();
+        Application.spot_repo.refresh_log_status ();
         Application.show_toast (_("QSO deleted"));
         close ();
     }
@@ -178,6 +180,7 @@ public sealed class QsoDialog : Adw.Dialog {
                 update_delivery_status (spot);
                 retry_qrz_button.visible = false;
                 qso_changed ();
+                Application.spot_repo.refresh_log_status ();
                 Application.show_toast (_("Uploaded QSO to QRZ"));
             } catch (Error err) {
                 qrz_error = err.message;
@@ -215,6 +218,7 @@ public sealed class QsoDialog : Adw.Dialog {
                 }
 
                 qso_changed ();
+                Application.spot_repo.refresh_log_status ();
                 lookup_park_button.visible = false;
                 Application.show_toast (_("Park details updated"));
             } catch (Error err) {

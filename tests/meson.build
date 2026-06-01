@@ -230,6 +230,7 @@ test_wsjtx_logged_adif = executable(
   [
     meson.project_source_root() / 'src/adif/adif_types.vala',
     meson.project_source_root() / 'src/adif/adif_parser.vala',
+    meson.project_source_root() / 'src/adif/adif_generator.vala',
     meson.project_source_root() / 'src/frequency.vala',
     meson.project_source_root() / 'src/string_utils.vala',
     meson.project_source_root() / 'src/logging_service.vala',

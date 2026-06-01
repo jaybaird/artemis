@@ -23,6 +23,8 @@ using Shumate;
 public const uint32 BLANK_HASH = uint32.MAX;
 
 public class RadioConstants {
+    public const string UNKNOWN_MODE = "Unknown";
+
     public const string[] BANDS = {
         "All", "160m", "80m", "60m", "40m", "30m", "20m", "17m",
         "15m", "12m", "10m", "6m", "2m", "70cm"
@@ -181,6 +183,11 @@ public sealed class Spot : Object, WeatherSpotDetails {
         return value;
     }
 
+    private static string optional_mode_member (Json.Object object) {
+        var value = object.get_string_member_with_default ("mode", "").strip ();
+        return value != "" ? value : RadioConstants.UNKNOWN_MODE;
+    }
+
     private static double parse_frequency_khz (Json.Object object) throws Error {
         var value = object.get_string_member_with_default ("frequency", "0").strip ();
         try {
@@ -213,7 +220,7 @@ public sealed class Spot : Object, WeatherSpotDetails {
             callsign: required_string_member (spot, "activator"),
             park_ref: required_string_member (spot, "reference"),
             park_name: spot.get_string_member_with_default ("name", ""),
-            mode: required_string_member (spot, "mode"),
+            mode: optional_mode_member (spot),
             location_desc: spot.get_string_member_with_default ("locationDesc", ""),
             activator_comment: spot.get_string_member_with_default (
                 "activatorLastComments",

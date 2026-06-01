@@ -9,8 +9,8 @@
   <description>
     <p>Trailwave is a desktop companion for Parks on the Air hunters. Follow live POTA spots in card, list, or map views, filter activity by band, mode, program, and search text, and open a focused park detail view with operating context before you call.</p>
     <p>Use the interactive map to see current park activity, grayline and sun or moon overlays, and recent signal reports that show where your transmitted signal is being heard. Weather, distance, bearing, coordinates, spot history, and hunted/new-park badges help you decide what is worth chasing next.</p>
-    <p>Trailwave can connect to supported radios through Hamlib for one-click tuning and mode control, listen to WSJT-X activity so decoded activators stand out, and help you add or re-spot activations without leaving the app.</p>
-    <p>Log QSOs locally, review and edit them later, track hunted parks, import POTA.app log exports, write an ADIF backup log, and upload completed contacts to QRZ when configured.</p>
+    <p>Trailwave can connect to supported radios through Hamlib for one-click tuning and mode control, listen to WSJT-X activity so decoded activators stand out, and help you add or spot activations without leaving the app.</p>
+    <p>Trailwave can save worked POTA contacts for hunted-park tracking, import POTA.app history, write an ADIF backup log, and upload completed contacts to QRZ when configured.</p>
   </description>
 
   <developer id="tld.vendor">
@@ -76,7 +76,7 @@
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/cards-dark.png</image>
-      <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions.</caption>
+      <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-light.png</image>
@@ -84,7 +84,7 @@
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-dark.png</image>
-      <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting.</caption>
+      <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-light.png</image>
@@ -100,11 +100,12 @@
     <release version="2.1" date="2026-05-27">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1</url>
       <description>
-        <p>Artemis is now Trailwave! This release brings better logbook handling, map improvements, and many bugfixes and feature tweaks to make operating a breeze.</p>
+        <p>This release brings better hunted-park tracking, map improvements, and many bugfixes and feature tweaks to make operating a breeze.</p>
         <ul>
+          <li>Artemis has been renamed to Trailwave.</li>
           <li>New and improved map visualization: grayline visualization, sun/moon data, and signal reports so you can see where your transmitted signal is being heard.</li>
-          <li>Added a dedicated QSO view in the logbook with editing, park lookup, QRZ retry, and QSO deletion.</li>
-          <li>Better sideband and bandwidth setting when tuning.</li>
+          <li>Improved POTA contact handling with QRZ forwarding, ADIF backup logging, and hunted-park tracking.</li>
+          <li>Tuning a spot sends the spot frequency and attempts to set a matching radio mode when possible.</li>
           <li>Improved internationalization support with locale-aware date and time formatting</li>
           <li>Refined preferences, help, and app metadata.</li>
           <li>Improved internal map, logging, cache, and radio-control organization for better reliability and future maintenance.</li>
@@ -128,8 +129,8 @@
         <ul>
           <li>Moved band, mode, and program filters into the sidebar, with mode and program choices now based on the currently available spots.</li>
           <li>Added spot weather, and badges for hunted/new activity</li>
-          <li>Added list-view operation with direct tune and re-spot buttons on each row.</li>
-          <li>Added FT4 support in Add Spot and Re-Spot flows, and fixed a bug preserving fractional kHz frequencies.</li>
+          <li>Added list-view operation with direct tune and spot buttons on each row.</li>
+          <li>Added FT4 support in Add Spot and Spot flows, and fixed a bug preserving fractional kHz frequencies.</li>
           <li>Improved map behavior so user panning is respected during refreshes and repeated spot selection updates.</li>
           <li>Improved POTA, QRZ, weather, and radio-control reliability, including safer response parsing, better refresh coalescing, and more robust Hamlib integration.</li>
         </ul>
@@ -164,7 +165,7 @@
          cause high CPU usage after disconnecting a radio has been fixed. Full changelog
          below:</p>
         <ul>
-          <li>Fixed a crash and multiple SQL errors when submitting/re-spotting a park.</li>
+          <li>Fixed a crash and multiple SQL errors when submitting/spotting a park.</li>
           <li>Added null checks to lat/long parsing and grid handling.</li>
           <li>Fixed radio status watcher loop behavior.</li>
           <li>Fixed multiple memory leaks.</li>

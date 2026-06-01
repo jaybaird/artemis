@@ -274,7 +274,7 @@ namespace Artemis.Wsjtx {
             if (spot == null)
                 return;
 
-            spot.mark_heard_recently ();
+            Application.spot_repo.mark_spot_heard (spot);
             highlight_spot_callsign (spot);
         }
 

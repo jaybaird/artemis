@@ -158,9 +158,15 @@ private sealed class FakePotaPoster : Object, PotaSpotPoster {
 
 private sealed class FakeQrzUploader : Object, QrzQsoUploader {
     public int upload_count = 0;
+    public string last_adif = "";
 
     public async void upload_spot_qso (Spot spot) throws Error {
         upload_count++;
+    }
+
+    public async void upload_adif_record (string adif) throws Error {
+        upload_count++;
+        last_adif = adif;
     }
 }
 
@@ -387,6 +393,27 @@ private void test_handler_respects_wsjtx_qrz_toggle () {
     assert (fixture.qrz_uploader.upload_count == 1);
 }
 
+private void test_handler_uploads_original_wsjtx_adif_comment_to_qrz () {
+    var fixture = new HandlerFixture ();
+    fixture.preferences.api_key = "test-key";
+    fixture.preferences.forward_wsjtx_qrz = true;
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    Artemis.Wsjtx.LoggedAdifPacket packet = {};
+    packet.adif = "<CALL:5>K1ABC<MODE:3>FT8<FREQ:6>14.074<QSO_DATE:8>20260519<TIME_ON:6>153000<COMMENT:15>from wsjt-x log<EOR>";
+
+    assert (run_handler (fixture.handler, packet));
+    assert (fixture.qrz_uploader.upload_count == 1);
+    assert (fixture.qrz_uploader.last_adif.contains ("<COMMENT:15>from wsjt-x log"));
+    assert (fixture.qrz_uploader.last_adif.contains ("<POTA_REF:7>US-0001"));
+}
+
 public int main (string[] args) {
     Test.init (ref args);
 
@@ -416,6 +443,8 @@ public int main (string[] args) {
         test_handler_ignores_expired_cq_pota);
     Test.add_func ("/wsjtx-logged-adif/handler-respects-wsjtx-qrz-toggle",
         test_handler_respects_wsjtx_qrz_toggle);
+    Test.add_func ("/wsjtx-logged-adif/handler-uploads-original-wsjtx-adif-comment-to-qrz",
+        test_handler_uploads_original_wsjtx_adif_comment_to_qrz);
 
     return Test.run ();
 }

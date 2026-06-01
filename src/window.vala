@@ -21,6 +21,12 @@
 using Gee;
 using Adw;
 
+private enum RefreshButtonState {
+    PAUSE,
+    RESUME,
+    RELOADING
+}
+
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/main_window.ui")]
 public sealed class AppWindow : Adw.ApplicationWindow {
     [GtkChild]
@@ -86,6 +92,12 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     [GtkChild]
     private unowned SpotDetail spot_detail;
 
+    [GtkChild]
+    private unowned Gtk.Stack refresh_button_stack;
+
+    [GtkChild]
+    private unowned Adw.Spinner refresh_spinner;
+
     private uint refresh_timer_id = 0;
     private int64 next_refresh_at_us = 0;
     private int64 next_clock_update_at_us = 0;
@@ -95,6 +107,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private MapView? map_view = null;
     private SpotListView? list_view = null;
     private bool radio_connect_inflight = false;
+    private uint auto_radio_start_id = 0;
     private Quark map_centered_spot_hash = BLANK_HASH;
     private string? pending_initial_band = null;
     private bool initial_band_applied = false;
@@ -133,7 +146,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         active_error_keys = new Gee.HashSet<string> ();
         left_sidebar.set_mode_visible (Application.is_radio_configured);
         if (Application.is_radio_configured) {
-            start_radio ();
+            queue_initial_radio_start ();
         }
 
         refresh_toggle.clicked.connect (on_refresh_button_clicked);
@@ -192,9 +205,15 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         notify["default-height"].connect (save_window_geometry);
         notify["maximized"].connect (save_window_maximized_state);
 
-        //Application.spot_repo.busy_changed.connect ((busy) => {
-        //    loading_spinner.visible = busy;
-        //});
+        Application.spot_repo.busy_changed.connect ((busy) => {
+            set_refresh_button_state (
+                busy
+                    ? RefreshButtonState.RELOADING
+                    : update_paused
+                        ? RefreshButtonState.RESUME
+                        : RefreshButtonState.PAUSE
+            );
+        });
 
         Application.spot_repo.refreshed.connect ((spots_updated) => {
             if (!initial_band_applied && Application.state.current_mode_filter == null) {
@@ -236,6 +255,19 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             }
 
             update_refresh_status ();
+            update_status_bar ();
+        });
+
+        Application.spot_repo.log_status_refreshed.connect (() => {
+            band_view.bounce_filter ();
+            if (list_view != null)
+                list_view.bounce_filter ();
+            if (map_view != null)
+                map_view.bounce_filter ();
+
+            spot_detail.set_spot (
+                Application.spot_repo.get_spot (Application.state.current_spot_hash)
+            );
             update_status_bar ();
         });
 
@@ -322,7 +354,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
         on_visible_view_changed ();
 
-        set_refresh_button_state (update_paused);
+        set_refresh_button_state (update_paused ? RefreshButtonState.RESUME : RefreshButtonState.PAUSE);
 
         set_sidebar_visible (true);
         update_collapsed_sidebar_controls ();
@@ -344,6 +376,10 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         alerts_badge.visible = Application.settings.get_boolean ("spot-alerts-enabled");
     }
 
+    public void open_map () {
+        views.visible_child_name = "map";
+    }
+
     private void on_visible_view_changed () {
         var visible_child_name = views.visible_child_name;
 
@@ -359,6 +395,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             map_view.set_active (false);
 
         spot_detail.set_action_buttons_visible (views.visible_child_name != "cards");
+        spot_detail.set_open_map_button_visible (views.visible_child_name != "map");
     }
 
     private void ensure_list_view () {
@@ -772,6 +809,21 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         left_sidebar.set_mode_visible (false);
     }
 
+    private void queue_initial_radio_start () {
+        if (auto_radio_start_id != 0)
+            return;
+
+        auto_radio_start_id = Timeout.add (250, () => {
+            auto_radio_start_id = 0;
+            if (Application.is_radio_configured &&
+                !Application.radio_control.is_rig_connected &&
+                !radio_connect_inflight) {
+                start_radio ();
+            }
+            return Source.REMOVE;
+        });
+    }
+
     private void disconnect_radio_handlers () {
         if (radio_status_handler != 0) {
             SignalHandler.disconnect (Application.radio_control, radio_status_handler);
@@ -900,13 +952,27 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         add_spot.present (this);
     }
 
-    private void set_refresh_button_state (bool paused) {
-        refresh_toggle.active = paused;
-        refresh_toggle.icon_name = paused
-            ? "arrow-circular-bottom-right-symbolic"
-            : "media-playback-pause-symbolic";
-        refresh_toggle.tooltip_text = paused ? _("Resume") : _("Pause");
+    private void set_refresh_button_state (RefreshButtonState state) {
+    switch (state) {
+        case RefreshButtonState.RELOADING:
+            refresh_button_stack.visible_child = refresh_spinner;
+            break;
+
+        case RefreshButtonState.PAUSE:
+            refresh_button_stack.visible_child = refresh_toggle;
+            refresh_toggle.active = false;
+            refresh_toggle.icon_name = "media-playback-pause-symbolic";
+            refresh_toggle.tooltip_text = _("Pause");
+            break;
+
+        case RefreshButtonState.RESUME:
+            refresh_button_stack.visible_child = refresh_toggle;
+            refresh_toggle.active = true;
+            refresh_toggle.icon_name = "arrow-circular-bottom-right-symbolic";
+            refresh_toggle.tooltip_text = _("Resume");
+            break;
     }
+}
 
     private void on_refresh_button_clicked () {
         update_paused = !update_paused;
@@ -922,13 +988,17 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             schedule_next_refresh_wake ();
         }
 
-        set_refresh_button_state (update_paused);
+        set_refresh_button_state (update_paused ? RefreshButtonState.RESUME : RefreshButtonState.PAUSE);
 
         update_refresh_status ();
     }
 
     ~AppWindow () {
         cancel_refresh_timer ();
+        if (auto_radio_start_id != 0) {
+            Source.remove (auto_radio_start_id);
+            auto_radio_start_id = 0;
+        }
 
         disconnect_radio_handlers ();
     }
