@@ -18,7 +18,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-public sealed class BandStrip : Gtk.Box {
+public sealed class BandStrip : Gtk.Widget {
     private string _band = "All";
 
     public string band {

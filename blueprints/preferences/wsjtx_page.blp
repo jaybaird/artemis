@@ -1,0 +1,89 @@
+/* blueprints/preferences/wsjtx_page.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $WsjtxPreferencesPage : Adw.PreferencesPage {
+  title: _("WSJT-X");
+  icon-name: "globe-alt2-symbolic";
+
+  Adw.PreferencesGroup {
+    title: _("WSJT-X Integration");
+    description: _("Configure Trailwave to listen for WSJT-X packets for logging and heard spots.");
+  
+    Adw.SwitchRow wsjtx_active {
+      title: _("WSJT-X Integration");
+      subtitle: _("Listen for logged contacts and heard spots");
+      accessibility {
+        label: _("WSJT-X Integration");
+        role-description: _("switch");
+      }
+    }
+  
+    Adw.EntryRow row_wsjtx_listen_ip {
+      title: _("Listen IP");
+      text: "127.0.0.1";
+      accessibility {
+        label: _("Listen IP");
+        role-description: _("text entry");
+      }
+    }
+
+    Adw.EntryRow row_wsjtx_listen_port {
+      title: _("Port");
+      input-purpose: digits;
+      accessibility {
+        label: _("Port");
+        role-description: _("text entry");
+      }
+    }
+
+    Adw.SwitchRow row_forward_qrz {
+      title: _("Forward WSJT-X QSOs to QRZ");
+      subtitle: _("Upload accepted WSJT-X logged contacts to QRZ when an API key is configured");
+      accessibility {
+        label: _("Forward WSJT-X QSOs to QRZ");
+        role-description: _("switch");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup wsjtx_status_group {
+    title: _("Status");
+
+    Adw.ActionRow wsjtx_status_row {
+      title: _("Listener");
+      subtitle: _("Not listening");
+
+      Box {
+        orientation: horizontal;
+        spacing: 12;
+        valign: center;
+
+        Image wsjtx_status_icon {
+          icon-name: "network-offline-symbolic";
+          pixel-size: 16;
+          accessibility {
+            label: _("Listener Status");
+            role-description: _("status icon");
+          }
+        }
+
+        Label wsjtx_status_label {
+          label: _("Inactive");
+        }
+      }
+    }
+
+    Label wsjtx_status_detail {
+      xalign: 0.0;
+      wrap: true;
+      styles ["dim-label"]
+    }
+  }
+}

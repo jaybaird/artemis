@@ -40,7 +40,7 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
         }
     }
 
-    public DetailFieldRow (string title, bool wrap = false) {
+    public DetailFieldRow (string title, bool wrap = false, string? icon_name = null) {
         Object ();
 
         var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
@@ -50,6 +50,15 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
             margin_end = 12,
             hexpand = true
         };
+
+        if (icon_name != null) {
+            var icon = new Gtk.Image.from_icon_name (icon_name) {
+                pixel_size = 16,
+                valign = Gtk.Align.CENTER
+            };
+            icon.add_css_class ("dim-label");
+            box.append (icon);
+        }
 
         title_label = new Gtk.Label (title) {
             xalign = 0.0f,
@@ -74,9 +83,86 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
 
         child = box;
     }
+}
 
-    public void add_value_css_class (string css_class) {
-        value_label.add_css_class (css_class);
+public sealed class DetailTimePairRow : Gtk.ListBoxRow {
+    private Gtk.Label title_label;
+    private Gtk.Label first_value_label;
+    private Gtk.Label second_value_label;
+
+    public string title {
+        set {
+            title_label.label = value;
+        }
+    }
+
+    public string first_value {
+        set {
+            first_value_label.label = value;
+        }
+    }
+
+    public string second_value {
+        set {
+            second_value_label.label = value;
+        }
+    }
+
+    public DetailTimePairRow (
+        string title,
+        string first_icon_name,
+        string second_icon_name
+    ) {
+        Object ();
+
+        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
+            margin_top = 10,
+            margin_bottom = 10,
+            margin_start = 12,
+            margin_end = 12,
+            hexpand = true
+        };
+
+        title_label = new Gtk.Label (title) {
+            xalign = 0.0f,
+            width_chars = 12
+        };
+        title_label.add_css_class ("caption");
+        title_label.add_css_class ("dim-label");
+        box.append (title_label);
+
+        var values_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
+            hexpand = true
+        };
+        values_box.halign = Gtk.Align.END;
+
+        values_box.append (build_time_pair (first_icon_name, out first_value_label));
+        values_box.append (build_time_pair (second_icon_name, out second_value_label));
+
+        box.append (values_box);
+        child = box;
+    }
+
+    private Gtk.Box build_time_pair (string icon_name, out Gtk.Label value_label) {
+        var pair = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
+            halign = Gtk.Align.END
+        };
+
+        var icon = new Gtk.Image.from_icon_name (icon_name) {
+            valign = Gtk.Align.CENTER
+        };
+        icon.add_css_class ("detail-time-icon");
+        icon.add_css_class ("dim-label");
+        pair.append (icon);
+
+        value_label = new Gtk.Label ("") {
+            xalign = 1.0f,
+            selectable = true
+        };
+        value_label.add_css_class ("body");
+        pair.append (value_label);
+
+        return pair;
     }
 }
 
@@ -112,6 +198,9 @@ public sealed class DetailLinkRow : Gtk.ListBoxRow {
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_detail.ui")]
 public sealed class SpotDetail : Gtk.Box {
     [GtkChild]
+    private unowned Adw.HeaderBar detail_header;
+
+    [GtkChild]
     private unowned Gtk.Stack detail_stack;
 
     [GtkChild]
@@ -122,6 +211,9 @@ public sealed class SpotDetail : Gtk.Box {
 
     [GtkChild]
     private unowned Gtk.Label detail_park_name;
+
+    [GtkChild]
+    private unowned Gtk.Box weather_summary_card;
 
     [GtkChild]
     private unowned Gtk.Image wx_conditions;
@@ -153,10 +245,29 @@ public sealed class SpotDetail : Gtk.Box {
     [GtkChild]
     private unowned Gtk.Button detail_spot_button;
 
+    [GtkChild]
+    private unowned Gtk.Button open_map_button;
+
+    [GtkChild]
+    private unowned Gtk.Revealer detail_buttons_revealer;
+
+    [GtkChild]
+    private unowned Gtk.Revealer open_map_revealer;
+
+    [GtkChild]
+    private unowned Gtk.Stack weather_stack;
+
+    [GtkChild]
+    private unowned Gtk.Box weather_loading_card;
+
+    [GtkChild]
+    private unowned Gtk.Box weather_unavailable_card;
+
     private Spot? current_spot = null;
     private string? park_url = null;
     private string? activator_url = null;
     private ulong callsign_cache_handler = 0;
+    private ulong pota_locations_handler = 0;
     private ulong radio_connected_handler = 0;
     private ulong radio_disconnected_handler = 0;
     private ulong radio_error_handler = 0;
@@ -173,7 +284,10 @@ public sealed class SpotDetail : Gtk.Box {
     private DetailFieldRow detail_location_row;
     private DetailFieldRow detail_bearing_row;
     private DetailFieldRow detail_distance_row;
+    private DetailFieldRow detail_coordinate_row;
     private DetailFieldRow detail_grid_row;
+    private DetailTimePairRow detail_sun_row;
+    private DetailTimePairRow detail_moon_row;
     private DetailLinkRow detail_park_row;
     private DetailFieldRow detail_spotter_row;
     private DetailFieldRow detail_spot_time_row;
@@ -184,10 +298,17 @@ public sealed class SpotDetail : Gtk.Box {
         Object ();
     }
 
+    public void set_end_title_buttons_visible (bool visible) {
+        detail_header.show_end_title_buttons = visible;
+    }
+
     construct {
         build_detail_lists ();
         detail_tune_button.clicked.connect (on_tune_clicked);
         detail_spot_button.clicked.connect (on_spot_clicked);
+        open_map_button.clicked.connect (on_open_map_clicked);
+        detail_buttons_revealer.reveal_child = false;
+
         detail_last_spot_list.row_activated.connect ((row) => {
             if (row == detail_history_row)
                 on_history_clicked ();
@@ -199,6 +320,10 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_list.row_activated.connect ((row) => {
             if (row == detail_activator_link_row)
                 on_activator_clicked ();
+        });
+        pota_locations_handler = Application.pota_client.locations_updated.connect (() => {
+            if (current_spot != null)
+                populate (current_spot);
         });
         radio_connected_handler = Application.radio_control.radio_connected.connect (() => {
             update_tune_button_state ();
@@ -222,10 +347,10 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_list.append (detail_activator_link_row);
 
         detail_frequency_row = new DetailFieldRow (_("Frequency"));
-        detail_frequency_row.add_value_css_class ("numeric");
+        detail_frequency_row.add_css_class ("numeric");
         detail_mode_row = new DetailFieldRow (_("Mode"));
         detail_spot_count_row = new DetailFieldRow (_("Spots"));
-        detail_spot_count_row.add_value_css_class ("numeric");
+        detail_spot_count_row.add_css_class ("numeric");
         detail_activator_comment_row = new DetailFieldRow (_("Activator Comments"), true);
         detail_operating_list.append (detail_frequency_row);
         detail_operating_list.append (detail_mode_row);
@@ -234,14 +359,31 @@ public sealed class SpotDetail : Gtk.Box {
 
         detail_location_row = new DetailFieldRow (_("Location"), true);
         detail_bearing_row = new DetailFieldRow (_("Direction"));
+        detail_bearing_row.add_css_class ("numeric");
         detail_distance_row = new DetailFieldRow (_("Distance"));
-        detail_grid_row = new DetailFieldRow (_("Coordinates"));
-        detail_grid_row.add_value_css_class ("numeric");
+        detail_distance_row.add_css_class ("numeric");
+        detail_grid_row = new DetailFieldRow (_("Grid"));
+        detail_grid_row.add_css_class ("numeric");
+        detail_coordinate_row = new DetailFieldRow (_("Coordinates"));
+        detail_coordinate_row.add_css_class ("numeric");
+        detail_sun_row = new DetailTimePairRow (
+            _("Sun"),
+            "daytime-sunrise-symbolic",
+            "daytime-sunset-symbolic"
+        );
+        detail_moon_row = new DetailTimePairRow (
+            _("Moon"),
+            "moonrise-symbolic",
+            "moonset-symbolic"
+        );
         detail_park_row = new DetailLinkRow (_("View Park Details"));
         detail_location_list.append (detail_location_row);
         detail_location_list.append (detail_bearing_row);
         detail_location_list.append (detail_distance_row);
         detail_location_list.append (detail_grid_row);
+        detail_location_list.append (detail_coordinate_row);
+        detail_location_list.append (detail_sun_row);
+        detail_location_list.append (detail_moon_row);
         detail_location_list.append (detail_park_row);
 
         detail_spotter_row = new DetailFieldRow (_("Spotter"));
@@ -296,28 +438,50 @@ public sealed class SpotDetail : Gtk.Box {
         detail_spot_count_row.value = ngettext ("%d spot", "%d spots", spot.spot_count)
             .printf (spot.spot_count);
 
-        Error err = null;
         var locations = spot.location_desc.split (",", -1);
         var loc_str = "";
         if (locations.length <= 2) {
             for (int i = 0; i < locations.length; i++) {
-                var country = Application.spot_database.country_string_for_location (
-                    locations[i], out err);
-                loc_str += (i > 0 ? "\n" : "") + (country ?? spot.location_desc);
+                string location_key = locations[i].strip ();
+                var location = Application.pota_client.lookup_location (location_key);
+                string display = location != null ? location.to_string () : location_key;
+                loc_str += (i > 0 ? "\n" : "") + display;
             }
         } else {
             loc_str = spot.location_desc;
         }
         detail_location_row.value = loc_str;
 
-        detail_grid_row.visible = spot.coordinate != null;
-        if (spot.coordinate != null) {
-            detail_grid_row.value = "%.4f, %.4f".printf (
+        detail_grid_row.visible = has_text (spot.grid6) || has_text (spot.grid4);
+        if (detail_grid_row.visible) {
+            detail_grid_row.value = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
+        }
+
+        detail_coordinate_row.visible = spot.coordinate != null;
+        if (detail_coordinate_row.visible) {
+            detail_coordinate_row.value = "%.4f, %.4f".printf (
                 spot.coordinate.latitude,
                 spot.coordinate.longitude
             );
+            var now = new DateTime.now_utc ();
+            var sun_times = Astronomy.sun_rise_set_times (now, spot.coordinate);
+            var moon_times = Astronomy.moon_rise_set_times (now, spot.coordinate);
+
+            detail_sun_row.visible = (sun_times.rise != null) || (sun_times.set != null);
+            detail_sun_row.first_value = format_time_label (sun_times.rise);
+            detail_sun_row.second_value = format_time_label (sun_times.set);
+
+            detail_moon_row.visible = (moon_times.rise != null) || (moon_times.set != null);
+            detail_moon_row.first_value = format_time_label (moon_times.rise);
+            detail_moon_row.second_value = format_time_label (moon_times.set);
         } else {
-            detail_grid_row.value = "";
+            detail_coordinate_row.value = "";
+            detail_sun_row.visible = false;
+            detail_sun_row.first_value = "";
+            detail_sun_row.second_value = "";
+            detail_moon_row.visible = false;
+            detail_moon_row.first_value = "";
+            detail_moon_row.second_value = "";
         }
 
         var has_location = Application.settings.get_string ("location") != "" && spot.distance >= 0;
@@ -353,12 +517,19 @@ public sealed class SpotDetail : Gtk.Box {
         activator_url = @"https://pota.app/#/profile/$escaped_callsign";
     }
 
+    private string format_time_label (DateTime? time) {
+        if (time == null)
+            return "––:––";
+
+        return time.to_utc ().format ("%R UTC");
+    }
+
     private string weather_temperature_label (double temperature) {
         var unit = Application.settings.get_boolean ("use-metric") ? "C" : "F";
         return "%.0f°%s".printf (temperature, unit);
     }
 
-    private string weather_icon_name (WeatherData data) {
+    private unowned string weather_icon_name (WeatherData data) {
         switch (data.icon_code) {
             case "01d":
                 return "sun-outline-symbolic";
@@ -409,17 +580,11 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void set_weather_loading () {
-        wx_conditions.icon_name = "clouds-outline-symbolic";
-        wx_conditions_txt.label = _("Loading weather…");
-        wx_temp.label = "—";
-        wx_humidity.label = "—";
+        weather_stack.visible_child = weather_loading_card;
     }
 
     private void set_weather_unavailable () {
-        wx_conditions.icon_name = "clouds-outline-symbolic";
-        wx_conditions_txt.label = _("Weather unavailable");
-        wx_temp.label = "—";
-        wx_humidity.label = "—";
+        weather_stack.visible_child = weather_unavailable_card;
     }
 
     private void apply_weather (WeatherData data) {
@@ -427,6 +592,8 @@ public sealed class SpotDetail : Gtk.Box {
         wx_conditions_txt.label = data.condition;
         wx_temp.label = weather_temperature_label (data.temperature);
         wx_humidity.label = _("%d%%").printf (data.relative_humidity);
+
+        weather_stack.visible_child = weather_summary_card;
     }
 
     private async void load_weather (Spot spot, uint request_serial) {
@@ -471,14 +638,28 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     public void set_action_buttons_visible (bool visible) {
+        detail_buttons_revealer.reveal_child = visible;
         detail_tune_button.visible = visible && Application.is_radio_configured;
-        detail_spot_button.visible = visible;
         update_tune_button_state ();
+    }
+
+    public void set_open_map_button_visible (bool visible) {
+        open_map_revealer.reveal_child = visible;
     }
 
     private void update_tune_button_state () {
         detail_tune_button.sensitive = detail_tune_button.visible &&
             Application.radio_control.is_rig_connected;
+    }
+
+    private void on_open_map_clicked () {
+        if (current_spot == null)
+            return;
+        var win = Application.win as AppWindow;
+        if (win == null)
+            return;
+
+        win.open_map ();
     }
 
     private void on_tune_clicked () {
@@ -513,8 +694,11 @@ public sealed class SpotDetail : Gtk.Box {
     private void on_park_clicked () {
         if (park_url == null)
             return;
+        var parent = get_root () as Gtk.Window;
+        if (parent == null)
+            return;
 #if ARTEMIS_UNIX
-        new ParkDetailsView (_("Park Details"), park_url).present (get_root ());
+        new ParkDetailsView (parent, _("Park Details"), park_url).present ();
 #else
         GLib.AppInfo.launch_default_for_uri (park_url, null);
 #endif
@@ -524,7 +708,10 @@ public sealed class SpotDetail : Gtk.Box {
         if (activator_url == null)
             return;
 #if ARTEMIS_UNIX
-        new ParkDetailsView (_("Activator Details"), activator_url).present (get_root ());
+        var parent = get_root () as Gtk.Window;
+        if (parent == null)
+            return;
+        new ParkDetailsView (parent, _("Activator Details"), activator_url).present ();
 #else
         GLib.AppInfo.launch_default_for_uri (activator_url, null);
 #endif
@@ -534,6 +721,9 @@ public sealed class SpotDetail : Gtk.Box {
         if (callsign_cache_handler != 0 &&
             SignalHandler.is_connected (Application.callsign_cache, callsign_cache_handler))
             SignalHandler.disconnect (Application.callsign_cache, callsign_cache_handler);
+        if (pota_locations_handler != 0 &&
+            SignalHandler.is_connected (Application.pota_client, pota_locations_handler))
+            SignalHandler.disconnect (Application.pota_client, pota_locations_handler);
         if (radio_connected_handler != 0 &&
             SignalHandler.is_connected (Application.radio_control, radio_connected_handler))
             SignalHandler.disconnect (Application.radio_control, radio_connected_handler);

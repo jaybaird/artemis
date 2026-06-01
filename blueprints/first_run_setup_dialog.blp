@@ -1,0 +1,110 @@
+/* blueprints/first_run_setup_dialog.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $FirstRunSetupDialog : Adw.Dialog {
+  title: _("First-Time Setup");
+  content-width: 460;
+  can-close: false;
+
+  Box {
+    orientation: vertical;
+    spacing: 12;
+    margin-top: 18;
+    margin-bottom: 12;
+    margin-start: 18;
+    margin-end: 18;
+
+    Label {
+      label: _("First-Time Setup");
+      xalign: 0;
+      wrap: true;
+      styles ["title-2"]
+    }
+
+    Label {
+      label: _("Set the basic station details Trailwave uses for spots, distance, and logging.");
+      xalign: 0;
+      wrap: true;
+      styles ["dim-label"]
+    }
+
+    Adw.PreferencesGroup {
+      Adw.EntryRow callsign_row {
+        title: _("Callsign");
+        accessibility {
+          label: _("Callsign");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow location_row {
+        title: _("Grid Square / Station Location");
+        accessibility {
+          label: _("Grid Square / Station Location");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.SwitchRow metric_row {
+        title: _("Metric Units");
+        accessibility {
+          label: _("Metric Units");
+          role-description: _("switch");
+        }
+      }
+    }
+
+    Label {
+      label: _("This information is stored only on this device. Trailwave does not collect it or send it anywhere.");
+      xalign: 0;
+      wrap: true;
+      styles ["caption", "dim-label"]
+    }
+
+    Box {
+      orientation: horizontal;
+      spacing: 6;
+
+      Button skip_button {
+        label: _("Skip");
+        accessibility {
+          label: _("Skip Setup");
+          role-description: _("button");
+        }
+      }
+
+      Box {
+        hexpand: true;
+      }
+
+      Button save_button {
+        label: _("Save");
+        styles ["suggested-action"]
+        accessibility {
+          label: _("Save Setup");
+          role-description: _("button");
+        }
+      }
+    }
+  }
+}

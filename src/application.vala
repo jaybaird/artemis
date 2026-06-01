@@ -18,20 +18,32 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+public sealed class AppNotification : Object {
+    public string message { get; construct; }
+    public DateTime timestamp { get; construct; }
+
+    public AppNotification (string message, DateTime timestamp) {
+        Object (
+            message: message,
+            timestamp: timestamp
+        );
+    }
+}
+
 public sealed class Application : Adw.Application {
     public signal void radio_connection_state_changed ();
+    public signal void toast_requested (string message);
+    public signal void notification_history_changed ();
 
-    private static Quark _current_spot_hash = 0;
+    public static AppState state { get; private set; }
+    public static LoggingService logging_service { get; private set; }
+    public static LogbookImportService logbook_import_service { get; private set; }
+
     public static Quark current_spot_hash {
         get {
-            return _current_spot_hash;
+            return state.current_spot_hash;
         } set {
-            if (_current_spot_hash == value)
-                return;
-            _current_spot_hash = value;
-            if (_spot_repo != null) {
-                _spot_repo.current_spot_changed (value);
-            }
+            state.current_spot_hash = value;
         }
     }
     public static CallsignCache callsign_cache { get; private set; }
@@ -39,8 +51,16 @@ public sealed class Application : Adw.Application {
     public static SpotRepo spot_repo { get; private set; }
     public static Settings settings { get; private set; }
     public static PotaClient pota_client { get; private set; }
+    public static ParkDetailsCache park_details_cache { get; private set; }
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
+    public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
+    private AlertsWindow? alerts_window = null;
+    private HelpWindow? help_window = null;
+    private LogbookWindow? logbook_window = null;
+    private bool setup_dialog_active = false;
+    private GLib.ListStore notification_history_store;
+    private const uint MAX_NOTIFICATION_HISTORY = 25;
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
@@ -48,10 +68,22 @@ public sealed class Application : Adw.Application {
     public static Application app;
     public static Gtk.Window win;
 
-    public static string? current_mode_filter { get; set; }
-    public static string? current_program_filter { get; set; }
-    public static string? current_search_text { get; set; }
-    public static string? current_band_filter { get; set; }
+    public static string? current_mode_filter {
+        get { return state.current_mode_filter; }
+        set { state.current_mode_filter = value; }
+    }
+    public static string? current_program_filter {
+        get { return state.current_program_filter; }
+        set { state.current_program_filter = value; }
+    }
+    public static string? current_search_text {
+        get { return state.current_search_text; }
+        set { state.current_search_text = value; }
+    }
+    public static string? current_band_filter {
+        get { return state.current_band_filter; }
+        set { state.current_band_filter = value ?? "All"; }
+    }
 #if ARTEMIS_WINDOWS
     private static string? windows_bundle_root = null;
 #endif
@@ -64,9 +96,14 @@ public sealed class Application : Adw.Application {
 
     private const GLib.ActionEntry[] APP_ENTRIES = {
         { "add-spot", on_add_button_clicked },
+        { "alerts", on_alerts_action },
+        { "logbook", on_logbook_action },
+        { "help", on_help_action },
+        { "shortcuts", shortcuts_activated },
         { "about", about_activated },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
+        { "tune", tune_current_spot },
         { "quit", quit_activated }
     };
 
@@ -79,15 +116,29 @@ public sealed class Application : Adw.Application {
 
     construct {
         set_accels_for_action ("app.add-spot", { "<primary>a" });
-        set_accels_for_action ("app.about", { "F1" });
+        set_accels_for_action ("app.alerts", { "<primary><shift>a" });
+        set_accels_for_action ("app.help", { "F1" });
+        set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
+        set_accels_for_action ("app.tune", { "<primary>t" });
         set_accels_for_action ("app.quit", { "<primary>q" });
+        set_accels_for_action ("win.search", { "<Ctrl>F" });
+        set_accels_for_action ("win.toggle-sidebar", { "F9" });
         add_action_entries (APP_ENTRIES, this);
 
+        state = new AppState ();
+        notification_history_store = new GLib.ListStore (typeof (AppNotification));
+        state.current_spot_changed.connect ((spot_hash) => {
+            if (spot_repo != null)
+                spot_repo.current_spot_changed (spot_hash);
+        });
+
         settings = new Settings (Build.DOMAIN);
+        settings.changed["show-logbook"].connect (sync_logbook_ui);
         spot_repo = new SpotRepo ();
         pota_client = new PotaClient ();
+        park_details_cache = new ParkDetailsCache (pota_client);
         qrz_client = new QrzClient ();
 
         spot_database = new SpotDb ();
@@ -96,8 +147,20 @@ public sealed class Application : Adw.Application {
             error (err.message);
         }
 
-        callsign_cache = new CallsignCache (3600);
-        weather_cache = new WeatherCache ();
+        callsign_cache = new CallsignCache (3600, pota_client);
+        logging_service = new LoggingService (
+            spot_database,
+            pota_client,
+            qrz_client,
+            new FileLocalAdifWriter (),
+            new SettingsLoggingPreferences (settings)
+        );
+        logging_service.qso_added.connect ((spot) => {
+            spot_repo.refresh_log_status_for_added_qso (spot);
+        });
+        logbook_import_service = new LogbookImportService (spot_database);
+        weather_cache = new WeatherCache (new SettingsWeatherUnitsProvider (settings));
+        wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
         radio_control = new RadioControl ();
         radio_control.radio_connected.connect (() => {
             is_radio_connected = true;
@@ -111,6 +174,37 @@ public sealed class Application : Adw.Application {
             is_radio_connected = false;
             radio_connection_state_changed ();
         });
+        app = this;
+        sync_logbook_ui ();
+    }
+
+    public static void show_toast (string message, bool log_message = true) {
+        if ((app == null) || (message.strip () == ""))
+            return;
+
+        if (log_message)
+            app.add_notification_history (message);
+        app.toast_requested (message);
+    }
+
+    public GLib.ListModel get_notification_history () {
+        return notification_history_store;
+    }
+
+    public void clear_notification_history () {
+        notification_history_store.remove_all ();
+        notification_history_changed ();
+    }
+
+    private void add_notification_history (string message) {
+        notification_history_store.append (
+            new AppNotification (message.strip (), new DateTime.now_local ())
+        );
+
+        while (notification_history_store.get_n_items () > MAX_NOTIFICATION_HISTORY)
+            notification_history_store.remove (0);
+
+        notification_history_changed ();
     }
 
     public override void activate () {
@@ -148,21 +242,117 @@ public sealed class Application : Adw.Application {
             return false;
         });
         win.present ();
+        maybe_show_first_run_setup ();
+    }
+
+    public void send_spot_alert (Spot spot) {
+        var title = _("Spot alert: %s").printf (spot.callsign);
+        var body = _("%s on %s %s").printf (spot.park_ref, spot.band, spot.mode);
+        var notification = new GLib.Notification (title);
+        notification.set_body (body);
+        notification.set_icon (new ThemedIcon ("com.k0vcz.Artemis"));
+        notification.set_priority (GLib.NotificationPriority.NORMAL);
+
+        send_notification ("spot-alert-%u".printf ((uint) spot.hash), notification);
+        show_toast ("%s: %s".printf (title, body));
+    }
+
+    private void maybe_show_first_run_setup () {
+        if (setup_dialog_active ||
+            settings.get_boolean ("first-run-setup-complete") ||
+            win == null) {
+            return;
+        }
+
+        setup_dialog_active = true;
+        var dialog = new FirstRunSetupDialog ();
+        dialog.completed.connect ((save, callsign, location, use_metric) => {
+            setup_dialog_active = false;
+            if (save) {
+                settings.set_string ("callsign", callsign);
+                settings.set_string ("location", location);
+                settings.set_boolean ("use-metric", use_metric);
+            }
+            settings.set_boolean ("first-run-setup-complete", true);
+        });
+        dialog.present (win);
+    }
+
+    private void on_help_action () {
+        try {
+            if (help_window == null) {
+                help_window = new HelpWindow (this);
+                help_window.set_transient_for (win);
+                help_window.close_request.connect (() => {
+                    help_window = null;
+                    return false;
+                });
+            }
+
+            help_window.present ();
+        } catch (Error error) {
+            warning ("Unable to open help: %s", error.message);
+        }
+    }
+
+    private void on_logbook_action () {
+        if (!settings.get_boolean ("show-logbook"))
+            return;
+
+        if (logbook_window == null) {
+            logbook_window = new LogbookWindow (win);
+            logbook_window.close_request.connect (() => {
+                logbook_window = null;
+                return false;
+            });
+        }
+
+        logbook_window.present ();
+    }
+
+    private void sync_logbook_ui () {
+        var show_logbook = settings.get_boolean ("show-logbook");
+        var action = lookup_action ("logbook") as SimpleAction;
+        if (action != null)
+            action.set_enabled (show_logbook);
+
+        if (show_logbook)
+            set_accels_for_action ("app.logbook", { "<primary>l" });
+        else
+            set_accels_for_action ("app.logbook", {});
+    }
+
+    private void on_alerts_action () {
+        if (alerts_window == null) {
+            alerts_window = new AlertsWindow (this);
+            alerts_window.set_transient_for (win);
+            alerts_window.close_request.connect (() => {
+                alerts_window = null;
+                return false;
+            });
+        }
+
+        alerts_window.present ();
     }
 
     private void about_activated () {
         const string[] ARTISTS = {
+            "App icon designed by gnoman https://gitlab.gnome.org/gnoman",
+            null
         };
 
         const string[] DESIGNERS = {
+            null
         };
 
         const string[] DEVELOPERS = {
-            "Jay Baird (K0VCZ)"
+            "Jay Baird (K0VCZ)",
+            null
         };
 
         const string[] CONTRIBUTORS = {
-            "Henry Cisneros (KG5VFJ)"
+            "Henry Cisneros (KG5VFJ)",
+            null
         };
 
         const string COPYRIGHT = "© 2026 Jay Baird (K0VCZ)";
@@ -176,10 +366,59 @@ public sealed class Application : Adw.Application {
             translator_credits = _("translator-credits")
         };
 
-        dialog.add_acknowledgement_section (_("Contributors"), CONTRIBUTORS);
+        dialog.add_acknowledgement_section (_("Beta Testers"), CONTRIBUTORS);
+        dialog.add_legal_section (
+            _("Hamlib"),
+            RadioControl.hamlib_copyright (),
+            Gtk.License.LGPL_2_1, null
+        );
+        dialog.add_legal_section (
+            _("Eclipse Paho MQTT C Client Library"),
+            "Copyright © 2007, Eclipse Foundation, Inc. and its licensors.\n" +
+            "Licensed under the Eclipse Distribution License v1.0.",
+            Gtk.License.CUSTOM,
+            null
+        );
+        dialog.add_legal_section (
+            _("libheatmap"),
+            "Copyright © 2013 Lucas Beyer\n" +
+            "https://github.com/lucasb-eyer/libheatmap",
+            Gtk.License.MIT_X11,
+            null
+        );
+        dialog.add_legal_section (
+            _("Map Tiles"),
+            "© Mapbox © OpenStreetMap contributors",
+            Gtk.License.CUSTOM,
+            null
+        );
 
         //dialog.add_link (_("Translate"), Build.TRANSLATE_WEBSITE);
-        //dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
+        if (Build.DONATE_WEBSITE != "")
+            dialog.add_link (_("Donate"), Build.DONATE_WEBSITE);
+
+        dialog.present (win);
+    }
+
+    private void shortcuts_activated () {
+        var dialog = new Adw.ShortcutsDialog ();
+
+        var general = new Adw.ShortcutsSection (_("General"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Add Spot"), "app.add-spot"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Tune"), "app.tune"));
+        if (settings.get_boolean ("show-logbook"))
+            general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
+        dialog.add (general);
+
+        var application = new Adw.ShortcutsSection (_("Application"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Help"), "app.help"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Keyboard Shortcuts"), "app.shortcuts"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Preferences"), "app.preferences"));
+        application.add (new Adw.ShortcutsItem.from_action (_("Quit"), "app.quit"));
+        dialog.add (application);
 
         dialog.present (win);
     }
@@ -188,6 +427,13 @@ public sealed class Application : Adw.Application {
         spot_repo.update_spots.begin ((obj, res) => {
             spot_repo.update_spots.end (res);
         });
+    }
+
+    private void tune_current_spot () {
+        Spot? spot = _spot_repo.get_spot (_state.current_spot_hash);
+        if (spot != null) {
+            _radio_control.tune_to_spot (spot);
+        }
     }
 
     private void quit_activated () {
@@ -280,8 +526,8 @@ public sealed class Application : Adw.Application {
 #if ARTEMIS_WINDOWS
         configure_windows_runtime_environment (args);
 #endif
-        Environment.set_prgname ("Artemis");
-        Environment.set_application_name ("Artemis");
+        Environment.set_prgname (Build.NAME);
+        Environment.set_application_name (Build.NAME);
         Intl.setlocale (LocaleCategory.ALL, "");
         Intl.bindtextdomain (Build.GETTEXT_PACKAGE, Build.LOCALEDIR);
         Intl.bind_textdomain_codeset (Build.GETTEXT_PACKAGE, "UTF-8");

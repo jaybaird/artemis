@@ -1,7 +1,7 @@
 project(
   'com.k0vcz.Artemis', 
   ['c', 'vala'],
-  version: '2.0.1',
+  version: '2.1',
   meson_version: '>= 1.0.0',
   default_options: [
     'warning_level=2',
@@ -25,6 +25,7 @@ if meson.get_compiler ('c').get_id () == 'clang'
 endif
 
 devel = get_option('debug')
+valgrind_friendly = get_option('valgrind_friendly')
 
 # Setup configuration file
 config = configuration_data()
@@ -34,15 +35,20 @@ config.set('BINDIR', join_paths(get_option('prefix'), get_option('bindir')))
 config.set('LOCALEDIR', join_paths(get_option('prefix'), get_option('localedir')))
 config.set('DATADIR', join_paths(get_option('prefix'), get_option('datadir')))
 config.set('DOMAIN', meson.project_name ())
-config.set('G_LOG_DOMAIN', 'Artemis')
+config.set('G_LOG_DOMAIN', 'Trailwave')
 config.set('RESOURCES', '/' + '/'.join(meson.project_name().split('.')) + '/')
 config.set('VERSION', meson.project_version())
 config.set('PREFIX', get_option('prefix'))
-config.set('NAME', 'Artemis')
-config.set('WEBSITE', '')
-config.set('DONATE_WEBSITE', '')
+config.set('NAME', 'Trailwave')
+config.set('TARGET', host_machine.system())
+config.set('WEBSITE', 'https://artemispota.app')
+config.set('DONATE_WEBSITE', 'https://buymeacoffee.com/k0vcz')
 config.set('TRANSLATE_WEBSITE', '')
 config.set('OPENWEATHER_API_KEY', get_option('openweather_api_key'))
+config.set('MAPBOX_ACCESS_TOKEN', get_option('mapbox_access_token'))
+config.set('MAPBOX_STYLE_OWNER', get_option('mapbox_style_owner'))
+config.set('MAPBOX_LIGHT_STYLE_ID', get_option('mapbox_light_style_id'))
+config.set('MAPBOX_DARK_STYLE_ID', get_option('mapbox_dark_style_id'))
 config.set('PROFILE', devel ? 'development' : 'release')
 
 if devel
@@ -57,10 +63,24 @@ endif
 
 add_project_arguments('-DGETTEXT_PACKAGE="' + meson.project_name() + '"', language: 'c')
 
+if valgrind_friendly
+  add_project_arguments(
+    [
+      '-O0',
+      '-fno-omit-frame-pointer',
+      '-fno-inline',
+      '-fno-inline-functions',
+      '-fno-inline-small-functions'
+    ],
+    language: 'c'
+  )
+endif
+
 subdir('blueprints')
 subdir('data')
 subdir('src')
 subdir('po')
+subdir('tests')
 
 win_sources = []
 windows_exe_link_args = []
@@ -75,7 +95,9 @@ if is_windows
 endif
 
 link_deps = [
-  libradiocontrol
+  libradiocontrol,
+  libartemismqtt,
+  libheatmap
 ]
 
 if is_windows
@@ -83,19 +105,59 @@ if is_windows
 endif
 
 if devel
-  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--vapidir='+srcdir]
+  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map']
 else
-  vala_args = ['--pkg=RadioControl', '--vapidir='+srcdir]
+  vala_args = ['--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map']
 endif
 
-executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
+artemis_exe = executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
   dependencies: artemis_vala_deps,
   vala_args: vala_args,
+  include_directories: src_inc,
   link_with: link_deps,
   link_args: windows_exe_link_args,
   win_subsystem: is_windows ? 'windows' : 'console',
   install: true,
 )
+
+if not is_windows
+  valgrind = find_program('valgrind', required: false)
+  if valgrind.found()
+    valgrind_env = environment()
+    valgrind_env.set('G_DEBUG', 'gc-friendly')
+    valgrind_env.set('G_SLICE', 'always-malloc')
+    valgrind_env.set('GSETTINGS_SCHEMA_DIR', meson.project_build_root() / 'data')
+
+    run_target(
+      'valgrind-memcheck',
+      command: [
+        valgrind,
+        '--tool=memcheck',
+        '--leak-check=full',
+        '--show-leak-kinds=definite,indirect,possible',
+        '--track-origins=yes',
+        '--num-callers=40',
+        '--log-file=' + meson.project_build_root() / 'valgrind-artemis-%p.log',
+        artemis_exe,
+      ],
+      env: valgrind_env,
+    )
+
+    run_target(
+      'valgrind-massif',
+      command: [
+        valgrind,
+        '--tool=massif',
+        '--time-unit=ms',
+        '--detailed-freq=100',
+        '--max-snapshots=200',
+        '--massif-out-file=' + meson.project_build_root() / 'massif-artemis-%p.out',
+        artemis_exe,
+      ],
+      env: valgrind_env,
+    )
+  endif
+endif
 
 if not is_windows
   gnome.post_install(

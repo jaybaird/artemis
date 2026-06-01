@@ -54,18 +54,11 @@ public static string format_vfo (double freq_khz) {
     return "%lu.%03lu.%02lu".printf ((ulong)mhz, (ulong)khz, (ulong)(hz / 10));
 }
 
-public static string format_frequency_khz (double frequency_khz) {
-    if (Math.fabs (frequency_khz - Math.round (frequency_khz)) < 0.0005)
-        return "%.0f".printf (frequency_khz);
-
-    var formatted = "%.3f".printf (frequency_khz);
-    while (formatted.has_suffix ("0")) {
-        formatted = formatted.substring (0, formatted.length - 1);
-    }
-    if (formatted.has_suffix ("."))
-        formatted = formatted.substring (0, formatted.length - 1);
-
-    return formatted;
+public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error {
+    var loader = new Gly.Loader.for_bytes (bytes);
+    var image = yield loader.load_async (null);
+    var frame = yield image.next_frame_async (null);
+    return GlyGtk4.frame_get_texture (frame);
 }
 
 public static string pota_profile_callsign (string callsign) {
@@ -95,8 +88,35 @@ public sealed class SpotBadgeInfo : Object {
     }
 }
 
+public class SpotBadgeHelpInfo {
+    public string icon_name { get; private set; }
+    public string label { get; private set; }
+    public string description { get; private set; }
+    public string css_class { get; private set; }
+
+    public SpotBadgeHelpInfo (
+        string icon_name,
+        string label,
+        string description,
+        string css_class
+    ) {
+        this.icon_name = icon_name;
+        this.label = label;
+        this.description = description;
+        this.css_class = css_class;
+    }
+}
+
 public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
     var badges = new Gee.ArrayList<SpotBadgeInfo> ();
+
+    if (spot.heard_recently) {
+        badges.add (new SpotBadgeInfo (
+            "headphones-symbolic",
+            _("Heard recently"),
+            "badge-heard-recently"
+        ));
+    }
 
     if (spot.is_new_park && Application.settings.get_boolean ("highlight-unhunted-parks")) {
         badges.add (new SpotBadgeInfo (
@@ -131,6 +151,43 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
     return badges;
 }
 
+public static Gee.ArrayList<SpotBadgeHelpInfo> spot_badge_help_items () {
+    var badges = new Gee.ArrayList<SpotBadgeHelpInfo> ();
+
+    badges.add (new SpotBadgeHelpInfo (
+        "starred-symbolic",
+        _("New park"),
+        _("You have no local record of hunting this park."),
+        "badge-new-park"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "verified-checkmark-symbolic",
+        _("Hunted today"),
+        _("You already logged this park on the current UTC day."),
+        "badge-hunted-today"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "clock-alt-symbolic",
+        _("Previously hunted"),
+        _("This park exists in your local hunting history."),
+        "badge-previously-hunted"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "sound-wave-add-symbolic",
+        _("New band"),
+        _("You have hunted this park before, but not on this band."),
+        "badge-new-band"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "headphones-symbolic",
+        _("Heard recently"),
+        _("WSJT-X recently decoded text matching this activator."),
+        "badge-heard-recently"
+    ));
+
+    return badges;
+}
+
 public static Gtk.Image create_spot_badge_image (SpotBadgeInfo badge) {
     var image = new Gtk.Image.from_icon_name (badge.icon_name);
     image.tooltip_text = badge.tooltip;
@@ -152,106 +209,34 @@ public static void populate_spot_badges (Gtk.Box box, Spot spot) {
 }
 
 public static bool spot_matches_current_filters (Spot spot, string band_filter) {
-    if (spot == null)
-        return false;
-
-    if ((band_filter != "All") && (spot.band != band_filter))
-        return false;
-
-    if (Application.settings.get_boolean ("hide-qrt") &&
-        spot.activator_comment.down ().contains ("qrt"))
-        return false;
-
-    if (Application.settings.get_boolean ("hide-hunted") && spot.was_hunted_today)
-        return false;
-
-    var stale_minutes = Application.settings.get_int ("hide-older-than");
-    var now = new DateTime.now_utc ();
-    var expires = spot.spot_time.add_minutes (stale_minutes);
-    if (now.compare (expires) > 0)
-        return false;
-
-    if ((Application.current_program_filter != null) &&
-        !spot.park_ref.down ().has_prefix (Application.current_program_filter.down ()))
-        return false;
-
-    if ((Application.current_mode_filter != null) &&
-        !spot.mode.down ().contains (Application.current_mode_filter.down ()))
-        return false;
-
-    if (Application.current_search_text != null) {
-        var needle = Application.current_search_text.down ();
-        if (!(spot.callsign.down ().contains (needle) ||
-              spot.park_ref.down ().contains (needle) ||
-              spot.park_name.down ().contains (needle))) {
-            return false;
-        }
-    }
-
-    return true;
+    var filter = new SpotFilterState (
+        band_filter,
+        Application.state.current_mode_filter,
+        Application.state.current_program_filter,
+        Application.state.current_search_text,
+        Application.settings.get_boolean ("hide-qrt"),
+        Application.settings.get_boolean ("hide-hunted"),
+        Application.settings.get_int ("hide-older-than")
+    );
+    var snapshot = new SpotFilterSnapshot (
+        spot.callsign,
+        spot.park_ref,
+        spot.park_name,
+        spot.activator_comment,
+        spot.band,
+        spot.mode,
+        spot.spot_time,
+        spot.was_hunted_today
+    );
+    return spot_matches_filter (snapshot, filter);
 }
 
-namespace Distance {
-    public enum MaidenheadError {
-        TOO_SHORT,
-    }
-
-    public static GLib.Quark distance_error_quark () {
-        return GLib.Quark.from_string ("maidenhead-error");
-    }
-
-    public inline static double to_radians (double degrees) {
-        return degrees * (Math.PI / 180.0);
-    }
-
-    // Convert radians to degrees
-    public inline static double to_degrees (double radians) {
-        return radians * (180.0 / Math.PI);
-    }
-
-    // Parse a Maidenhead locator to decimal degrees (approx center of square)
-    public static Coordinate maidenhead_to_latlon (string grid) throws Error {
-        if (grid.length < 4)
-            throw new Error (distance_error_quark (), MaidenheadError.TOO_SHORT,
-                "Grid locator %s is too short", grid);
-
-        var loc = grid.ascii_down ();      // simplify handling
-        double lon = (loc[0] - 'a') * 20.0 - 180.0;
-        double lat = (loc[1] - 'a') * 10.0 - 90.0;
-
-        lon += (loc[2] - '0') * 2.0;
-        lat += (loc[3] - '0') * 1.0;
-
-        if (loc.length >= 6) {
-            lon += (loc[4] - 'a') * (5.0 / 60.0);
-            lat += (loc[5] - 'a') * (2.5 / 60.0);
-            // add half of subsquare to get center
-            lon += 2.5 / 60.0;
-            lat += 1.25 / 60.0;
-        } else {
-            // add half of square for center if no subsquare
-            lon += 1.0;
-            lat += 0.5;
-        }
-
-        return new Coordinate.full (lat, lon);
-    }
-
-    public static double haversine_distance_km (Coordinate a, Coordinate b) {
-        return a.distance (b) / 1000.0;
-    }
-
-    // Initial bearing from point A to B
-    public static double bearing (Coordinate a, Coordinate b) {
-        double lat1 = to_radians (a.latitude);
-        double lat2 = to_radians (b.latitude);
-        double dlon = to_radians (b.longitude - a.longitude);
-
-        double y = Math.sin (dlon) * Math.cos (lat2);
-        double x = Math.cos (lat1) * Math.sin (lat2) - Math.sin (lat1) * Math.cos (
-            lat2) * Math.cos (dlon);
-        double brng = Math.atan2 (y, x);
-        brng = to_degrees (brng);
-        return (brng + 360) % 360;      // normalize 0–360°
-    }
-} /* namespace Distance */
+public static Gdk.RGBA rgba (double red, double green, double blue, double alpha) {
+    var color = Gdk.RGBA () {
+        red = (float) red,
+        green = (float) green,
+        blue = (float) blue,
+        alpha = (float) alpha
+    };
+    return color;
+}

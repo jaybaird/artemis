@@ -1,0 +1,48 @@
+/* blueprints/spot_list_view.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $SpotListView : Box {
+  orientation: vertical;
+  hexpand: true;
+  vexpand: true;
+
+  ScrolledWindow scroll_window {
+    hexpand: true;
+    vexpand: true;
+    hscrollbar-policy: never;
+
+    child: ListBox spot_list {
+      selection-mode: single;
+      styles ["boxed-list"]
+    };
+  }
+
+  Adw.StatusPage status_page {
+    visible: false;
+    title: _("No Spots Match");
+    description: _("Adjust your filters to see more activations.");
+    icon-name: "view-list-symbolic";
+    hexpand: true;
+    vexpand: true;
+  }
+}

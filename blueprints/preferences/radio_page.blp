@@ -1,0 +1,177 @@
+/* blueprints/preferences/radio_page.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+Gtk.StringList connection_types_model {
+  strings: ["None", "Serial/USB", "Network"];
+}
+
+Gtk.StringList baud_rates_model {
+  strings: ["1200", "2400", "4800", "9600", "19200", "38400", "57600", "115200"];
+}
+
+Gtk.StringList radio_models_model {
+  strings: ["Dummy Radio (Testing)"];
+}
+
+Gtk.StringList data_bits_model {
+  strings: ["Default", "Seven", "Eight"];
+}
+
+Gtk.StringList stop_bits_model {
+  strings: ["Default", "One", "Two"];
+}
+
+Gtk.StringList handshake_model {
+  strings: ["None", "XON/XOFF", "Hardware"];
+}
+
+template $RadioPreferencesPage : Adw.PreferencesPage {
+  title: _("CAT Control");
+  icon-name: "radio-console-symbolic";
+
+  Adw.PreferencesGroup radio_connection_group {
+    title: _("Connection");
+    description: _("Configure how to connect to your radio via Hamlib");
+
+    Adw.ComboRow row_connection_type {
+      title: _("Connection Type");
+      model: connection_types_model;
+      accessibility {
+        label: _("Connection Type");
+        role-description: _("combo box");
+      }
+    }
+
+    Adw.ComboRow row_radio_model {
+      title: _("Radio Model");
+      subtitle: _("Select your radio model");
+      model: radio_models_model;
+      enable-search: true;
+      accessibility {
+        label: _("Radio Model");
+        role-description: _("combo box");
+      }
+    }
+
+    Adw.PreferencesGroup serial_settings_group {
+      title: _("Serial Settings");
+
+      Adw.ComboRow row_device_path {
+        title: _("Serial Port");
+        subtitle: _("The path to your rig");
+        accessibility {
+          label: _("Serial Port");
+          role-description: _("combo box");
+        }
+      }
+
+      Adw.ComboRow row_baud_rate {
+        title: _("Baud Rate");
+        model: baud_rates_model;
+        accessibility {
+          label: _("Baud Rate");
+          role-description: _("combo box");
+        }
+      }
+
+      Adw.ComboRow row_data_bits {
+        title: _("Data Bits");
+        model: data_bits_model;
+        accessibility {
+          label: _("Data Bits");
+          role-description: _("combo box");
+        }
+      }
+
+      Adw.ComboRow row_stop_bits {
+        title: _("Stop Bits");
+        model: stop_bits_model;
+        accessibility {
+          label: _("Stop Bits");
+          role-description: _("combo box");
+        }
+      }
+
+      Adw.ComboRow row_handshake {
+        title: _("Handshake");
+        model: handshake_model;
+        accessibility {
+          label: _("Handshake");
+          role-description: _("combo box");
+        }
+      }
+    }
+
+    Adw.PreferencesGroup network_settings_group {
+      title: _("Network Settings");
+
+      Adw.EntryRow row_network_host {
+        title: _("Host");
+        text: "localhost";
+        accessibility {
+          label: _("Host");
+          role-description: _("text entry");
+        }
+      }
+
+      Adw.EntryRow row_network_port {
+        title: _("Port");
+        input-purpose: digits;
+        accessibility {
+          label: _("Port");
+          role-description: _("text entry");
+        }
+      }
+    }
+  }
+
+  Adw.PreferencesGroup radio_test_group {
+    title: _("Connection Test");
+
+    Adw.ActionRow test_connection_row {
+      title: _("Test Radio Connection");
+      subtitle: _("Verify that Trailwave can communicate with your radio");
+
+      Box {
+        orientation: horizontal;
+        spacing: 12;
+        valign: center;
+
+        Image connection_status_icon {
+          icon-name: "network-offline-symbolic";
+          pixel-size: 16;
+          accessibility {
+            label: _("Connection Status");
+            role-description: _("status icon");
+          }
+        }
+
+        Label connection_status_label {
+          label: _("Not tested");
+        }
+
+        Button test_connection_button {
+          label: _("Test Connection");
+          styles ["suggested-action"]
+          accessibility {
+            label: _("Test Connection");
+            role-description: _("button");
+          }
+        }
+      }
+    }
+
+    Label hamlib_version_label {
+      margin-top: 5;
+      label: "";
+      styles ["caption"]
+    }
+  }
+}

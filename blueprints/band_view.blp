@@ -39,16 +39,17 @@ template $BandView : Box {
 
       FlowBox band_spot_cards {
         column-spacing: 8;
-        row-spacing: 0;
-        margin-top: 0;
+        row-spacing: 8;
+        margin-top: 8;
         margin-start: 8;
         margin-end: 8;
-        margin-bottom: 88;
+        margin-bottom: 8;
         selection-mode: single;
-        min-children-per-line: 2;
-        max-children-per-line: 2;
+        min-children-per-line: 1;
+        max-children-per-line: 3;
         homogeneous: true;
         valign: start;
+        styles ["park-grid"]
       }
     };
 

@@ -33,8 +33,8 @@ private SpotCard create_spot_card (Spot spot) {
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/band_view.ui")]
 public sealed class BandView : Gtk.Box {
-    public string band_label { get; construct; }
-    public string icon_name { get; construct; }
+    public string band_label { get; set; default = "All"; }
+    public string icon_name { get; set; default = "band-All"; }
     [GtkChild]
     public unowned Gtk.FlowBox band_spot_cards;
 
@@ -44,7 +44,6 @@ public sealed class BandView : Gtk.Box {
     [GtkChild]
     public unowned Adw.StatusPage status_page;
 
-    public unowned Adw.ViewStackPage ? page;
     public signal void count_changed (uint count);
 
     private Gtk.Filter filter;
@@ -53,6 +52,8 @@ public sealed class BandView : Gtk.Box {
     private Gtk.SortListModel sorted;
 
     private bool just_selected = false;
+    private uint sync_selection_idle_id = 0;
+    private Quark pending_selection_hash = BLANK_HASH;
 
     public BandView (string band_label, string icon) {
         Object (
@@ -67,7 +68,9 @@ public sealed class BandView : Gtk.Box {
             var spot = item as Spot;
             if (spot == null)
                 return false;
-            return spot_matches_current_filters (spot, band_label);
+
+            var band_filter = Application.state.current_band_filter ?? "All";
+            return spot_matches_current_filters (spot, band_filter);
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
@@ -92,13 +95,13 @@ public sealed class BandView : Gtk.Box {
         band_spot_cards.bind_model (
             sorted,
             (Gtk.FlowBoxCreateWidgetFunc)create_spot_card
-            );
+        );
         band_spot_cards.child_activated.connect ((child) => {
             var spot_card = child.get_child () as SpotCard;
             if ((spot_card != null) &&
                 !just_selected &&
-                (spot_card.spot.hash == Application.current_spot_hash)) {
-                Application.current_spot_hash = BLANK_HASH;
+                (spot_card.spot.hash == Application.state.current_spot_hash)) {
+                Application.state.current_spot_hash = BLANK_HASH;
                 band_spot_cards.unselect_all ();
             }
             if (just_selected) {
@@ -115,44 +118,23 @@ public sealed class BandView : Gtk.Box {
                 var spot_card = child.get_child () as SpotCard;
                 if (spot_card != null) {
                     var spot_hash = spot_card.spot.hash;
-                    if (spot_hash != Application.current_spot_hash) {
-                        Application.current_spot_hash = spot_hash;
+                    if (spot_hash != Application.state.current_spot_hash) {
+                        Application.state.current_spot_hash = spot_hash;
                         just_selected = true;
                     }
+                    sync_card_selection (spot_hash);
                 }
+            } else {
+                sync_card_selection (BLANK_HASH);
             }
         });
 
         sorted.items_changed.connect ((position, removed, added) => {
-            var items = sorted.get_n_items ();
-
-            band_spot_cards.visible = (items > 0);
-            status_page.visible = (items == 0);
-
-            if (items == 0) {
-                int raw_count = (band_label == "All")
-                    ? (int)Application.spot_repo.store.get_n_items ()
-                    : Application.spot_repo.get_band_count (band_label);
-                if (raw_count > 0)
-                    status_page.description = _("No spots on %s match your current filters").printf (band_label);
-                else
-                    status_page.description = _("There are no spots currently on %s").printf (band_label);
-            }
-
-            if (page != null)
-                page.badge_number = sorted.get_n_items ();
-            count_changed (items);
+            update_visible_state ();
+            count_changed (sorted.get_n_items ());
         });
 
-        var items = sorted.get_n_items ();
-        band_spot_cards.visible = (items > 0);
-        status_page.visible = (items == 0);
-        status_page.title = band_label;
-        status_page.description = _("There are no spots currently on %s").printf (band_label);
-        status_page.icon_name = icon_name;
-
-        if (page != null)
-            page.badge_number = sorted.get_n_items ();
+        update_visible_state ();
 
         settings.changed["hide-qrt"].connect (bounce_filter);
         settings.changed["hide-hunted"].connect (bounce_filter);
@@ -162,33 +144,60 @@ public sealed class BandView : Gtk.Box {
     }
 
     public void set_current_spot (Quark spot_hash) {
-        Idle.add (() => {
-            if (spot_hash == BLANK_HASH) {
+        pending_selection_hash = spot_hash;
+        if (sync_selection_idle_id != 0)
+            return;
+
+        sync_selection_idle_id = Idle.add (() => {
+            sync_selection_idle_id = 0;
+            var current_hash = pending_selection_hash;
+
+            if (current_hash == BLANK_HASH) {
+                sync_card_selection (BLANK_HASH);
                 band_spot_cards.unselect_all ();
                 return Source.REMOVE;
             }
 
-            for (var child = band_spot_cards.get_first_child () ; child != null
-                 ;
-                 child = child.get_next_sibling ()) {
-                var fbchild = child as Gtk.FlowBoxChild;
-                if (fbchild == null)
-                    continue;
-
-                var spot_card = fbchild.get_child () as SpotCard;
-                if ((spot_card != null) && (spot_card.spot.hash == spot_hash)) {
-                    band_spot_cards.select_child (fbchild);
-                    Idle.add (() => {
-                        scroll_to_child (fbchild);
-                        return Source.REMOVE;
-                    });
+            var selected_child = sync_card_selection (current_hash);
+            if (selected_child != null) {
+                band_spot_cards.select_child (selected_child);
+                Idle.add (() => {
+                    scroll_to_child (selected_child);
                     return Source.REMOVE;
-                }
+                });
+                return Source.REMOVE;
             }
 
             band_spot_cards.unselect_all ();
             return Source.REMOVE;
         });
+    }
+
+    private Gtk.FlowBoxChild? sync_card_selection (Quark current_hash) {
+        Gtk.FlowBoxChild? selected_child = null;
+
+        for (var child = band_spot_cards.get_first_child ();
+             child != null;
+             child = child.get_next_sibling ()) {
+            var flow_child = child as Gtk.FlowBoxChild;
+            if (flow_child == null)
+                continue;
+
+            var spot_card = flow_child.get_child () as SpotCard;
+            if (spot_card == null)
+                continue;
+
+            var is_selected = (
+                current_hash != BLANK_HASH &&
+                spot_card.spot.hash == current_hash
+            );
+            spot_card.selected = is_selected;
+
+            if (is_selected)
+                selected_child = flow_child;
+        }
+
+        return selected_child;
     }
 
     private void scroll_to_child (Gtk.Widget child) {
@@ -219,11 +228,37 @@ public sealed class BandView : Gtk.Box {
         }
     }
 
-    public uint get_n_items () {
-        return sorted.get_n_items ();
+    public void set_band_filter (string band) {
+        band_label = band;
+        icon_name = @"band-$band";
+        bounce_filter ();
+        update_visible_state ();
     }
 
     public void bounce_filter (string? key = null) {
         filter.changed (Gtk.FilterChange.DIFFERENT);
+    }
+
+    private void update_visible_state () {
+        var items = sorted.get_n_items ();
+        var band = Application.state.current_band_filter ?? "All";
+        band_label = band;
+        icon_name = @"band-$band";
+
+        band_spot_cards.visible = (items > 0);
+        status_page.visible = (items == 0);
+        status_page.title = band_label;
+        status_page.icon_name = icon_name;
+
+        if (items > 0)
+            return;
+
+        int raw_count = (band_label == "All")
+            ? (int)Application.spot_repo.store.get_n_items ()
+            : Application.spot_repo.get_band_count (band_label);
+        if (raw_count > 0)
+            status_page.description = _("No spots on %s match your current filters").printf (band_label);
+        else
+            status_page.description = _("There are no spots currently on %s").printf (band_label);
     }
 } /* class BandView */

@@ -4,3 +4,38 @@ option(
   value: '',
   description: 'OpenWeather API key compiled into release builds'
 )
+
+option(
+  'mapbox_access_token',
+  type: 'string',
+  value: '',
+  description: 'Mapbox access token compiled into release builds'
+)
+
+option(
+  'mapbox_style_owner',
+  type: 'string',
+  value: 'k0vcz',
+  description: 'Mapbox style owner username for the Artemis basemap'
+)
+
+option(
+  'mapbox_light_style_id',
+  type: 'string',
+  value: 'cmpakyngg009601shgmiua0pt',
+  description: 'Mapbox light style ID for the Artemis basemap'
+)
+
+option(
+  'mapbox_dark_style_id',
+  type: 'string',
+  value: 'cmpam8fy8004o01sq84qu56te',
+  description: 'Mapbox dark style ID for the Artemis basemap'
+)
+
+option(
+  'valgrind_friendly',
+  type: 'boolean',
+  value: false,
+  description: 'Force low-optimization, frame-pointer-friendly builds for Valgrind and leak debugging'
+)

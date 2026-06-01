@@ -1,0 +1,111 @@
+/* blueprints/spot_list_row.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+
+template $SpotListRow : Box {
+  orientation: horizontal;
+  spacing: 12;
+  margin-top: 6;
+  margin-bottom: 6;
+  margin-start: 8;
+  margin-end: 12;
+
+  $BandStrip band_marker {
+    valign: center;
+    margin-end: 4;
+    styles ["band-strip-list"]
+  }
+
+  Box {
+    orientation: vertical;
+    spacing: 2;
+    hexpand: true;
+    valign: center;
+
+    Label callsign_label {
+      hexpand: true;
+      xalign: 0.0;
+      ellipsize: end;
+      styles ["heading"]
+    }
+
+    Label park_label {
+      hexpand: true;
+      xalign: 0.0;
+      ellipsize: end;
+      styles ["dim-label"]
+    }
+  }
+
+  Box {
+    orientation: horizontal;
+    spacing: 12;
+    halign: end;
+    valign: center;
+    hexpand: false;
+
+    Label location_label {
+      xalign: 1.0;
+      justify: right;
+      ellipsize: end;
+      width-chars: 8;
+      max-width-chars: 12;
+      styles ["dim-label"]
+    }
+
+    Label frequency_label {
+      xalign: 1.0;
+      styles ["numeric"]
+    }
+
+    Label mode_label {
+      xalign: 0.5;
+      styles ["pill", "caption"]
+    }
+
+    Box badge_box {
+      orientation: horizontal;
+      spacing: 4;
+      valign: center;
+    }
+
+    Label time_label {
+      xalign: 1.0;
+      styles ["dim-label"]
+    }
+
+    Button tune_button {
+      icon-name: "encoder-knob-symbolic";
+      tooltip-text: _("Tune your radio to this frequency");
+      valign: center;
+      visible: false;
+      styles ["flat", "spot-list-icon-button"]
+    }
+
+    Button spot_button {
+      icon-name: "bullseye-symbolic";
+      tooltip-text: _("Add your spot for this park");
+      valign: center;
+      visible: false;
+      styles ["suggested-action", "spot-list-icon-button"]
+    }
+  }
+}

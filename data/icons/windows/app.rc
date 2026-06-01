@@ -20,11 +20,11 @@ BEGIN
     BLOCK "040904b0"
     BEGIN
       VALUE "CompanyName", "K0VCZ\0"
-      VALUE "FileDescription", "Artemis\0"
+      VALUE "FileDescription", "Trailwave\0"
       VALUE "FileVersion", "2.0.1\0"
-      VALUE "InternalName", "Artemis\0"
+      VALUE "InternalName", "Trailwave\0"
       VALUE "OriginalFilename", "com.k0vcz.Artemis.exe\0"
-      VALUE "ProductName", "Artemis\0"
+      VALUE "ProductName", "Trailwave\0"
       VALUE "ProductVersion", "2.0.1\0"
     END
   END

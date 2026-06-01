@@ -34,7 +34,7 @@ public struct RadioModel {
     public unowned string display_name;
 }
 
-[CCode (cname = "RadioControl", cheader_filename="../src/radio_control.h")]
+[CCode (cname = "RadioControl", cheader_filename = "radio/radio_control.h")]
 public class RadioControl : GLib.Object {
     // Constructor
     public RadioControl ();
@@ -83,25 +83,53 @@ public class RadioControl : GLib.Object {
     public signal void radio_disconnected ();
 
     [CCode (cname = "radio-status")]
-    public signal void radio_status (double frequency, RadioMode mode);
+    public signal void radio_status (double frequency, RadioMode mode, bool tx_active);
 
     [CCode (cname = "radio-error")]
     public signal void radio_error (GLib.Error error);
 
     // Helpers
     public static RadioMode mode_for_spot (Spot spot) {
-        var text_mode = spot.mode.down ();
-        if (text_mode == "ft8" || text_mode == "ft4")
+        var text_mode = spot.mode.strip ().ascii_up ();
+        if (text_mode == "LSB")
+            return RadioMode.LSB;
+        if (text_mode == "USB")
+            return RadioMode.USB;
+        if (text_mode == "SSB")
+            return (spot.frequency_khz >= 10000) ? RadioMode.USB : RadioMode.LSB;
+        if (is_digital_spot_mode (text_mode))
             return RadioMode.DIGITAL_U;
-        if (text_mode == "ssb")
-            return (spot.frequency_khz >= 14000) ? RadioMode.USB : RadioMode.LSB;
-        if (text_mode == "fm")
+        if (text_mode == "FM")
             return RadioMode.FM;
-        if (text_mode == "am")
+        if (text_mode == "AM")
             return RadioMode.AM;
-        if (text_mode == "cw")
+        if (text_mode == "CW")
             return RadioMode.CW;
         return RadioMode.UNKNOWN;
+    }
+
+    private static bool is_digital_spot_mode (string text_mode) {
+        switch (text_mode) {
+            case "USB-D":
+            case "LSB-D":
+            case "DIGI":
+            case "DIGITAL":
+            case "DATA":
+            case "FT8":
+            case "FT4":
+            case "JS8":
+            case "JS8CALL":
+            case "JT65":
+            case "JT9":
+            case "RTTY":
+            case "PSK":
+            case "PSK31":
+            case "MFSK":
+            case "OLIVIA":
+                return true;
+            default:
+                return false;
+        }
     }
 
     public void tune_to_spot (Spot spot) {
@@ -130,7 +158,7 @@ public class RadioControl : GLib.Object {
         }).disown ();
     }
 
-    public static string mode_string (RadioMode mode) {
+    public static unowned string mode_string (RadioMode mode) {
         switch (mode) {
             case AM: return "AM";
             case CW:

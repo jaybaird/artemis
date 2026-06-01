@@ -19,6 +19,24 @@
         <description>Default spot message to use when posting.</description>
         </key>
 
+        <key name="first-run-setup-complete" type="b">
+        <default>false</default>
+        <summary>First-run setup complete</summary>
+        <description>Whether the first-time setup dialog has already been completed or skipped.</description>
+        </key>
+
+        <key name="spot-alerts-enabled" type="b">
+        <default>false</default>
+        <summary>Enable spot alerts</summary>
+        <description>Show notifications when matching POTA spots appear.</description>
+        </key>
+
+        <key name="spot-alert-keywords" type="as">
+        <default>[]</default>
+        <summary>Spot alert keywords</summary>
+        <description>Keyword rules used to match POTA spots for alerts.</description>
+        </key>
+
         <key name="update-interval" type="i">
         <default>60</default>
         <summary>Update interval</summary>
@@ -71,6 +89,12 @@
         <description>API key for QRZ.com lookups.</description>
         </key>
 
+        <key name="show-logbook" type="b">
+        <default>false</default>
+        <summary>Show logbook UI</summary>
+        <description>Show the experimental Logbook window and related shortcuts.</description>
+        </key>
+
         <!-- Radio Settings -->
         <key name="radio-connection-type" type="s">
         <default>"none"</default>
@@ -106,6 +130,31 @@
         <summary>Network port</summary>
         <description>Port number for network connection.</description>
         <range min="1" max="65535"/>
+        </key>
+
+        <key name="enable-wsjtx-integration" type="b">
+        <default>false</default>
+        <summary>Enable WSJT-X integration</summary>
+        <description>Listen for WSJT-X UDP packets for logged contacts and heard spots.</description>
+        </key>
+
+        <key name="wsjtx-listen-ip" type="s">
+        <default>"127.0.0.1"</default>
+        <summary>WSJT-X listen IP</summary>
+        <description>Local unicast or multicast IP address to listen on for WSJT-X UDP packets.</description>
+        </key>
+
+        <key name="wsjtx-listen-port" type="i">
+        <default>2237</default>
+        <summary>WSJT-X listen port</summary>
+        <description>UDP port used to receive WSJT-X packets.</description>
+        <range min="1" max="65535"/>
+        </key>
+
+        <key name="forward-wsjtx-qsos-to-qrz" type="b">
+        <default>false</default>
+        <summary>Forward WSJT-X QSOs to QRZ</summary>
+        <description>Upload accepted WSJT-X logged contacts to QRZ when an API key is configured.</description>
         </key>
 
         <key name="radio-baud-rate" type="i">
@@ -162,6 +211,44 @@
         <description>Use metric units for distance calculations and elsewhere in the app</description>
         </key>
 
+        <key name="map-grayline-visible" type="b">
+        <default>true</default>
+        <summary>Show grayline overlay</summary>
+        <description>Show the day and night terminator on the map.</description>
+        </key>
+
+        <key name="map-astronomy-visible" type="b">
+        <default>true</default>
+        <summary>Show sun and moon overlay</summary>
+        <description>Show sun and moon positions on the map.</description>
+        </key>
+
+        <key name="map-signal-reports-visible" type="b">
+        <default>false</default>
+        <summary>Show signal report overlay</summary>
+        <description>Show live PSKReporter signal reports on the map.</description>
+        </key>
+
+        <key name="signal-report-max-age-seconds" type="i">
+        <default>1800</default>
+        <summary>Signal report maximum age</summary>
+        <description>How long signal reports remain visible on the map heatmap, in seconds.</description>
+        <range min="300" max="7200"/>
+        </key>
+
+        <key name="signal-report-heatmap-radius" type="i">
+        <default>28</default>
+        <summary>Signal report heatmap spread</summary>
+        <description>Pixel radius used when drawing signal report heatmap points.</description>
+        <range min="12" max="64"/>
+        </key>
+
+        <key name="signal-report-preload-history" type="b">
+        <default>true</default>
+        <summary>Preload signal report history</summary>
+        <description>Load recent PSKReporter signal reports before starting the live MQTT stream.</description>
+        </key>
+
         <key name="use-metric" type="b">
         <default>false</default>
         <summary>Metric Units</summary>
@@ -172,6 +259,48 @@
         <default>false</default>
         <summary>Enable automatic logging</summary>
         <description>Automatically log QSOs when spotting.</description>
+        </key>
+
+        <key name="enable-local-adif-log" type="b">
+        <default>true</default>
+        <summary>Enable local ADIF log</summary>
+        <description>Enable local ADIF log.</description>
+        </key>
+
+        <key name="local-adif-log-path" type="s">
+        <default>""</default>
+        <summary>Local ADIF log path</summary>
+        <description>Path for the local ADIF log</description>
+        </key>
+
+        <key name="window-width" type="i">
+        <default>1280</default>
+        <summary>Window width</summary>
+        <description>The last saved width of the main window.</description>
+        </key>
+
+        <key name="window-height" type="i">
+        <default>720</default>
+        <summary>Window height</summary>
+        <description>The last saved height of the main window.</description>
+        </key>
+
+        <key name="window-maximized" type="b">
+        <default>false</default>
+        <summary>Window maximized</summary>
+        <description>Whether the main window was maximized.</description>
+        </key>
+
+        <key name="main-pane-position" type="i">
+        <default>220</default>
+        <summary>Main pane position</summary>
+        <description>The sidebar split position in the main window.</description>
+        </key>
+
+        <key name="content-pane-position" type="i">
+        <default>920</default>
+        <summary>Content pane position</summary>
+        <description>The inspector split position in the main window.</description>
         </key>
 	</schema>
 </schemalist>

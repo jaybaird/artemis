@@ -1,0 +1,136 @@
+{
+  "version": 8,
+  "name": "Trailwave Raster Dark",
+  "sources": {
+    "mapbox-streets": {
+      "type": "vector",
+      "url": "mapbox://mapbox.mapbox-streets-v8"
+    }
+  },
+  "glyphs": "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
+  "sprite": "mapbox://sprites/mapbox/dark-v11",
+  "layers": [
+    {
+      "id": "background",
+      "type": "background",
+      "paint": {
+        "background-color": "#11161a"
+      }
+    },
+    {
+      "id": "water",
+      "type": "fill",
+      "source": "mapbox-streets",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#1d3b4a"
+      }
+    },
+    {
+      "id": "parks-national",
+      "type": "fill",
+      "source": "mapbox-streets",
+      "source-layer": "landuse_overlay",
+      "filter": ["==", ["get", "class"], "national_park"],
+      "paint": {
+        "fill-color": "#244b2f",
+        "fill-opacity": 0.85
+      }
+    },
+    {
+      "id": "parks-general",
+      "type": "fill",
+      "source": "mapbox-streets",
+      "source-layer": "landuse_overlay",
+      "filter": ["==", ["get", "class"], "park"],
+      "paint": {
+        "fill-color": "#1d3524",
+        "fill-opacity": 0.72
+      }
+    },
+    {
+      "id": "roads-minor",
+      "type": "line",
+      "source": "mapbox-streets",
+      "source-layer": "road",
+      "filter": ["in", ["get", "class"], ["literal", ["street", "secondary", "tertiary"]]],
+      "paint": {
+        "line-color": "#5b5144",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5, 0.4,
+          10, 1.2,
+          14, 2.6
+        ]
+      }
+    },
+    {
+      "id": "roads-major",
+      "type": "line",
+      "source": "mapbox-streets",
+      "source-layer": "road",
+      "filter": ["in", ["get", "class"], ["literal", ["motorway", "trunk", "primary"]]],
+      "paint": {
+        "line-color": "#b88746",
+        "line-width": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          5, 0.8,
+          10, 1.8,
+          14, 3.6
+        ]
+      }
+    },
+    {
+      "id": "state-labels",
+      "type": "symbol",
+      "source": "mapbox-streets",
+      "source-layer": "place_label",
+      "filter": ["==", ["get", "class"], "state"],
+      "layout": {
+        "text-field": ["coalesce", ["get", "abbr"], ["get", "name"]],
+        "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+        "text-size": [
+          "interpolate",
+          ["linear"],
+          ["zoom"],
+          3, 10,
+          6, 14
+        ]
+      },
+      "paint": {
+        "text-color": "#b9c6b3",
+        "text-halo-color": "#11161a",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "park-pois",
+      "type": "symbol",
+      "source": "mapbox-streets",
+      "source-layer": "poi_label",
+      "filter": [
+        "in",
+        ["get", "maki"],
+        ["literal", ["campsite", "attraction", "picnic-site", "park"]]
+      ],
+      "layout": {
+        "icon-image": ["get", "maki"],
+        "icon-size": 0.9,
+        "text-field": ["get", "name"],
+        "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+        "text-size": 11,
+        "text-offset": [0, 1.1],
+        "text-anchor": "top"
+      },
+      "paint": {
+        "text-color": "#d6e6ce",
+        "text-halo-color": "#11161a",
+        "text-halo-width": 1
+      }
+    }
+  ]
+}

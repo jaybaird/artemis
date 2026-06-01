@@ -1,0 +1,96 @@
+/* blueprints/help_window.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $HelpWindow : Adw.Window {
+  title: _("Trailwave Help");
+  default-width: 1080;
+  default-height: 760;
+
+  Adw.OverlaySplitView {
+    sidebar-position: start;
+
+    [sidebar]
+    Adw.ToolbarView {
+      vexpand: true;
+      styles ["sidebar"]
+
+      [top]
+      Adw.HeaderBar {
+        show-end-title-buttons: false;
+
+        title-widget: Adw.WindowTitle {
+          title: _("Trailwave Help");
+        };
+      }
+
+      content: ScrolledWindow {
+        hscrollbar-policy: never;
+        min-content-width: 320;
+        margin-start: 12;
+        margin-end: 12;
+        margin-top: 12;
+        margin-bottom: 12;
+        vexpand: true;
+
+        child: ListBox article_list {
+          selection-mode: browse;
+        };
+      };
+    }
+
+    [content]
+    Adw.ToolbarView {
+      [top]
+      Adw.HeaderBar {
+        show-start-title-buttons: false;
+
+        title-widget: Adw.Bin {};
+
+        [end]
+        SearchEntry search_entry {
+          width-request: 320;
+          placeholder-text: _("Search Help");
+        }
+      }
+
+      content: ScrolledWindow {
+        hscrollbar-policy: never;
+        vexpand: true;
+
+        child: Adw.Clamp {
+          maximum-size: 720;
+          tightening-threshold: 520;
+
+          Box article_body {
+            orientation: vertical;
+            spacing: 16;
+            margin-top: 24;
+            margin-bottom: 24;
+            margin-start: 24;
+            margin-end: 24;
+          }
+        };
+      };
+    }
+  }
+}

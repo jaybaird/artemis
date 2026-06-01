@@ -1,0 +1,96 @@
+/* blueprints/alerts_window.blp
+ *
+ * Copyright 2026 Jay Baird (K0VCZ)
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $AlertsWindow : Adw.Window {
+  title: _("Alerts");
+  default-width: 520;
+  default-height: 460;
+  width-request: 520;
+  height-request: 600;
+
+  Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      styles ["flat"]
+    }
+
+    Adw.PreferencesPage {
+      vexpand: true;
+      margin-bottom: 12;
+      margin-start: 12;
+      margin-end: 12;
+
+      Adw.PreferencesGroup {
+        margin-bottom: 12;
+        title: _("Spot Alerts");
+        description: _("Keywords match callsign, park reference or name, location, grid, band, mode, activator comments, or spotter comments");
+
+        Adw.SwitchRow enabled_row {
+          title: _("Enable Spot Alerts");
+          subtitle: _("Show desktop notifications when matching spots appear");
+          accessibility {
+            label: _("Enable Spot Alerts");
+            role-description: _("switch");
+          }
+        }
+      }
+      
+      Adw.PreferencesGroup keywords_group {
+        title: _("Keywords");
+
+        Adw.ActionRow {
+          title: _("Add Keyword");
+          activatable-widget: add_keyword_button;
+
+          [suffix]
+          Button add_keyword_button {
+            icon-name: "list-add-symbolic";
+            tooltip-text: _("Add Keyword");
+            valign: center;
+            styles ["flat"]
+          }
+        }
+      }
+    }
+
+    Box {
+      hexpand: true;
+      halign: end;
+      orientation: horizontal;
+      spacing: 6;
+      margin-bottom: 12;
+      margin-end: 12;
+
+      Button cancel_button {
+        label: _("Cancel");
+        styles ["flat"]
+      }
+
+      Button save_button {
+        label: _("Save & Close");
+        styles ["suggested-action"]
+      }
+    }
+  }
+}

@@ -4,11 +4,13 @@
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
 
-  <name>Artemis</name>
-  <summary>Hunt Parks on the Air</summary>
+  <name>Trailwave</name>
+  <summary>Parks on the Air hunting companion</summary>
   <description>
-    <p>Artemis helps amateur radio operators hunt Parks on the Air activations with a fast desktop workflow for filtering spots, spotting, and tuning radios with one-click QSY.</p>
-    <p>Use live spot filtering by band, mode, and program, view parks on an interactive map, and coordinate your station with integrated CAT control through Hamlib.</p>
+    <p>Trailwave is a desktop companion for Parks on the Air hunters. Follow live POTA spots in card, list, or map views, filter activity by band, mode, program, and search text, and open a focused park detail view with operating context before you call.</p>
+    <p>Use the interactive map to see current park activity, grayline and sun or moon overlays, and recent signal reports that show where your transmitted signal is being heard. Weather, distance, bearing, coordinates, spot history, and hunted/new-park badges help you decide what is worth chasing next.</p>
+    <p>Trailwave can connect to supported radios through Hamlib for one-click tuning and mode control, listen to WSJT-X activity so decoded activators stand out, and help you add or spot activations without leaving the app.</p>
+    <p>Trailwave can save worked POTA contacts for hunted-park tracking, import POTA.app history, write an ADIF backup log, and upload completed contacts to QRZ when configured.</p>
   </description>
 
   <developer id="tld.vendor">
@@ -16,7 +18,7 @@
   </developer>
 
   <!-- Required: Should be a link to the upstream homepage for the component -->
-  <url type="homepage">https://github.com/jaybaird/artemis-vala</url>
+  <url type="homepage">https://artemispota.app</url>
   <!-- Recommended: It is highly recommended for open-source projects to display the source code repository -->
   <url type="vcs-browser">https://github.com/jaybaird/artemis-vala</url>
   <!-- Should point to the software's bug tracking system, for users to report new bugs -->
@@ -24,13 +26,13 @@
   <!-- Should link a FAQ page for this software, to answer some of the most-asked questions in detail -->
   <!-- URLs of this type should point to a webpage where users can submit or modify translations of the upstream project -->
   <url type="translate">https://github.com/jaybaird/artemis-vala</url>
-  <url type="faq">https://github.com/jaybaird/artemis-vala#readme</url>
+  <url type="faq">https://artemispota.app/support</url>
   <!-- Should provide a web link to an online user's reference, a software manual or help page -->
-  <url type="help">https://github.com/jaybaird/artemis-vala#readme</url>
+  <url type="help">https://artemispota.app/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to donate to the described software project -->
-  <url type="donation">https://github.com/jaybaird/artemis-vala</url>
+  <url type="donation">https://buymeacoffee.com/k0vcz</url>
   <!-- This could for example be an HTTPS URL to an online form or a page describing how to contact the developer -->
-  <url type="contact">https://github.com/jaybaird/artemis-vala/issues</url>
+  <url type="contact">https://artemispota.app/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to contribute to the described software project -->
   <url type="contribute">https://github.com/jaybaird/artemis-vala/pulls</url>
 
@@ -62,7 +64,6 @@
     <content_attribute id="social-location">none</content_attribute>
   </content_rating>
 
-  <!-- Applications should set a brand color in both light and dark variants like so -->
   <branding>
     <color type="primary" scheme_preference="light">#1f5ab4</color>
     <color type="primary" scheme_preference="dark">#545454</color>
@@ -75,7 +76,7 @@
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/cards-dark.png</image>
-      <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions.</caption>
+      <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-light.png</image>
@@ -83,7 +84,7 @@
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-dark.png</image>
-      <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting.</caption>
+      <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-light.png</image>
@@ -96,6 +97,21 @@
   </screenshots>
 
   <releases>
+    <release version="2.1" date="2026-05-27">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1</url>
+      <description>
+        <p>This release brings better hunted-park tracking, map improvements, and many bugfixes and feature tweaks to make operating a breeze.</p>
+        <ul>
+          <li>Artemis has been renamed to Trailwave.</li>
+          <li>New and improved map visualization: grayline visualization, sun/moon data, and signal reports so you can see where your transmitted signal is being heard.</li>
+          <li>Improved POTA contact handling with QRZ forwarding, ADIF backup logging, and hunted-park tracking.</li>
+          <li>Tuning a spot sends the spot frequency and attempts to set a matching radio mode when possible.</li>
+          <li>Improved internationalization support with locale-aware date and time formatting</li>
+          <li>Refined preferences, help, and app metadata.</li>
+          <li>Improved internal map, logging, cache, and radio-control organization for better reliability and future maintenance.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.0.1" date="2026-05-15">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.0.1</url>
       <description>
@@ -113,8 +129,8 @@
         <ul>
           <li>Moved band, mode, and program filters into the sidebar, with mode and program choices now based on the currently available spots.</li>
           <li>Added spot weather, and badges for hunted/new activity</li>
-          <li>Added list-view operation with direct tune and re-spot buttons on each row.</li>
-          <li>Added FT4 support in Add Spot and Re-Spot flows, and fixed a bug preserving fractional kHz frequencies.</li>
+          <li>Added list-view operation with direct tune and spot buttons on each row.</li>
+          <li>Added FT4 support in Add Spot and Spot flows, and fixed a bug preserving fractional kHz frequencies.</li>
           <li>Improved map behavior so user panning is respected during refreshes and repeated spot selection updates.</li>
           <li>Improved POTA, QRZ, weather, and radio-control reliability, including safer response parsing, better refresh coalescing, and more robust Hamlib integration.</li>
         </ul>
@@ -149,7 +165,7 @@
          cause high CPU usage after disconnecting a radio has been fixed. Full changelog
          below:</p>
         <ul>
-          <li>Fixed a crash and multiple SQL errors when submitting/re-spotting a park.</li>
+          <li>Fixed a crash and multiple SQL errors when submitting/spotting a park.</li>
           <li>Added null checks to lat/long parsing and grid handling.</li>
           <li>Fixed radio status watcher loop behavior.</li>
           <li>Fixed multiple memory leaks.</li>
@@ -166,7 +182,7 @@
     <release version="1.0.0" date="2026-02-14">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v1.0.0</url>
       <description translate="no">
-        <p>Initial public release of Artemis.</p>
+        <p>Initial public release of Trailwave.</p>
         <ul>
           <li>Live POTA spot filtering by band, mode, and program</li>
           <li>Integrated map view for park and spot visualization</li>

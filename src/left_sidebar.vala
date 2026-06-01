@@ -43,6 +43,12 @@ public sealed class BandButton : Gtk.Box {
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/left_sidebar.ui")]
 public sealed class LeftSidebar : Gtk.Box {
     [GtkChild]
+    private unowned Gtk.Button add_spot_button;
+
+    [GtkChild]
+    private unowned Gtk.ToggleButton sidebar_toggle;
+
+    [GtkChild]
     private unowned Gtk.Box band_buttons_box;
 
     [GtkChild]
@@ -58,12 +64,22 @@ public sealed class LeftSidebar : Gtk.Box {
     private unowned Gtk.Label radio_vfo;
 
     [GtkChild]
+    private unowned Gtk.Image tx_light;
+
+    [GtkChild]
+    private unowned Gtk.Image rx_light;
+
+    [GtkChild]
+    private unowned Gtk.Image data_light;
+
+    [GtkChild]
     private unowned Gtk.Label radio_mode;
 
     private Gtk.ToggleButton? band_group_leader = null;
     private HashMap<string, Gtk.ToggleButton> band_buttons;
     private ulong mode_handler = 0;
     private ulong program_handler = 0;
+    private ulong data_status_handler = 0;
     private bool syncing_mode_model = false;
     private bool syncing_program_model = false;
 
@@ -78,6 +94,8 @@ public sealed class LeftSidebar : Gtk.Box {
     public signal void mode_changed (string? mode);
     public signal void program_changed (string? program);
     public signal void power_clicked ();
+    public signal void add_requested ();
+    public signal void sidebar_visibility_changed (bool visible);
 
     public LeftSidebar () {
         Object ();
@@ -86,6 +104,10 @@ public sealed class LeftSidebar : Gtk.Box {
     construct {
         band_buttons = new HashMap<string, Gtk.ToggleButton> ();
 
+        add_spot_button.clicked.connect (() => add_requested ());
+        sidebar_toggle.toggled.connect (() => {
+            sidebar_visibility_changed (sidebar_toggle.active);
+        });
         radio_power_button.clicked.connect (() => power_clicked ());
 
         mode_handler = mode_select.notify["selected"].connect (() => {
@@ -111,6 +133,11 @@ public sealed class LeftSidebar : Gtk.Box {
                 return;
             program_changed (idx > 0 ? model.get_string (idx) : null);
         });
+
+        data_status_handler = Application.wsjtx_session.status_changed.connect (() => {
+            set_data_active (Application.wsjtx_session.connected);
+        });
+        set_data_active (Application.wsjtx_session.connected);
     }
 
     public void update_mode_model (Gtk.StringList model, string? current_filter) {
@@ -199,6 +226,30 @@ public sealed class LeftSidebar : Gtk.Box {
         radio_mode.label = mode;
     }
 
+    public void set_tx_active (bool active) {
+        if (active)
+            tx_light.add_css_class ("active");
+        else
+            tx_light.remove_css_class ("active");
+    }
+
+    public void set_rx_active (bool active) {
+        if (active)
+            rx_light.add_css_class ("active");
+        else
+            rx_light.remove_css_class ("active");
+    }
+
+    public void set_data_active (bool active) {
+        if (active) {
+            data_light.add_css_class ("pulse-green");
+            data_light.tooltip_text = _("WSJT-X connected");
+        } else {
+            data_light.remove_css_class ("pulse-green");
+            data_light.tooltip_text = "";
+        }
+    }
+
     public void set_power_button_active (bool active) {
         radio_power_button.active = active;
     }
@@ -213,6 +264,11 @@ public sealed class LeftSidebar : Gtk.Box {
 
     public void set_power_button_text (string text) {
         radio_power_button.label = text;
+    }
+
+    public void set_sidebar_visible_state (bool visible) {
+        sidebar_toggle.active = visible;
+        sidebar_toggle.tooltip_text = visible ? _("Hide Sidebar") : _("Show Sidebar");
     }
 
     public void set_vfo_animated (double freq_khz) {
@@ -267,15 +323,18 @@ public sealed class LeftSidebar : Gtk.Box {
     public void reset_vfo () {
         stop_vfo_animation ();
         has_displayed_radio_vfo = false;
-        radio_vfo.label = "";
+        radio_vfo.label = "––.–––.––";
+        set_tx_active (false);
+        set_rx_active (false);
     }
 
     private Gtk.ToggleButton make_band_button (string band, int count, bool active) {
-        var btn = new Gtk.ToggleButton ();
-        btn.child = new BandButton (band, count);
-        btn.active = active;
+        var btn = new Gtk.ToggleButton () {
+            child = new BandButton (band, count),
+            active = active,
+            hexpand = true
+        };
         btn.add_css_class ("flat");
-        btn.hexpand = true;
 
         btn.toggled.connect (() => {
             if (btn.active)

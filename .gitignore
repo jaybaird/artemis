@@ -6,5 +6,6 @@ flatpak-build/
 .cache/
 dist/
 po/*.pot
+data/gschemas.compiled
 subprojects/blueprint-compiler/
 *.ui

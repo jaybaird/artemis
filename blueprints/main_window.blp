@@ -21,183 +21,274 @@
 using Gtk 4.0;
 using Adw 1;
 
-template $AppWindow : Window {
-  title: _("Artemis");
+template $AppWindow : Adw.ApplicationWindow {
+  title: _("Trailwave");
   default-width: 1280;
   default-height: 720;
+  width-request: 360;
+  height-request: 480;
 
-  [titlebar]
-  Adw.HeaderBar {
-    title-widget: Adw.ViewSwitcher {
-      halign: center;
-      stack: views;
-      policy: wide;
-    };
-
-    Button add_spot {
-      icon-name: "list-add-symbolic";
-      tooltip-text: _("Add Spot");
-      clicked => $on_add_button_clicked();
-      accessibility {
-        label: _("Add Spot");
-        role-description: _("button");
-      }
+  Adw.OverlaySplitView sidebar_split {
+    collapsed: false;
+    show-sidebar: true;
+    enable-show-gesture: true;
+    enable-hide-gesture: true;
+    min-sidebar-width: 220;
+    max-sidebar-width: 260;
+    sidebar-width-fraction: 0.2;
+    sidebar-width-unit: sp;
+    sidebar-position: start;
+    
+    [sidebar]
+    $LeftSidebar left_sidebar {
+      width-request: 220;
+      hexpand: false;
     }
 
-    ToggleButton refresh_toggle {
-      icon-name: "media-playback-pause-symbolic";
-      tooltip-text: _("Pause");
-      accessibility {
-        label: _("Pause Updates");
-        role-description: _("toggle button");
-      }
-    }
+    [content]
+    Adw.OverlaySplitView inspector_split {
+      enable-show-gesture: true;
+      enable-hide-gesture: true;
+      min-sidebar-width: 320;
+      max-sidebar-width: 400;
+      sidebar-position: end;
 
-    [end]
-    Box {
-      orientation: horizontal;
-      spacing: 4;
+      [content] 
+      Adw.BreakpointBin {
+        width-request: 360;
+        height-request: 480;
 
-      SearchEntry search_entry {
-        width-request: 250;
-        input-hints: no_spellcheck;
-        placeholder-text: _("Search for Park or Callsign");
-        accessibility {
-          label: _("Search for Park or Callsign");
-          role-description: _("search entry");
+        Adw.Breakpoint {
+          condition ("max-width: 550sp")
+          setters {
+            switcher_bar.reveal: true;
+            main_header.title-widget: null;
+          }
         }
-      }
 
-      ToggleButton inspector_toggle {
-        icon-name: "dock-right-symbolic";
-        tooltip-text: _("Show Inspector");
-        active: true;
-        accessibility {
-          label: _("Show Inspector");
-          role-description: _("toggle button");
-        }
-      }
+        child: Adw.ToolbarView {
+          extend-content-to-top-edge: true;
 
-      MenuButton button_menu {
-        menu-model: menu_app;
-        icon-name: "open-menu-symbolic";
-        accessibility {
-          label: _("Application Menu");
-          role-description: _("menu button");
-        }
-      }
-    }
-  }
+          [top]
+          Adw.HeaderBar main_header {
+            show-start-title-buttons: true;
+            show-end-title-buttons: true;
 
-  Box {
-    orientation: vertical;
+            title-widget: Adw.ViewSwitcher {
+              halign: center;
+              stack: views;
+              policy: wide;
+            };
 
-    Paned {
-      orientation: horizontal;
-      hexpand: true;
-      vexpand: true;
-      resize-start-child: false;
-      resize-end-child: true;
+            [start]
+            Box {
+              orientation: horizontal;
+              spacing: 4;
 
-      start-child: $LeftSidebar left_sidebar {
-        width-request: 220;
-      };
+              Adw.Clamp collapsed_sidebar_controls {
+                maximum-size: 96;
+                visible: false;
 
-      end-child: Paned content_paned {
-        orientation: horizontal;
-        resize-start-child: true;
-        resize-end-child: false;
-        shrink-end-child: false;
+                Box {
+                  orientation: horizontal;
+                  spacing: 4;
 
-        start-child: Overlay {
-          hexpand: true;
-          vexpand: true;
+                  Button header_add_spot_button {
+                    icon-name: "list-add-symbolic";
+                    tooltip-text: _("Add Spot");
+                    accessibility {
+                      label: _("Add Spot");
+                      role-description: _("button");
+                    }
+                  }
 
-          child: Box {
-            orientation: vertical;
-            hexpand: true;
-            margin-top: 12;
-            margin-start: 12;
-            margin-end: 12;
+                  ToggleButton sidebar_toggle {
+                    icon-name: "sidebar-show-symbolic";
+                    tooltip-text: _("Hide Sidebar");
+                    active: true;
+                    accessibility {
+                      label: _("Show Sidebar");
+                      role-description: _("toggle button");
+                    }
+                  }
+                }
+              }
 
-              Adw.ViewStack views {
-              vexpand: true;
+              Stack refresh_button_stack {
+                transition-type: crossfade;
+                transition-duration: 250;
+                visible-child-name: "refresh_spinner";
+                
+                Adw.Spinner refresh_spinner {
+                  width-request: 24;
+                  height-request: 24;
 
+                  accessibility {
+                    label: _("Loading");
+                  }
+                }
+              
+                ToggleButton refresh_toggle {
+                  icon-name: "media-playback-pause-symbolic";
+                  tooltip-text: _("Pause");
+                  accessibility {
+                    label: _("Pause Updates");
+                    role-description: _("toggle button");
+                  }
+                }
+              }
+            }
+
+            [end]
+            Box {
+              orientation: horizontal;
+              spacing: 4;
+
+              ToggleButton search_button {
+                icon-name: "edit-find-symbolic";
+                tooltip-text: _("Search");
+                accessibility {
+                  label: _("Search");
+                  role-description: _("toggle button");
+                }
+              }
+
+              Button {
+                tooltip-text: _("Alerts");
+                action-name: "app.alerts";
+                styles ["image-button", "flat"]
+
+                Overlay {
+                  Image {
+                    icon-name: "preferences-system-notifications-symbolic";
+                  }
+
+                  [overlay]
+                  Box alerts_badge {
+                    width-request: 8;
+                    height-request: 8;
+                    halign: end;
+                    valign: start;
+                    visible: false;
+                    styles ["toolbar-status-badge", "enabled"]
+                    accessibility {
+                      label: _("Spot Alerts Enabled");
+                      role-description: _("status indicator");
+                    }
+                  }
+                }
+
+                accessibility {
+                  label: _("Alerts");
+                  role-description: _("button");
+                }
+              }
+
+              ToggleButton inspector_toggle {
+                icon-name: "dock-right-symbolic";
+                tooltip-text: _("Show Inspector");
+                active: true;
+                accessibility {
+                  label: _("Show Inspector");
+                  role-description: _("toggle button");
+                }
+              }
+
+              MenuButton button_menu {
+                menu-model: menu_app;
+                icon-name: "open-menu-symbolic";
+                accessibility {
+                  label: _("Application Menu");
+                  role-description: _("menu button");
+                }
+              }
+            }
+          }
+
+          [top]
+          Adw.Bin {
+            margin-start: 16;
+            margin-end: 16;
+            styles ["overlay-search-bar"]
+
+            SearchBar search_bar {
+              SearchEntry search_entry {
+                hexpand: true;
+                input-hints: no_spellcheck;
+                placeholder-text: _("Search for Park or Callsign");
+                styles ["overlay-search-entry"]
+                accessibility {
+                  label: _("Search for Park or Callsign");
+                  role-description: _("search entry");
+                }
+              }
+            }
+          }
+     
+          content: Adw.ToastOverlay toast_overlay {
+
+            Adw.ViewStack views {
               Adw.ViewStackPage {
+                name: "cards";
                 title: _("Cards");
                 icon-name: "grid-filled-symbolic";
 
-                child: Box {
-                  orientation: vertical;
-
-                  Overlay {
-                    hexpand: true;
-                    vexpand: true;
-
-                    child:
-                      Box root {
-                        orientation: vertical;
-
-                        Adw.ViewStack band_stack {
-                          enable-transitions: true;
-                          hexpand: true;
-                          vexpand: true;
-                        }
-                      };
-
-                      [overlay]
-                      Box loading_spinner {
-                        halign: center;
-                        valign: center;
-                        visible: false;
-
-                        Adw.Spinner {
-                          width-request: 64;
-                          height-request: 64;
-                        }
-                      }
-                  }
+                child: $BandView band_view {
+                  hexpand: true;
+                  vexpand: true;
+                  margin-top: 48;
+                  margin-start: 12;
+                  margin-end: 12;
                 };
               }
 
               Adw.ViewStackPage {
+                name: "list";
                 title: _("List");
                 icon-name: "view-list-symbolic";
 
                 child: Box list_container {
-                  orientation: vertical;
-                  styles ["card"]
+                  hexpand: true;
+                  vexpand: true;
+                  margin-top: 48;
+                  margin-start: 12;
+                  margin-end: 12;
                 };
               }
 
               Adw.ViewStackPage {
+                name: "map";
                 title: _("Map");
                 icon-name: "map-symbolic";
 
                 child: Box map_container {
-                  orientation: vertical;
-                  styles ["card"]
+                  hexpand: true;
+                  vexpand: true;
                 };
               }
             }
           };
 
-          [overlay]
+          [bottom]
           $StatusBar status_bar {
-            valign: end;
-            halign: fill;
             hexpand: true;
-            margin-start: 28;
-            margin-end: 28;
-            margin-bottom: 12;
+            margin-top: 0;
+            margin-bottom: 0;
+          }
+
+          [bottom]
+          Adw.ViewSwitcherBar switcher_bar {
+            stack: views;
+            reveal: false;
           }
         };
+      }
 
-        end-child: $SpotDetail spot_detail {
+      [sidebar]
+      $SpotDetail spot_detail {
           width-request: 360;
           hexpand: false;
-        };
-      };
+      }
     }
   }
 }
@@ -213,9 +304,37 @@ menu menu_app {
       label: _("Refresh");
       action: "app.refresh";
     }
+
+    item {
+      label: _("Tune");
+      action: "app.tune";
+    }
+
+    item {
+      label: _("Logbook");
+      action: "app.logbook";
+      hidden-when: "action-disabled";
+    }
+
+    item {
+      label: _("Alerts");
+      icon-name: "preferences-system-notifications-symbolic";
+      action: "app.alerts";
+    }
+
   }
 
   section {
+    item {
+      label: _("Help");
+      action: "app.help";
+    }
+
+    item {
+      label: _("Keyboard Shortcuts");
+      action: "app.shortcuts";
+    }
+
     item {
       label: _("Preferences");
       action: "app.preferences";
@@ -223,13 +342,8 @@ menu menu_app {
 
 
     item {
-      label: _("About Artemis");
+      label: _("About Trailwave");
       action: "app.about";
-    }
-
-    item {
-      label: _("Quit");
-      action: "app.quit";
     }
   }
 }

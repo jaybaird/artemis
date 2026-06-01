@@ -23,6 +23,8 @@ using Shumate;
 public const uint32 BLANK_HASH = uint32.MAX;
 
 public class RadioConstants {
+    public const string UNKNOWN_MODE = "Unknown";
+
     public const string[] BANDS = {
         "All", "160m", "80m", "60m", "40m", "30m", "20m", "17m",
         "15m", "12m", "10m", "6m", "2m", "70cm"
@@ -66,7 +68,10 @@ public string band_from_khz (double khz) {
     return "Other";
 } /* band_from_khz */
 
-public sealed class Spot : Object {
+public sealed class Spot : Object, WeatherSpotDetails {
+    public const uint HEARD_RECENTLY_TIMEOUT_SECONDS = 90;
+    private uint heard_recently_timeout_id = 0;
+
     public string callsign { get; construct; }
     public string park_ref { get; construct; }
     public string park_name { get; construct; }
@@ -85,11 +90,12 @@ public sealed class Spot : Object {
     public double bearing { get; construct; }
     public Coordinate coordinate { get; construct; }
     public Quark hash { get; construct; default = BLANK_HASH; }
-    public bool is_new_park { get; construct; }
-    public bool was_hunted_today { get; construct; }
-    public bool is_new_band { get; construct; }
+    public bool is_new_park { get; private set; default = false; }
+    public bool was_hunted_today { get; private set; default = false; }
+    public bool is_new_band { get; private set; default = false; }
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
+    public bool heard_recently { get; private set; default = false; }
 
     public Spot (string callsign,
                  string park_ref,
@@ -122,6 +128,18 @@ public sealed class Spot : Object {
         );
     }
 
+    public string weather_park_ref () {
+        return park_ref;
+    }
+
+    public string weather_grid4 () {
+        return grid4;
+    }
+
+    public string weather_grid6 () {
+        return grid6;
+    }
+
     public Spot.from_add_spot (
         string callsign,
         string park_ref,
@@ -136,7 +154,7 @@ public sealed class Spot : Object {
             callsign: callsign,
             park_ref: park_ref,
             spot_time: spot_time,
-            frequency_khz: parse_frequency_input_khz (frequency_khz),
+            frequency_khz: parse_khz_or_zero (frequency_khz),
             mode: mode,
             spotter: spotter,
             spotter_comment: spotter_comment,
@@ -165,31 +183,20 @@ public sealed class Spot : Object {
         return value;
     }
 
-    private static double parse_frequency_input_khz (string value) {
-        double frequency_khz = 0;
-        unowned string unparsed;
-
-        if (double.try_parse (value.strip (), out frequency_khz, out unparsed) &&
-            (unparsed == "")) {
-            return frequency_khz;
-        }
-
-        return 0;
+    private static string optional_mode_member (Json.Object object) {
+        var value = object.get_string_member_with_default ("mode", "").strip ();
+        return value != "" ? value : RadioConstants.UNKNOWN_MODE;
     }
 
     private static double parse_frequency_khz (Json.Object object) throws Error {
         var value = object.get_string_member_with_default ("frequency", "0").strip ();
-        double frequency_khz = 0;
-        unowned string unparsed;
-
-        if (!double.try_parse (value, out frequency_khz, out unparsed) ||
-            (unparsed != "")) {
+        try {
+            return parse_frequency (value, FrequencyUnit.KHZ, FrequencyUnit.KHZ);
+        } catch (FrequencyError error) {
             throw new IOError.INVALID_DATA (
                 "Spot has invalid frequency '%s'".printf (value)
             );
         }
-
-        return frequency_khz;
     }
 
     private static DateTime parse_spot_time (Json.Object object) throws Error {
@@ -213,7 +220,7 @@ public sealed class Spot : Object {
             callsign: required_string_member (spot, "activator"),
             park_ref: required_string_member (spot, "reference"),
             park_name: spot.get_string_member_with_default ("name", ""),
-            mode: required_string_member (spot, "mode"),
+            mode: optional_mode_member (spot),
             location_desc: spot.get_string_member_with_default ("locationDesc", ""),
             activator_comment: spot.get_string_member_with_default (
                 "activatorLastComments",
@@ -236,14 +243,6 @@ public sealed class Spot : Object {
         hash = GLib.Quark.from_string (key);
         if (hash == BLANK_HASH)
             hash = hash - 1;
-
-        Error error = null;
-        was_hunted_today = Application.spot_database.had_qso_with_park_on_utc_day (
-            park_ref, new DateTime.now_utc (), out error);
-        is_new_park = !Application.spot_database.is_park_hunted (park_ref, out
-            error);
-        is_new_band = !is_new_park && !Application.spot_database.had_qso_with_park_on_band (
-            park_ref, band, out error);
 
         coordinate = null;
         distance = -1.0;
@@ -308,6 +307,51 @@ public sealed class Spot : Object {
     public string to_string () {
         return
             @"Spot(activator: $callsign\nspotter: $spotter\npark: $park_ref\nfrequency: $frequency_khz)";
+    }
+
+    public void mark_heard_recently (uint timeout_seconds = HEARD_RECENTLY_TIMEOUT_SECONDS) {
+        heard_recently = true;
+        notify_property ("heard-recently");
+
+        if (heard_recently_timeout_id != 0) {
+            Source.remove (heard_recently_timeout_id);
+            heard_recently_timeout_id = 0;
+        }
+
+        heard_recently_timeout_id = Timeout.add_seconds (timeout_seconds, () => {
+            heard_recently_timeout_id = 0;
+            if (heard_recently) {
+                heard_recently = false;
+                notify_property ("heard-recently");
+            }
+            return Source.REMOVE;
+        });
+    }
+
+    public void set_log_status (
+        bool was_hunted_today,
+        bool is_new_park,
+        bool is_new_band
+    ) {
+        if (this.was_hunted_today != was_hunted_today) {
+            this.was_hunted_today = was_hunted_today;
+            notify_property ("was-hunted-today");
+        }
+        if (this.is_new_park != is_new_park) {
+            this.is_new_park = is_new_park;
+            notify_property ("is-new-park");
+        }
+        if (this.is_new_band != is_new_band) {
+            this.is_new_band = is_new_band;
+            notify_property ("is-new-band");
+        }
+    }
+
+    ~Spot () {
+        if (heard_recently_timeout_id != 0) {
+            Source.remove (heard_recently_timeout_id);
+            heard_recently_timeout_id = 0;
+        }
     }
 } /* class Spot */
 

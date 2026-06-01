@@ -1,0 +1,160 @@
+/* blueprints/logbook_window.blp
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $LogbookWindow : Adw.Window {
+  title: _("Logbook");
+  default-width: 980;
+  default-height: 720;
+  width-request: 420;
+  height-request: 480;
+
+  Adw.ToolbarView {
+    [top]
+    Adw.HeaderBar {
+      title-widget: Adw.ViewSwitcher {
+        stack: views;
+        policy: wide;
+        halign: center;
+      };
+
+      [end]
+      SearchEntry search_entry {
+        width-request: 260;
+        input-hints: no_spellcheck;
+        placeholder-text: _("Search logbook");
+        accessibility {
+          label: _("Search logbook");
+          role-description: _("search entry");
+        }
+      }
+
+      Button refresh_button {
+        icon-name: "view-refresh-symbolic";
+        tooltip-text: _("Refresh Logbook");
+        accessibility {
+          label: _("Refresh Logbook");
+          role-description: _("button");
+        }
+      }
+    }
+
+    content: Adw.Bin {
+      margin-start: 6;
+      margin-end: 6;
+      hexpand: true;
+      vexpand: true;
+      styles ["card"]
+      
+      Adw.ViewStack views {
+        hexpand: true;
+        vexpand: true;
+
+        Adw.ViewStackPage {
+          name: "qsos";
+          title: _("QSOs");
+          icon-name: "radio-console-symbolic";
+
+          child: Stack qso_stack {
+            hexpand: true;
+            vexpand: true;
+
+            Adw.StatusPage qso_status_page {
+              icon-name: "radio-console-symbolic";
+              title: _("No QSOs Logged");
+              description: _("Logged QSOs will appear here after they are saved locally.");
+            }
+
+            ScrolledWindow qso_scroll {
+              hscrollbar-policy: never;
+              vscrollbar-policy: automatic;
+              hexpand: true;
+              vexpand: true;
+
+              ColumnView qso_column_view {
+                single-click-activate: true;
+                hexpand: true;
+                vexpand: true;
+                styles ["logbook-table"]
+              }
+            }
+          };
+        }
+
+        Adw.ViewStackPage {
+          name: "parks";
+          title: _("Parks");
+          icon-name: "map-symbolic";
+
+          child: Stack parks_stack {
+            hexpand: true;
+            vexpand: true;
+
+            Adw.StatusPage parks_status_page {
+              icon-name: "map-symbolic";
+              title: _("No Hunted Parks");
+              description: _("Parks will appear here after a QSO is logged or an imported log marks them hunted.");
+            }
+
+            ScrolledWindow parks_scroll {
+              vscrollbar-policy: automatic;
+              hscrollbar-policy: never;
+              hexpand: true;
+              vexpand: true;
+
+              ColumnView parks_column_view {
+                hexpand: true;
+                vexpand: true;
+                styles ["logbook-table"]
+              }
+            }
+          };
+        }
+      }
+    };
+
+    [bottom]
+    Box pager_bar {
+      orientation: horizontal;
+      spacing: 12;
+      margin-top: 6;
+      margin-bottom: 6;
+      margin-start: 12;
+      margin-end: 12;
+      hexpand: true;
+
+      Label result_count_label {
+        xalign: 0;
+        hexpand: true;
+        styles ["dim-label"]
+      }
+
+      Button previous_page_button {
+        icon-name: "go-previous-symbolic";
+        tooltip-text: _("Previous Page");
+        accessibility {
+          label: _("Previous Page");
+          role-description: _("button");
+        }
+      }
+
+      Label page_label {
+        label: _("Page 1 of 1");
+        styles ["numeric"]
+      }
+
+      Button next_page_button {
+        icon-name: "go-next-symbolic";
+        tooltip-text: _("Next Page");
+        accessibility {
+          label: _("Next Page");
+          role-description: _("button");
+        }
+      }
+    }
+  }
+}

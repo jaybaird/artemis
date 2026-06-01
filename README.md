@@ -9,7 +9,7 @@
     <a href='https://stopthemingmy.app'><img width='193.455' alt='Please do not theme this app' src='https://stopthemingmy.app/badge.svg'/></a>
 </p>
 
-**Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track QSOs, log parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
+**Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track hunted parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
 
 Artemis is designed to be cross-platform, lightweight, and easy to use.
 
@@ -18,14 +18,14 @@ Artemis is designed to be cross-platform, lightweight, and easy to use.
 ![Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector](./screenshots/cards-light.png)
 *Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector.*
 
-![Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions](./screenshots/cards-dark.png)
-*Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and re-spot actions.*
+![Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions](./screenshots/cards-dark.png)
+*Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions.*
 
 ![Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details](./screenshots/list-light.png)
 *Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details.*
 
-![Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting](./screenshots/list-dark.png)
-*Dark theme list view showing filtered POTA spots with direct row actions for tuning and re-spotting.*
+![Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting](./screenshots/list-dark.png)
+*Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting.*
 
 ![Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector](./screenshots/map-light.png)
 *Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector.*
@@ -41,7 +41,6 @@ Artemis is designed to be cross-platform, lightweight, and easy to use.
 
 - **Spot Management**
   - Fetch and display POTA spots in real-time.
-  - Show latest QSOs per park.
   - Track spotter and activator comments.
 
 - **Radio Integration**
@@ -49,7 +48,7 @@ Artemis is designed to be cross-platform, lightweight, and easy to use.
 
 - **Import/Export**
   - Import your already hunted parks from [POTA.app](https://pota.app)
-  - Ability to exporting hunter QSOs to QRZ; LoTW, UDP, or local ADIF log coming soon.
+  - Upload completed POTA contacts to QRZ and write a local ADIF backup log when configured.
 
 - **UI**
   - Modern GTK4/Adwaita interface.

@@ -35,40 +35,53 @@ template $SpotCard : Box {
 
     styles ["card", "frame"]
 
-    Box {
+    Grid {
       margin-start: 10;
       margin-top: 10;
-      margin-bottom: 6;
+      margin-bottom: 10;
       margin-end: 10;
-      orientation: horizontal;
+      column-spacing: 6;
+      row-spacing: 2;
+      hexpand: true;
 
       Adw.Avatar activator_avatar {
         valign: center;
         size: 32;
-        margin-end: 6;
+
+        layout {
+          column: 0;
+          row: 0;
+          row-span: 2;
+        }
       }
 
-      Box {
-        orientation: vertical;
-        valign: center;
+      Label title {
+        halign: start;
         hexpand: true;
+        justify: left;
+        label: "K0VCZ @ K-1234";
+        xalign: 0.0;
+        ellipsize: end;
+        max-width-chars: 18;
+        styles ["title-2"]
 
-        Label title {
-          halign: start;
-          justify: left;
-          label: "K0VCZ @ K-1234";
-          xalign: 0.0;
-          ellipsize: end;
-          max-width-chars: 22;
-          styles ["title-2"]
+        layout {
+          column: 1;
+          row: 0;
         }
+      }
 
-        Label park_label {
-          halign: start;
-          justify: left;
-          xalign: 0.0;
-          ellipsize: end;
-          max-width-chars: 26;
+      Label park_label {
+        halign: start;
+        hexpand: true;
+        justify: left;
+        xalign: 0.0;
+        ellipsize: end;
+        max-width-chars: 28;
+
+        layout {
+          column: 1;
+          row: 1;
         }
       }
     }
@@ -81,159 +94,189 @@ template $SpotCard : Box {
       orientation: vertical;
       margin-start: 10;
       margin-end: 10;
-      margin-bottom: 10;
       hexpand: true;
       spacing: 12;
 
-      Box {
-        orientation: horizontal;
-        spacing: 10;
+      Grid {
+        column-spacing: 10;
+        row-spacing: 8;
         hexpand: true;
         tooltip-text: _("Location");
 
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-        
-          Image {
-            icon-name: "map-marker-symbolic";
-            pixel-size: 20;
-            valign: baseline;
-            accessibility {
-              label: _("Location");
-              role-description: _("icon");
-            }
+        Image {
+          icon-name: "map-marker-symbolic";
+          valign: baseline;
+          styles ["spot-card-icon"]
+          accessibility {
+            label: _("Location");
+            role-description: _("icon");
           }
-
-          Label location_desc {
-            hexpand: true;
-            margin-bottom: 0;
-            label: "US-WY";
-            xalign: 0.0;
-            ellipsize: end;
-            max-width-chars: 12;
+          layout {
+            column: 0;
+            row: 0;
           }
         }
 
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-        
-          Image {
-            icon-name: "grid-symbolic";
-            pixel-size: 20;
-            valign: baseline;
-            accessibility {
-              label: _("Grid Square");
-              role-description: _("icon");
-            }
+        Label location_desc {
+          hexpand: true;
+          margin-bottom: 0;
+          label: "US-WY";
+          xalign: 0.0;
+          ellipsize: end;
+          max-width-chars: 12;
+          layout {
+            column: 1;
+            row: 0;
           }
+        }
 
-          Label grid_square {
-            margin-bottom: 0;
-            label: "FN20";
-            xalign: 0.0;
-            styles ["numeric"]
+        Image {
+          icon-name: "grid-symbolic";
+          valign: baseline;
+          styles ["spot-card-icon"]
+          accessibility {
+            label: _("Grid Square");
+            role-description: _("icon");
           }
-        } 
+          layout {
+            column: 2;
+            row: 0;
+          }
+        }
+
+        Label grid_square {
+          margin-bottom: 0;
+          label: "FN20";
+          xalign: 0.0;
+          styles ["numeric"]
+          layout {
+            column: 3;
+            row: 0;
+          }
+        }
       }
 
-      Box {
-        orientation: horizontal;
-        spacing: 10;
+      Grid {
+        column-spacing: 10;
+        row-spacing: 8;
         hexpand: true;
         tooltip-text: _("Frequency and mode");
 
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-          hexpand: true;
+        Adw.Bin {
+          valign: center;
+          styles ["spot-card-icon-slot"]
+          layout {
+            column: 0;
+            row: 0;
+          }
 
-          $BandStrip band_strip {
-            width-request: 4;
-            height-request: 20;
+          Image band_dot {
+            halign: center;
             valign: center;
-            band: "20m";
-          }
-
-          Label frequency {
-            hexpand: true;
-            halign: start;
-            valign: baseline;
-            label: "14074 kHz";
-            styles ["numeric"]
-          }
-        }
-
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-
-          Image {
-            icon-name: "sound-wave-alt-symbolic";
-            pixel-size: 20;
-            valign: baseline;
+            icon-name: "bigger-dot-symbolic";
+            styles ["spot-card-icon", "band-dot-20m"]
             accessibility {
-              label: _("Mode");
+              label: _("Band");
               role-description: _("icon");
             }
           }
+        }
 
-          Label mode {
-            valign: baseline;
-            label: "FT8";
+        Label frequency {
+          hexpand: true;
+          halign: start;
+          valign: baseline;
+          label: _("14074 kHz");
+          ellipsize: end;
+          max-width-chars: 12;
+          styles ["numeric"]
+          layout {
+            column: 1;
+            row: 0;
+          }
+        }
+
+        Image {
+          icon-name: "sound-wave-alt-symbolic";
+          valign: baseline;
+          styles ["spot-card-icon"]
+          accessibility {
+            label: _("Mode");
+            role-description: _("icon");
+          }
+          layout {
+            column: 2;
+            row: 0;
+          }
+        }
+
+        Label mode {
+          valign: baseline;
+          label: _("FT8");
+          ellipsize: end;
+          max-width-chars: 8;
+          layout {
+            column: 3;
+            row: 0;
           }
         }
       }
 
-      Box {
-        orientation: horizontal;
-        spacing: 10;
+      Grid {
+        column-spacing: 10;
+        row-spacing: 8;
         hexpand: true;
         tooltip-text: _("Age and spot count");
 
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-          hexpand: true;
-
-          Image {
-            pixel-size: 20;
-            icon-name: "clocks-symbolic";
-            valign: baseline;
-            accessibility {
-              label: _("Age");
-              role-description: _("icon");
-            }
+        Image {
+          icon-name: "clocks-symbolic";
+          valign: baseline;
+          styles ["spot-card-icon"]
+          accessibility {
+            label: _("Age");
+            role-description: _("icon");
           }
-
-          Label time {
-            hexpand: true;
-            halign: start;
-            valign: baseline;
-            label: "2 minutes ago";
+          layout {
+            column: 0;
+            row: 0;
           }
         }
 
-        Box {
-          orientation: horizontal;
-          spacing: 10;
-
-          Image {
-            pixel-size: 20;
-            icon-name: "bullseye-symbolic";
-            valign: baseline;
-            accessibility {
-              label: _("Spot Count");
-              role-description: _("icon");
-            }
+        Label time {
+          hexpand: true;
+          halign: start;
+          valign: baseline;
+          label: _("2 minutes ago");
+          ellipsize: end;
+          max-width-chars: 16;
+          layout {
+            column: 1;
+            row: 0;
           }
+        }
 
-          Label spot_count {
-            halign: start;
-            valign: baseline;
-            label: "4";
-            styles ["numeric"]
+        Image {
+          icon-name: "bullseye-symbolic";
+          valign: baseline;
+          styles ["spot-card-icon"]
+          accessibility {
+            label: _("Spot Count");
+            role-description: _("icon");
+          }
+          layout {
+            column: 2;
+            row: 0;
+          }
+        }
+
+        Label spot_count {
+          halign: start;
+          valign: baseline;
+          label: "4";
+          styles ["numeric"]
+          layout {
+            column: 3;
+            row: 0;
           }
         }
       }
@@ -244,12 +287,10 @@ template $SpotCard : Box {
     }
 
     Box {
-      orientation: horizontal;
-      margin-start: 6;
+      margin-start: 10;
       margin-end: 6;
-      margin-top: 4;
-      margin-bottom: 4;
-      spacing: 6;
+      margin-bottom: 6;
+      orientation: horizontal;
 
       Box badge_box {
         orientation: horizontal;
@@ -258,24 +299,31 @@ template $SpotCard : Box {
         valign: center;
       }
 
-      Button tune_button {
-        label: _("Tune");
-        tooltip-text: _("Tune your radio to this frequency");
-        visible: false;
-        styles ["raised"]
-        accessibility {
-          label: _("Tune");
-          role-description: _("button");
-        }
-      }
+      Box {
+        orientation: horizontal;
+        styles ["linked"]
 
-      Button spot_button {
-        label: _("Re-Spot");
-        tooltip-text: _("Add your spot for this park");
-        styles ["raised", "suggested-action"]
-        accessibility {
-          label: _("Re-Spot");
-          role-description: _("button");
+        Button tune_button {
+          label: _("Tune");
+          tooltip-text: _("Tune your radio to this frequency");
+          visible: false;
+          styles ["flat"]
+
+          accessibility {
+            label: _("Tune");
+            role-description: _("button");
+          }
+        }
+
+        Button spot_button {
+          label: _("Spot");
+          tooltip-text: _("Add your spot for this park");
+          styles ["flat"]
+
+          accessibility {
+            label: _("Spot");
+            role-description: _("button");
+          }
         }
       }
     }

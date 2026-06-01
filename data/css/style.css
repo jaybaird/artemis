@@ -1,178 +1,241 @@
-notebook > stack {
-    background-color: rgba(0, 0, 0, 0);
-}
-
-.monospace {
-    font-family: "Adwaita Mono", "Consolas", monospace;
-}
-
-scrollbar.hover,
-scrollbar {
-    margin-left: 2px;
-}
-
-scrollbar trough {
-    min-width: 5pt;
-}
-
-scrollbar button {
-    min-height: 5pt;
-    min-width: 5pt;
-}
-
-scrollbar.right slider {
-    min-height: 70pt;
-    min-width: 5pt;
-}
-
-.spot-button {
-    background-color: @green_4;
-    color: @light_2;
-}
-
-.spot-button:hover {
-    background-color: @green_5;
-    color: @light_1;
-}
-
-banner {
-    background-color: @window_bg_color;
-}
-
-.icon-fill {
-    color: #fff;
-}
-
-.pinned {
-    background-color: color-mix(in srgb, @accent_color 10%, transparent);
-
-}
-
-
-.view-bg {
-    background-color: var(--view-bg-color);
+:root {
+    --band-all-color: var(--light-1);
+    --band-160m-color: #7cfc00;
+    --band-80m-color: #e550e5;
+    --band-60m-color: #00008b;
+    --band-40m-color: #5959ff;
+    --band-30m-color: #62d962;
+    --band-20m-color: #f2c40c;
+    --band-17m-color: #f2f261;
+    --band-15m-color: #cca166;
+    --band-12m-color: #b22222;
+    --band-10m-color: #ff69b4;
+    --band-6m-color: #ff0000;
+    --band-2m-color: #4ade80;
+    --band-70cm-color: #999900;
+    --wsjtx-heard-color: #35c9f4;
 }
 
 .map-marker-all {
-    color: @accent_bg_color;
+    color: var(--band-all-color);
 }
 
 .map-marker-160m {
-    color: #7cfc00;
+    color: var(--band-160m-color);
 }
 
 .map-marker-80m {
-    color: #e550e5;
+    color: var(--band-80m-color);
 }
 
 .map-marker-60m {
-    color: #00008b;
+    color: var(--band-60m-color);
 }
 
 .map-marker-40m {
-    color: #5959ff;
+    color: var(--band-40m-color);
 }
 
 .map-marker-30m {
-    color: #62d962;
+    color: var(--band-30m-color);
 }
 
 .map-marker-20m {
-    color: #f2c40c;
+    color: var(--band-20m-color);
 }
 
 .map-marker-17m {
-    color: #f2f261;
+    color: var(--band-17m-color);
 }
 
 .map-marker-15m {
-    color: #cca166;
+    color: var(--band-15m-color);
 }
 
 .map-marker-12m {
-    color: #b22222;
+    color: var(--band-12m-color);
 }
 
 .map-marker-10m {
-    color: #ff69b4;
+    color: var(--band-10m-color);
 }
 
 .map-marker-6m {
-    color: #ff0000;
+    color: var(--band-6m-color);
 }
 
 .map-marker-2m {
-    color: #4ADE80;
+    color: var(--band-2m-color);
 }
 
 .map-marker-70cm {
-    color: #999900;
+    color: var(--band-70cm-color);
+}
+
+.band-dot-all {
+    color: var(--band-all-color);
+}
+
+.band-dot-160m {
+    color: var(--band-160m-color);
+}
+
+.band-dot-80m {
+    color: var(--band-80m-color);
+}
+
+.band-dot-60m {
+    color: var(--band-60m-color);
+}
+
+.band-dot-40m {
+    color: var(--band-40m-color);
+}
+
+.band-dot-30m {
+    color: var(--band-30m-color);
+}
+
+.band-dot-20m {
+    color: var(--band-20m-color);
+}
+
+.band-dot-17m {
+    color: var(--band-17m-color);
+}
+
+.band-dot-15m {
+    color: var(--band-15m-color);
+}
+
+.band-dot-12m {
+    color: var(--band-12m-color);
+}
+
+.band-dot-10m {
+    color: var(--band-10m-color);
+}
+
+.band-dot-6m {
+    color: var(--band-6m-color);
+}
+
+.band-dot-2m {
+    color: var(--band-2m-color);
+}
+
+.band-dot-70cm {
+    color: var(--band-70cm-color);
+}
+
+.map-marker-content,
+.map-marker-dot {
+    min-width: 24px;
+    min-height: 24px;
+}
+
+.map-marker-heard-icon {
+    color: rgba(255, 255, 255, 0.98);
+}
+
+.map-marker-content.map-marker-heard-recently {
+    background-color: alpha(var(--wsjtx-heard-color), 0.3);
+    border-radius: 9999px;
 }
 
 .band-strip {
     border-radius: 9999px;
-    min-width: 4px;
+    min-width: 0.28em;
+    min-height: 1.4em;
+}
+
+.band-strip-card {
+    min-height: 1.4em;
+}
+
+.band-strip-sidebar {
+    min-height: 1.7em;
+}
+
+.band-strip-list {
+    min-height: 2.4em;
 }
 
 .band-strip-all {
-    background-color: @accent_bg_color;
+    background-color: var(--band-all-color);
 }
 
 .band-strip-160m {
-    background-color: #7cfc00;
+    background-color: var(--band-160m-color);
 }
 
 .band-strip-80m {
-    background-color: #e550e5;
+    background-color: var(--band-80m-color);
 }
 
 .band-strip-60m {
-    background-color: #00008b;
+    background-color: var(--band-60m-color);
 }
 
 .band-strip-40m {
-    background-color: #5959ff;
+    background-color: var(--band-40m-color);
 }
 
 .band-strip-30m {
-    background-color: #62d962;
+    background-color: var(--band-30m-color);
 }
 
 .band-strip-20m {
-    background-color: #f2c40c;
+    background-color: var(--band-20m-color);
 }
 
 .band-strip-17m {
-    background-color: #f2f261;
+    background-color: var(--band-17m-color);
 }
 
 .band-strip-15m {
-    background-color: #cca166;
+    background-color: var(--band-15m-color);
 }
 
 .band-strip-12m {
-    background-color: #b22222;
+    background-color: var(--band-12m-color);
 }
 
 .band-strip-10m {
-    background-color: #ff69b4;
+    background-color: var(--band-10m-color);
 }
 
 .band-strip-6m {
-    background-color: #ff0000;
+    background-color: var(--band-6m-color);
 }
 
 .band-strip-2m {
-    background-color: #4ADE80;
+    background-color: var(--band-2m-color);
 }
 
 .band-strip-70cm {
-    background-color: #999900;
+    background-color: var(--band-70cm-color);
 }
 
 .spot-badge {
-    min-width: 16px;
-    min-height: 16px;
+    -gtk-icon-size: 1.15em;
+    min-width: 1.15em;
+    min-height: 1.15em;
+}
+
+.spot-card-icon {
+    -gtk-icon-size: 1.25em;
+    min-width: 1.25em;
+    min-height: 1.25em;
+}
+
+.spot-card-icon-slot {
+    min-width: 1.25em;
+    min-height: 1.25em;
+}
+
+.spot-list-icon-button image {
+    -gtk-icon-size: 1.15em;
 }
 
 .badge-new-park {
@@ -184,16 +247,20 @@ banner {
 }
 
 .badge-previously-hunted {
-    color: @insensitive_fg_color;
+    color: var(--yellow-3);
 }
 
 .badge-new-band {
-    color: #20b2aa;
+    color: var(--green-3);
+}
+
+.badge-heard-recently {
+    color: var(--wsjtx-heard-color);
 }
 
 .frequency-display {
     font-weight: 700;
-    font-family: "Adwaita Mono", "Consolas", monospace;
+    font-family: var(--monospace-font-family);
     letter-spacing: -0.04em;
     line-height: 0.95;
 }
@@ -203,9 +270,57 @@ banner {
     padding: 4px 12px;
 }
 
-.online-button {
-  font-size: 20px;
-  padding: 8px 16px;
+.toolbar-status-badge {
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 999px;
+    margin-top: 1px;
+    margin-right: 1px;
+    box-shadow: 0 0 0 1px var(--window-bg-color);
+}
+
+.toolbar-status-badge.enabled {
+    background-color: var(--green-2);
+}
+
+.wsjtx-status {
+    font-size: 0.78em;
+    font-weight: 400;
+    margin-top: -2px;
+    opacity: 0.72;
+}
+
+.overlay-search-bar searchbar > revealer > box > * {
+    background-color: var(--window-bg-color);
+}
+
+.radio-activity-light {
+    -gtk-icon-size: 1.25em;
+    color: var(--insensitive_fg_color);
+}
+
+.tx-light.active {
+    color: var(--red-2);
+}
+
+.rx-light.active {
+    color: var(--green-2);
+}
+
+.pulse-green {
+    color: var(--green-2);
+}
+
+.detail-time-icon {
+    -gtk-icon-size: 1em;
+    min-width: 1em;
+    min-height: 1em;
+}
+
+.weather-summary-icon {
+    -gtk-icon-size: 1.25em;
+    min-width: 1.25em;
+    min-height: 1.25em;
 }
 
 .marker {
@@ -213,28 +328,68 @@ banner {
   transform-origin: center center;
 }
 
+.marker.marker-heard-recently {
+  filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.9));
+}
+
 .marker.hovered {
   transform: scale(1.25);
+}
+
+.astronomy-map-marker {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.5));
+}
+
+.astronomy-marker {
+  color: rgba(255, 255, 255, 0.98);
+  background-color: rgba(16, 24, 40, 0.72);
+  border-radius: 9999px;
+  padding: 4px;
+}
+
+.astronomy-marker-sun {
+  color: var(--yellow-2);
+}
+
+.astronomy-marker-moon {
+  color: var(--light-4);
+}
+
+.map-signal-report-status {
+  padding: 7px 10px;
+  border-radius: 8px;
+  background-color: var(--window-bg-color);
+  color: var(--window-fg-color);
+}
+
+.map-signal-report-status label {
+  color: var(--window-fg-color);
+}
+
+.map-signal-report-status .caption {
+  color: alpha(var(--window-fg-color), 0.72);
+}
+
+.map-signal-report-status image {
+  color: alpha(var(--window-fg-color), 0.96);
 }
 
 .radio-power-button {
     padding: 0;
     margin-top: 15px;
-    margin-bottom: 15px;
     min-width: 25px;
-    min-height: 25px;
-    border-radius: 9999px;
+    min-height: 36px;
     background-color: var(--accent-red);
-    color: white;
+    color: var(--light-1);
 }
 
 .radio-power-button:checked {
     background-color: var(--accent-green);
-    color: white;
+    color: var(--light-1);
 }
 
 .radio-power-button label {
-    color: white;
+    color: var(--light-1);
 }
 
 .radio-power-button:disabled label {
@@ -245,13 +400,44 @@ banner {
     filter: brightness(1.1);
 }
 
-.status-bar-overlay {
-    background-color: color-mix(in srgb, @headerbar_bg_color 82%, transparent);
-    border: 1px solid color-mix(in srgb, @window_fg_color 12%, transparent);
-    border-radius: 18px;
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
-}
-
 .weather-summary-card {
     padding: 8px 12px;
+}
+
+.logbook-table {
+    background-color: var(--card-bg-color);
+}
+
+.logbook-table row {
+    background-color: transparent;
+}
+
+.logbook-table row:hover {
+    background-color: alpha(var(--accent-bg-color), 0.16);
+}
+
+.logbook-table row:selected {
+    background-color: alpha(var(--accent-bg-color), 0.30);
+}
+
+.logbook-table row:selected label {
+    color: var(--window-fg-color);
+}
+
+.logbook-table row:not(:selected):not(:hover):nth-child(even) {
+    background-color: alpha(var(--window-fg-color), 0.035);
+}
+
+.logbook-action-warning {
+    color: var(--warning-bg-color);
+}
+
+flowbox.park-grid flowboxchild:selected {
+  background: transparent;
+}
+
+flowbox.park-grid flowboxchild:selected .card {
+  background: var(--card-bg-color);
+  outline: 4px solid var(--accent-color);
+  border-radius: 12px;
 }

@@ -2,15 +2,11 @@ using Gee;
 using GLib;
 using Shumate;
 
-public enum WeatherError {
+public errordomain WeatherError {
     INVALID_REQUEST,
     API_KEY_MISSING,
     HTTP_FAILED,
     PARSE_FAILED
-}
-
-public static GLib.Quark weather_error_quark () {
-    return GLib.Quark.from_string ("weather-error");
 }
 
 public struct WeatherData {
@@ -45,7 +41,34 @@ internal sealed class WeatherCacheEntry : Object {
     }
 }
 
-public sealed class WeatherClient : Object {
+public interface WeatherProvider : Object {
+    public abstract async WeatherData fetch_weather (Coordinate coord, string units) throws Error;
+}
+
+public interface WeatherUnitsProvider : Object {
+    public abstract string get_weather_units ();
+}
+
+public interface WeatherSpotDetails : Object {
+    public abstract string weather_park_ref ();
+    public abstract string weather_grid4 ();
+    public abstract string weather_grid6 ();
+}
+
+public sealed class SettingsWeatherUnitsProvider : Object, WeatherUnitsProvider {
+    private Settings settings;
+
+    public SettingsWeatherUnitsProvider (Settings settings) {
+        Object ();
+        this.settings = settings;
+    }
+
+    public string get_weather_units () {
+        return settings.get_boolean ("use-metric") ? "metric" : "imperial";
+    }
+}
+
+public sealed class WeatherClient : Object, WeatherProvider {
     private const string BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
     private Soup.Session session;
 
@@ -54,9 +77,10 @@ public sealed class WeatherClient : Object {
     }
 
     construct {
-        session = new Soup.Session ();
-        session.timeout = 30;
-        session.user_agent = "Artemis/%s".printf (Build.VERSION);
+        session = new Soup.Session () {
+            timeout = 30,
+            user_agent = Build.USER_AGENT
+        };
     }
 
     private static string encode_query_value (string value) {
@@ -80,10 +104,7 @@ public sealed class WeatherClient : Object {
     public async WeatherData fetch_weather (Coordinate coord, string units) throws Error {
         var api_key = Build.OPENWEATHER_API_KEY.strip ();
         if (api_key == "") {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.API_KEY_MISSING,
-                "OpenWeather API key is not configured in this build"
+            throw new WeatherError.API_KEY_MISSING ("OpenWeather API key is not configured in this build"
             );
         }
 
@@ -98,10 +119,7 @@ public sealed class WeatherClient : Object {
         );
 
         if (message.status_code != Soup.Status.OK) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.HTTP_FAILED,
-                "Weather request failed: %u %s".printf (
+            throw new WeatherError.HTTP_FAILED ("Weather request failed: %u %s".printf (
                     message.status_code,
                     message.reason_phrase
                 )
@@ -113,10 +131,7 @@ public sealed class WeatherClient : Object {
 
         var root = parser.get_root ();
         if ((root == null) || (root.get_node_type () != Json.NodeType.OBJECT)) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.PARSE_FAILED,
-                "Weather response did not contain a JSON object"
+            throw new WeatherError.PARSE_FAILED ("Weather response did not contain a JSON object"
             );
         }
 
@@ -125,19 +140,13 @@ public sealed class WeatherClient : Object {
         var weather = object.get_array_member ("weather");
 
         if ((main == null) || (weather == null) || (weather.get_length () == 0)) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.PARSE_FAILED,
-                "Weather response was missing required fields"
+            throw new WeatherError.PARSE_FAILED ("Weather response was missing required fields"
             );
         }
 
         var condition_object = weather.get_object_element (0);
         if (condition_object == null) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.PARSE_FAILED,
-                "Weather response was missing the current condition"
+            throw new WeatherError.PARSE_FAILED ("Weather response was missing the current condition"
             );
         }
 
@@ -153,52 +162,48 @@ public sealed class WeatherClient : Object {
 public sealed class WeatherCache : Object {
     private const int64 CACHE_TTL_SECONDS = 4 * 60 * 60;
 
-    private WeatherClient client;
+    private WeatherProvider client;
+    private WeatherUnitsProvider units_provider;
     private HashMap<string, WeatherCacheEntry> memory_cache;
     private string cache_path;
     private bool cache_loaded = false;
 
-    public WeatherCache () {
-        client = new WeatherClient ();
+    public WeatherCache (
+        WeatherUnitsProvider units_provider,
+        WeatherProvider? client = null,
+        string? cache_path = null
+    ) {
+        this.units_provider = units_provider;
+        this.client = client ?? new WeatherClient ();
         memory_cache = new HashMap<string, WeatherCacheEntry> ();
-        cache_path = Path.build_filename (
+        this.cache_path = cache_path ?? Path.build_filename (
             Environment.get_user_cache_dir (),
             "artemis",
             "weather-cache.ini"
         );
     }
 
-    private static string current_units () {
-        return Application.settings.get_boolean ("use-metric") ? "metric" : "imperial";
-    }
-
     private static string normalize_grid4 (string grid) throws Error {
         var normalized = grid.strip ().ascii_up ();
         if (normalized.length < 4) {
-            throw new Error (
-                weather_error_quark (),
-                WeatherError.INVALID_REQUEST,
-                "Grid locator %s is too short for weather lookups".printf (grid)
+            throw new WeatherError.INVALID_REQUEST ("Grid locator %s is too short for weather lookups".printf (grid)
             );
         }
 
         return normalized.substring (0, 4);
     }
 
-    private static string grid4_for_spot (Spot spot) throws Error {
-        var grid4 = (spot.grid4 ?? "").strip ();
+    private static string grid4_for_spot (WeatherSpotDetails spot) throws Error {
+        var grid4 = (spot.weather_grid4 () ?? "").strip ();
         if (grid4 != "")
             return normalize_grid4 (grid4);
 
-        var grid6 = (spot.grid6 ?? "").strip ();
+        var grid6 = (spot.weather_grid6 () ?? "").strip ();
         if (grid6.length >= 4)
             return normalize_grid4 (grid6.substring (0, 4));
 
-        throw new Error (
-            weather_error_quark (),
-            WeatherError.INVALID_REQUEST,
-            "Spot %s has no usable grid square for weather lookups".printf (
-                spot.park_ref
+        throw new WeatherError.INVALID_REQUEST ("Spot %s has no usable grid square for weather lookups".printf (
+                spot.weather_park_ref ()
             )
         );
     }
@@ -305,11 +310,10 @@ public sealed class WeatherCache : Object {
         }
     }
 
-    public async WeatherData get_weather_for_spot (Spot spot) throws Error {
+    public async WeatherData get_weather_for_grid4 (string grid4) throws Error {
         load_cache_from_disk ();
 
-        var grid4 = grid4_for_spot (spot);
-        var units = current_units ();
+        var units = units_provider.get_weather_units ();
         var cache_key = cache_key_for (grid4, units);
         var cached_entry = memory_cache.get (cache_key);
         var now = now_unix ();
@@ -323,5 +327,9 @@ public sealed class WeatherCache : Object {
         persist_cache_to_disk ();
 
         return data;
+    }
+
+    public async WeatherData get_weather_for_spot (WeatherSpotDetails spot) throws Error {
+        return yield get_weather_for_grid4 (grid4_for_spot (spot));
     }
 }

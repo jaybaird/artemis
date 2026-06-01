@@ -19,201 +19,14 @@
  */
 
 using Gee;
-using Gdk;
+public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
+    private const int64 HEARD_CACHE_SECONDS = Spot.HEARD_RECENTLY_TIMEOUT_SECONDS;
 
-public class CallsignCacheEntry : Object {
-    public Activator activator { get; construct; }
-    public uint64 expires_at { get; construct; }
-    public Gdk.Texture ? avatar { get; set; default = null; }
-    public CallsignCacheEntry (Activator activator, uint64 expires_at) {
-        Object (
-            activator : activator,
-            expires_at: expires_at
-        );
-    }
-}
-
-public class CallsignCache : Object {
-    private HashTable<string, CallsignCacheEntry> ham_cache;
-    private HashMap<string, HashSet<string>> profile_aliases;
-    private HashSet<string> avatar_fetch_inflight;
-    private Soup.Session avatar_session;
-    public uint ttl_seconds { get; construct; default = 3600; }
-    public signal void entry_updated (string callsign);
-
-    public CallsignCache (uint ttl_seconds) {
-        Object (
-            ttl_seconds : ttl_seconds
-        );
-    }
-
-    ~CallsignCache () {
-        if (avatar_session != null) {
-            avatar_session.abort ();
-            avatar_session = null;
-        }
-    }
-
-    construct {
-        ham_cache = new HashTable<string, CallsignCacheEntry> (GLib.str_hash,
-            GLib.str_equal);
-        profile_aliases = new HashMap<string, HashSet<string>> ();
-        avatar_fetch_inflight = new HashSet<string> ();
-        avatar_session = new Soup.Session ();
-        var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
-            "artemis");
-        var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
-        cache.set_max_size (50 * 1024 * 1024);
-        avatar_session.add_feature (cache);
-        avatar_session.timeout = 3;
-        avatar_session.user_agent = "Artemis/1.0.0";
-    }
-
-    private bool is_entry_expired (CallsignCacheEntry? entry) {
-        if (entry == null)
-            return true;
-        return GLib.get_monotonic_time () > entry.expires_at;
-    }
-
-    public void clear () {
-        ham_cache.remove_all ();
-        profile_aliases.clear ();
-        avatar_fetch_inflight.clear ();
-    }
-
-    private string remember_profile_alias (string callsign) {
-        var profile_callsign = pota_profile_callsign (callsign);
-        var aliases = profile_aliases.get (profile_callsign);
-        if (aliases == null) {
-            aliases = new HashSet<string> ();
-            profile_aliases[profile_callsign] = aliases;
-        }
-
-        aliases.add (profile_callsign);
-        aliases.add (callsign);
-        return profile_callsign;
-    }
-
-    private void emit_profile_updated (string profile_callsign, string fallback_callsign) {
-        var aliases = profile_aliases.get (profile_callsign);
-        if (aliases == null) {
-            entry_updated (fallback_callsign);
-            if (profile_callsign != fallback_callsign)
-                entry_updated (profile_callsign);
-            return;
-        }
-
-        foreach (var alias in aliases) {
-            entry_updated (alias);
-        }
-    }
-
-    public async void load_callsigns (HashSet<string> callsigns) {
-        foreach (var callsign in callsigns) {
-            yield get_callsign (callsign);
-        }
-    }
-
-    public Gdk.Texture? peek_avatar (string callsign) {
-        var entry = ham_cache.lookup (callsign);
-        if ((entry == null) || is_entry_expired (entry)) {
-            var profile_callsign = pota_profile_callsign (callsign);
-            entry = ham_cache.lookup (profile_callsign);
-        }
-        if (is_entry_expired (entry) || (entry == null))
-            return null;
-        return entry.avatar;
-    }
-
-    public Activator? peek_callsign (string callsign) {
-        var entry = ham_cache.lookup (callsign);
-        if (is_entry_expired (entry) || (entry == null))
-            return null;
-        return entry.activator;
-    }
-
-    public async Gdk.Texture? get_avatar_for (string callsign) {
-        var profile_callsign = remember_profile_alias (callsign);
-        var entry = yield get_callsign (callsign);
-
-        if (entry == null)
-            return null;
-
-        var cached_entry = ham_cache.lookup (callsign);
-        if ((cached_entry != null) && (cached_entry.avatar != null))
-            return cached_entry.avatar;
-
-        if (avatar_fetch_inflight.contains (profile_callsign))
-            return null;
-
-        avatar_fetch_inflight.add (profile_callsign);
-        Gdk.Texture? avatar = null;
-        try {
-            var gravatar_hash = entry.gravatar_hash;
-            if ((gravatar_hash != null) && (gravatar_hash.strip () != "")) {
-                var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
-                    .printf (gravatar_hash);
-
-                var message = new Soup.Message ("GET", url);
-
-                var stream = yield avatar_session.send_async (message, GLib.Priority.
-                    DEFAULT, null);
-
-                var pixbuf = new Gdk.Pixbuf.from_stream (stream);
-                if (pixbuf != null) {
-                    var texture = Gdk.Texture.for_pixbuf (pixbuf);
-                    cached_entry.avatar = texture;
-                    avatar = texture;
-                    emit_profile_updated (profile_callsign, callsign);
-                }
-            }
-        } catch (Error e) {
-            warning ("Failed to fetch avatar for %s: %s", callsign, e.message);
-        }
-        avatar_fetch_inflight.remove (profile_callsign);
-        return avatar;
-    }
-
-    public async Activator? get_callsign (string callsign) {
-        var entry = ham_cache.lookup (callsign);
-
-        if ((entry != null) && !is_entry_expired (entry))
-            return entry.activator;
-
-        var profile_callsign = remember_profile_alias (callsign);
-        entry = ham_cache.lookup (profile_callsign);
-        if ((entry != null) && !is_entry_expired (entry)) {
-            ham_cache.set (callsign, entry);
-            return entry.activator;
-        }
-
-        // cache miss, load from API
-        try {
-            var result = yield Application.pota_client.fetch_operator (profile_callsign)
-            ;
-
-            var callsign_entry = new CallsignCacheEntry (
-                new Activator.from_json (result.get_object ()),
-                GLib.get_monotonic_time () + (ttl_seconds * GLib.TimeSpan.SECOND
-                                              )
-                );
-            ham_cache.set (profile_callsign, callsign_entry);
-            ham_cache.set (callsign, callsign_entry);
-            emit_profile_updated (profile_callsign, callsign);
-            return callsign_entry.activator;
-        } catch (Error err) {
-            warning ("Failed to fetch activator profile for %s: %s",
-                profile_callsign, err.message);
-            return null;
-        }
-    }
-} /* class CallsignCache */
-
-public sealed class SpotRepo : Object {
     public GLib.ListStore store { get; construct; }
 
     public signal void busy_changed (bool busy);
     public signal void refreshed (uint spots_updated);
+    public signal void log_status_refreshed ();
     public signal void update_error (Error err);
     public signal void current_spot_changed (Quark spot_hash);
 
@@ -224,6 +37,8 @@ public sealed class SpotRepo : Object {
     public HashMap<string, int> band_counts;
     private bool update_in_progress = false;
     private bool update_pending = false;
+    private HashSet<uint> notified_alert_hashes;
+    private HashMap<string, int64?> heard_callsign_times;
 
     public SpotRepo () {
         Object ();
@@ -234,6 +49,8 @@ public sealed class SpotRepo : Object {
         program_model = new Gtk.StringList ({});
         mode_model = new Gtk.StringList ({});
         band_counts = new HashMap<string, int> ();
+        notified_alert_hashes = new HashSet<uint> ();
+        heard_callsign_times = new HashMap<string, int64?> ();
     }
 
     public Spot? get_spot (Quark spot_hash) {
@@ -246,12 +63,182 @@ public sealed class SpotRepo : Object {
         return null;
     }
 
+    public Spot? get_spot_for_callsign (string callsign) {
+        var normalized_exact = callsign.strip ().up ();
+        var normalized_profile = pota_profile_callsign (callsign).strip ().up ();
+        if ((normalized_exact == "") && (normalized_profile == ""))
+            return null;
+
+        Spot? profile_match = null;
+        for (uint i = 0 ; i < store.get_n_items () ; i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            var spot_exact = spot.callsign.strip ().up ();
+            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            if (spot_exact == normalized_exact)
+                return spot;
+
+            if ((profile_match == null) && (spot_profile == normalized_profile))
+                profile_match = spot;
+        }
+
+        return profile_match;
+    }
+
+    public Spot? get_spot_for_decode_text (string decode_text) {
+        var normalized_decode = decode_text.strip ().up ();
+        if (normalized_decode == "")
+            return null;
+
+        Spot? profile_match = null;
+        for (uint i = 0 ; i < store.get_n_items () ; i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            var spot_exact = spot.callsign.strip ().up ();
+            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            if ((spot_exact != "") && normalized_decode.contains (spot_exact))
+                return spot;
+
+            if ((profile_match == null) &&
+                (spot_profile != "") &&
+                normalized_decode.contains (spot_profile)) {
+                profile_match = spot;
+            }
+        }
+
+        return profile_match;
+    }
+
     public int get_band_count (string band) {
         if (band_counts.has_key (band)) {
             return band_counts.get (band);
         }
 
         return 0;
+    }
+
+    private void annotate_spot_log_status (
+        Spot spot,
+        SpotLogStatusSnapshot snapshot
+    ) {
+        var was_hunted_today = snapshot.hunted_today.contains (spot.park_ref);
+        var is_new_park = !snapshot.hunted_parks.contains (spot.park_ref);
+        var is_new_band = !is_new_park && !snapshot.hunted_park_bands.contains (
+            SpotLogStatusSnapshot.park_band_key (spot.park_ref, spot.band)
+        );
+
+        spot.set_log_status (was_hunted_today, is_new_park, is_new_band);
+    }
+
+    public void mark_spot_heard (Spot spot) {
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign))
+            heard_callsign_times[key] = now;
+
+        spot.mark_heard_recently ();
+    }
+
+    private void apply_heard_status (Spot spot) {
+        prune_heard_callsigns ();
+
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign)) {
+            if (!heard_callsign_times.has_key (key))
+                continue;
+
+            var age = now - heard_callsign_times[key];
+            if (age >= HEARD_CACHE_SECONDS)
+                continue;
+
+            spot.mark_heard_recently ((uint) (HEARD_CACHE_SECONDS - age));
+            return;
+        }
+    }
+
+    public void refresh_log_status () {
+        Error? snapshot_error = null;
+        var log_status_snapshot = Application.spot_database.load_log_status_snapshot (
+            new DateTime.now_utc (),
+            out snapshot_error
+        );
+        if (snapshot_error != null) {
+            warning ("Unable to refresh spot log status snapshot: %s",
+                snapshot_error.message);
+            return;
+        }
+
+        for (uint i = 0; i < store.get_n_items (); i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot != null)
+                annotate_spot_log_status (spot, log_status_snapshot);
+        }
+
+        log_status_refreshed ();
+    }
+
+    public void refresh_log_status_for_added_qso (Spot logged_spot) {
+        if (logged_spot == null || logged_spot.park_ref.strip () == "")
+            return;
+
+        var logged_park_ref = logged_spot.park_ref.strip ();
+        var logged_band = logged_spot.band;
+        var logged_today = logged_spot.spot_time.to_utc ().format ("%Y-%m-%d") ==
+            new DateTime.now_utc ().format ("%Y-%m-%d");
+        var changed = false;
+
+        for (uint i = 0; i < store.get_n_items (); i++) {
+            var spot = store.get_item (i) as Spot;
+            if (spot == null || spot.park_ref.strip () != logged_park_ref)
+                continue;
+
+            var was_hunted_today = spot.was_hunted_today || logged_today;
+            var is_new_park = false;
+            var is_new_band = spot.band == logged_band
+                ? false
+                : spot.is_new_park || spot.is_new_band;
+
+            if (spot.was_hunted_today != was_hunted_today ||
+                spot.is_new_park != is_new_park ||
+                spot.is_new_band != is_new_band) {
+                changed = true;
+            }
+
+            spot.set_log_status (was_hunted_today, is_new_park, is_new_band);
+        }
+
+        if (changed)
+            log_status_refreshed ();
+    }
+
+    private void prune_heard_callsigns () {
+        var now = monotonic_seconds ();
+        var expired = new ArrayList<string> ();
+        foreach (var entry in heard_callsign_times.entries) {
+            if (now - entry.value >= HEARD_CACHE_SECONDS)
+                expired.add (entry.key);
+        }
+
+        foreach (var key in expired)
+            heard_callsign_times.unset (key);
+    }
+
+    private static ArrayList<string> callsign_cache_keys (string callsign) {
+        var keys = new ArrayList<string> ();
+        var exact = callsign.strip ().up ();
+        var profile = pota_profile_callsign (callsign).strip ().up ();
+        if (exact != "")
+            keys.add (exact);
+        if (profile != "" && profile != exact)
+            keys.add (profile);
+        return keys;
+    }
+
+    private static int64 monotonic_seconds () {
+        return GLib.get_monotonic_time () / 1000000;
     }
 
     public async void update_spots () {
@@ -299,6 +286,7 @@ public sealed class SpotRepo : Object {
                             } else {
                                 parsed_band_counts[spot.band] = 1;
                             }
+                            apply_heard_status (spot);
                             parsed_spots.add (spot);
                         } catch (Error err) {
                             warning ("Skipping malformed POTA spot at index %u: %s",
@@ -307,7 +295,24 @@ public sealed class SpotRepo : Object {
                     }
                 }
 
-                // TODO: alert if watched callsign is seen in unique_callsigns
+                Error? snapshot_error = null;
+                var log_status_snapshot = Application.spot_database.load_log_status_snapshot (
+                    new DateTime.now_utc (),
+                    out snapshot_error
+                );
+                if (snapshot_error != null) {
+                    warning ("Unable to load spot log status snapshot: %s",
+                        snapshot_error.message);
+                    foreach (var spot in parsed_spots) {
+                        spot.set_log_status (false, false, false);
+                    }
+                } else {
+                    foreach (var spot in parsed_spots) {
+                        annotate_spot_log_status (spot, log_status_snapshot);
+                    }
+                }
+
+                notify_matching_spot_alerts (parsed_spots);
 
                 var programs_sorted = new ArrayList<string> ();
                 foreach (var program in programs) {
@@ -337,7 +342,6 @@ public sealed class SpotRepo : Object {
                     modes_sorted.add (mode);
                 }
 
-                store.remove_all ();
                 band_counts.clear ();
                 foreach (var entry in parsed_band_counts.entries) {
                     band_counts[entry.key] = entry.value;
@@ -346,9 +350,10 @@ public sealed class SpotRepo : Object {
                 var new_program_model = new Gtk.StringList ({});
                 var new_mode_model = new Gtk.StringList ({});
 
-                foreach (var spot in parsed_spots) {
-                    store.append (spot);
-                }
+                GLib.Object[] additions = new GLib.Object[parsed_spots.size];
+                for (int i = 0; i < parsed_spots.size; i++)
+                    additions[i] = parsed_spots[i];
+                store.splice (0, store.get_n_items (), additions);
                 spots_updated = parsed_spots.size;
 
                 new_program_model.append (_("All"));
@@ -373,4 +378,55 @@ public sealed class SpotRepo : Object {
 
         update_in_progress = false;
     } /* update_spots */
+
+    private void notify_matching_spot_alerts (ArrayList<Spot> spots) {
+        if (!Application.settings.get_boolean ("spot-alerts-enabled"))
+            return;
+
+        var keywords = normalized_alert_keywords ();
+        if (keywords.size == 0)
+            return;
+
+        foreach (var spot in spots) {
+            var hash = (uint) spot.hash;
+            if (notified_alert_hashes.contains (hash))
+                continue;
+
+            if (!spot_matches_keywords (spot, keywords))
+                continue;
+
+            notified_alert_hashes.add (hash);
+            Application.app.send_spot_alert (spot);
+        }
+    }
+
+    private ArrayList<string> normalized_alert_keywords () {
+        var keywords = new ArrayList<string> ();
+        foreach (var keyword in Application.settings.get_strv ("spot-alert-keywords")) {
+            var normalized = keyword.strip ().down ();
+            if (normalized != "")
+                keywords.add (normalized);
+        }
+        return keywords;
+    }
+
+    private bool spot_matches_keywords (Spot spot, ArrayList<string> keywords) {
+        var haystack = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s".printf (
+            spot.callsign,
+            spot.park_ref,
+            spot.park_name,
+            spot.location_desc,
+            spot.grid4,
+            spot.grid6,
+            spot.activator_comment,
+            spot.spotter_comment
+        ).down ();
+
+        foreach (var keyword in keywords) {
+            if (haystack.contains (keyword))
+                return true;
+        }
+
+        return false;
+    }
 }     /* class SpotRepo */
