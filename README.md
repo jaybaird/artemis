@@ -15,23 +15,23 @@ Artemis is designed to be cross-platform, lightweight, and easy to use.
 
 ## Screenshots
 
-![Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector](./screenshots/cards-light.png)
+![Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector](./screenshots/card-view-light-v21.png)
 *Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector.*
 
-![Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions](./screenshots/cards-dark.png)
+![Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions](./screenshots/card-view-dark-v21.png)
 *Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions.*
 
-![Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details](./screenshots/list-light.png)
+![Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details](./screenshots/list-view-light-v21.png)
 *Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details.*
 
-![Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting](./screenshots/list-dark.png)
+![Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting](./screenshots/list-view-dark-v21.png)
 *Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting.*
 
-![Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector](./screenshots/map-light.png)
-*Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector.*
+![Light theme map view showing park activity markers, signal report heatmap data, the sidebar filters, and the selected spot inspector](./screenshots/map-view-light-v21.png)
+*Light theme map view showing park activity markers, signal report heatmap data, the sidebar filters, and the selected spot inspector.*
 
-![Dark theme map view showing active parks on an interactive map with the floating refresh status bar](./screenshots/map-dark.png)
-*Dark theme map view showing active parks on an interactive map with the floating refresh status bar.*
+![Dark theme map view showing active parks and signal report heatmap data on an interactive map with the floating refresh status bar](./screenshots/map-view-dark-v21.png)
+*Dark theme map view showing active parks and signal report heatmap data on an interactive map with the floating refresh status bar.*
 
 ## Features
 

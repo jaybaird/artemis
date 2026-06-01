@@ -71,28 +71,28 @@
 
   <screenshots>
     <screenshot type="default">
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/cards-light.png</image>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/card-view-light-v21.png</image>
       <caption>Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector.</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/cards-dark.png</image>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/card-view-dark-v21.png</image>
       <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions.</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-light.png</image>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-view-light-v21.png</image>
       <caption>Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details.</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-dark.png</image>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-view-dark-v21.png</image>
       <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting.</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-light.png</image>
-      <caption>Light theme map view showing park activity markers, the sidebar filters, and the selected spot inspector.</caption>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view-light-v21.png</image>
+      <caption>Light theme map view showing park activity markers, signal report heatmap data, the sidebar filters, and the selected spot inspector.</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-dark.png</image>
-      <caption>Dark theme map view showing active parks on an interactive map with the floating refresh status bar.</caption>
+      <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view-dark-v21.png</image>
+      <caption>Dark theme map view showing active parks and signal report heatmap data on an interactive map with the floating refresh status bar.</caption>
     </screenshot>
   </screenshots>
 
