@@ -55,6 +55,11 @@ public sealed class Application : Adw.Application {
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
     public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
+    private static ZoneDetect.Database? _tz_db = null;
+    public static unowned ZoneDetect.Database? tz_db {
+        get { return _tz_db; }
+    }
+    private static Bytes? tz_db_bytes = null;
     private AlertsWindow? alerts_window = null;
     private HelpWindow? help_window = null;
     private LogbookWindow? logbook_window = null;
@@ -64,6 +69,9 @@ public sealed class Application : Adw.Application {
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
+    public static bool tz_db_available {
+        get { return _tz_db != null; }
+    }
 
     public static Application app;
     public static Gtk.Window win;
@@ -140,6 +148,7 @@ public sealed class Application : Adw.Application {
         pota_client = new PotaClient ();
         park_details_cache = new ParkDetailsCache (pota_client);
         qrz_client = new QrzClient ();
+        load_tz_db ();
 
         spot_database = new SpotDb ();
         Error err;
@@ -183,6 +192,28 @@ public sealed class Application : Adw.Application {
         }
 
         sync_logbook_ui ();
+    }
+
+    private static void load_tz_db () {
+        try {
+            tz_db_bytes = GLib.resources_lookup_data (
+                "/com/k0vcz/artemis/tz/timezone21.bin",
+                GLib.ResourceLookupFlags.NONE
+            );
+
+            unowned uint8[] data = tz_db_bytes.get_data ();
+            _tz_db = ZoneDetect.Database.open_from_memory (
+                (void*) data,
+                data.length
+            );
+
+            if (_tz_db == null)
+                warning ("Unable to load ZoneDetect timezone database from resources");
+        } catch (Error err) {
+            tz_db_bytes = null;
+            _tz_db = null;
+            warning ("Unable to load ZoneDetect timezone database resource: %s", err.message);
+        }
     }
 
     public static void show_toast (string message, bool log_message = true) {
@@ -391,6 +422,14 @@ public sealed class Application : Adw.Application {
             "Copyright © 2013 Lucas Beyer\n" +
             "https://github.com/lucasb-eyer/libheatmap",
             Gtk.License.MIT_X11,
+            null
+        );
+        dialog.add_legal_section (
+            _("ZoneDetect"),
+            "Copyright © 2018 Bertold Van den Bergh\n" +
+            "Licensed under the 3-clause BSD license.\n" +
+            "https://github.com/BertoldVdb/ZoneDetect",
+            Gtk.License.BSD_3,
             null
         );
         dialog.add_legal_section (

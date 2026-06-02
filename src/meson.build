@@ -6,6 +6,7 @@ artemis_vala_sources = [
   'src/adif/adif_generator.vala',
   'src/adif/adif_qso.vala',
   'src/add_spot.vala',
+  'src/avatar_detail_dialog.vala',
   'src/alerts_window.vala',
   'src/app_state.vala',
   'src/application.vala',
@@ -147,6 +148,16 @@ libartemismqtt = static_library(
 )
 
 mathlib = cc.find_library('m', required: true)
+
+zonedetect_sources = ['tz/zonedetect.c']
+zonedetect_deps = [mathlib]
+
+libzonedetect = static_library(
+  'zonedetect',
+  zonedetect_sources,
+  include_directories: src_inc,
+  dependencies: zonedetect_deps
+)
 
 heatmap_sources = ['map/heatmap.c']
 heatmap_deps = [mathlib]

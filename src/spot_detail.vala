@@ -213,6 +213,15 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Label detail_park_name;
 
     [GtkChild]
+    private unowned Gtk.Box detail_shift_badge;
+
+    [GtkChild]
+    private unowned Gtk.Image detail_shift_icon;
+
+    [GtkChild]
+    private unowned Gtk.Label detail_shift_label;
+
+    [GtkChild]
     private unowned Gtk.Box weather_summary_card;
 
     [GtkChild]
@@ -293,6 +302,7 @@ public sealed class SpotDetail : Gtk.Box {
     private DetailFieldRow detail_spot_time_row;
     private DetailFieldRow detail_spotter_comment_row;
     private DetailLinkRow detail_history_row;
+    private DetailFieldRow detail_localtime_row;
 
     public SpotDetail () {
         Object ();
@@ -334,6 +344,13 @@ public sealed class SpotDetail : Gtk.Box {
         radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
             update_tune_button_state ();
         });
+
+        var click = new Gtk.GestureClick ();
+        detail_avatar.add_controller (click);
+        detail_avatar.cursor = new Gdk.Cursor.from_name ("pointer", null);
+        click.released.connect (() => {
+            show_avatar_detail_dialog ();
+        });
     }
 
     private void build_detail_lists () {
@@ -366,6 +383,8 @@ public sealed class SpotDetail : Gtk.Box {
         detail_grid_row.add_css_class ("numeric");
         detail_coordinate_row = new DetailFieldRow (_("Coordinates"));
         detail_coordinate_row.add_css_class ("numeric");
+        detail_localtime_row = new DetailFieldRow (_("Local time"));
+        detail_localtime_row.add_css_class ("numeric");
         detail_sun_row = new DetailTimePairRow (
             _("Sun"),
             "daytime-sunrise-symbolic",
@@ -378,6 +397,7 @@ public sealed class SpotDetail : Gtk.Box {
         );
         detail_park_row = new DetailLinkRow (_("View Park Details"));
         detail_location_list.append (detail_location_row);
+        detail_location_list.append (detail_localtime_row);
         detail_location_list.append (detail_bearing_row);
         detail_location_list.append (detail_distance_row);
         detail_location_list.append (detail_grid_row);
@@ -429,6 +449,7 @@ public sealed class SpotDetail : Gtk.Box {
         var cached_activator = Application.callsign_cache.peek_callsign (spot.callsign);
         update_activator_profile (cached_activator);
         detail_park_name.label = spot.park_name;
+        update_shift_badge (spot);
         set_weather_loading ();
 
         detail_frequency_row.value = "%s kHz".printf (
@@ -456,6 +477,8 @@ public sealed class SpotDetail : Gtk.Box {
         if (detail_grid_row.visible) {
             detail_grid_row.value = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
         }
+
+        update_local_time_row (spot);
 
         detail_coordinate_row.visible = spot.coordinate != null;
         if (detail_coordinate_row.visible) {
@@ -515,6 +538,101 @@ public sealed class SpotDetail : Gtk.Box {
             false
         );
         activator_url = @"https://pota.app/#/profile/$escaped_callsign";
+    }
+
+    private void update_local_time_row (Spot spot) {
+        detail_localtime_row.visible = false;
+        detail_localtime_row.value = "";
+
+        if (spot.coordinate == null || !Application.tz_db_available)
+            return;
+
+        var tzid = timezone_id_for_coordinate (spot.coordinate);
+        if (tzid == null)
+            return;
+
+        TimeZone timezone;
+        try {
+            timezone = new TimeZone.identifier (tzid);
+        } catch (Error err) {
+            warning ("ZoneDetect returned unusable timezone id %s for %s @ %s: %s",
+                tzid, spot.callsign, spot.park_ref, err.message);
+            return;
+        }
+
+        var local_time = spot.spot_time.to_timezone (timezone);
+        detail_localtime_row.value = format_local_time_label (local_time);
+        detail_localtime_row.tooltip_text = tzid;
+        detail_localtime_row.visible = true;
+    }
+
+    private string format_local_time_label (DateTime local_time) {
+        var offset_seconds = local_time.get_utc_offset () / TimeSpan.SECOND;
+        var offset_sign = offset_seconds < 0 ? "-" : "+";
+        var offset_abs = offset_seconds < 0 ? -offset_seconds : offset_seconds;
+        var offset_hours = offset_abs / 3600;
+        var offset_minutes = (offset_abs % 3600) / 60;
+
+        return "%s %s (UTC%s%02d:%02d)".printf (
+            local_time.format ("%R"),
+            local_time.format ("%Z"),
+            offset_sign,
+            (int) offset_hours,
+            (int) offset_minutes
+        );
+    }
+
+    private string? timezone_id_for_coordinate (Shumate.Coordinate coordinate) {
+        unowned ZoneDetect.Database? tz_db = Application.tz_db;
+        if (tz_db == null)
+            return null;
+
+        char* raw_tzid = tz_db.simple_lookup_string_raw (
+            (float) coordinate.latitude,
+            (float) coordinate.longitude
+        );
+        if (raw_tzid == null)
+            return null;
+
+        var tzid = ((string) raw_tzid).dup ().strip ();
+        ZoneDetect.free_simple_lookup_string (raw_tzid);
+
+        return tzid != "" ? tzid : null;
+    }
+
+    private void update_shift_badge (Spot spot) {
+        Astronomy.Shift shift;
+        if (!spot_shift (spot, out shift)) {
+            detail_shift_badge.visible = false;
+            return;
+        }
+
+        if (shift == Astronomy.Shift.EARLY) {
+            set_shift_badge (
+                "sunrise-outline-symbolic",
+                _("Early Shift"),
+                _("This spot was posted during the park's Early Shift window.")
+            );
+        } else if (shift == Astronomy.Shift.LATE) {
+            set_shift_badge (
+                "moon-outline-symbolic",
+                _("Late Shift"),
+                _("This spot was posted during the park's Late Shift window.")
+            );
+        } else {
+            detail_shift_badge.visible = false;
+        }
+    }
+
+    private void set_shift_badge (
+        string icon_name,
+        string label,
+        string tooltip
+    ) {
+        detail_shift_icon.icon_name = icon_name;
+        detail_shift_label.label = label;
+        detail_shift_badge.tooltip_text = tooltip;
+        detail_shift_badge.visible = true;
     }
 
     private string format_time_label (DateTime? time) {
@@ -675,13 +793,12 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void on_history_clicked () {
-        var spot = current_spot;
-        if (spot == null)
+        if (current_spot == null)
             return;
-        var dlg = new SpotHistoryDialog (spot.callsign, spot.park_ref);
+        var dlg = new SpotHistoryDialog (current_spot.callsign, current_spot.park_ref);
         dlg.show_loading (true);
         dlg.present (get_root ());
-        Application.pota_client.fetch_spot_history.begin (spot.callsign, spot.park_ref, (
+        Application.pota_client.fetch_spot_history.begin (current_spot.callsign, current_spot.park_ref, (
                 obj, res) => {
             try {
                 dlg.show_history (Application.pota_client.fetch_spot_history.end (res));
@@ -689,6 +806,11 @@ public sealed class SpotDetail : Gtk.Box {
                 dlg.show_error (e.message);
             }
         });
+    }
+
+    private void show_avatar_detail_dialog () {
+        var dlg = new AvatarDetailDialog (current_spot.callsign);
+        dlg.present (get_root ());
     }
 
     private void on_park_clicked () {

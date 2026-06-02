@@ -1,7 +1,7 @@
 project(
   'com.k0vcz.Artemis', 
   ['c', 'vala'],
-  version: '2.1.1',
+  version: '2.2',
   meson_version: '>= 1.0.0',
   default_options: [
     'warning_level=2',
@@ -97,6 +97,7 @@ endif
 link_deps = [
   libradiocontrol,
   libartemismqtt,
+  libzonedetect,
   libheatmap
 ]
 
@@ -105,9 +106,9 @@ if is_windows
 endif
 
 if devel
-  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map']
+  vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--pkg=ZoneDetect', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map', '--vapidir='+srcdir / 'tz']
 else
-  vala_args = ['--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map']
+  vala_args = ['--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--pkg=ZoneDetect', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map', '--vapidir='+srcdir / 'tz']
 endif
 
 artemis_exe = executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,

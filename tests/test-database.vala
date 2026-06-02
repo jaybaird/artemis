@@ -4,7 +4,11 @@
  */
 
 public interface QsoStore : Object {
-    public abstract bool add_qso_from_spot (Spot spot, out Error? error);
+    public abstract bool add_qso_from_spot (
+        Spot spot,
+        out bool inserted,
+        out Error? error
+    );
     public abstract bool update_qso_delivery_status (
         Spot spot,
         bool local_adif_saved,
@@ -403,8 +407,14 @@ private void test_database_persists_qso_signal_reports () {
             "+04",
             "-08"
         );
-        assert (spot_db.add_qso_from_spot (spot, out error));
+        bool inserted;
+        assert (spot_db.add_qso_from_spot (spot, out inserted, out error));
         assert (error == null);
+        assert (inserted);
+
+        assert (spot_db.add_qso_from_spot (spot, out inserted, out error));
+        assert (error == null);
+        assert (!inserted);
 
         var qsos = spot_db.latest_qsos (1, out error);
         assert (error == null);
@@ -457,8 +467,10 @@ private void test_database_keeps_blank_park_qsos_out_of_park_summaries () {
             new DateTime.from_iso8601 ("2026-01-02T00:00:00Z", new TimeZone.utc ()),
             "K0VCZ"
         );
-        assert (spot_db.add_qso_from_spot (unresolved, out error));
+        bool inserted;
+        assert (spot_db.add_qso_from_spot (unresolved, out inserted, out error));
         assert (error == null);
+        assert (inserted);
 
         var qso_page = spot_db.load_qso_page (
             10,

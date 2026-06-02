@@ -1,5 +1,6 @@
 inputs = files(
   'add_spot_page.blp',
+  'avatar_detail_dialog.blp',
   'alerts_window.blp',
   'first_run_setup_dialog.blp',
   'main_window.blp',
@@ -27,6 +28,7 @@ inputs = files(
 
 outs = [
   'add_spot_page.ui',
+  'avatar_detail_dialog.ui',
   'alerts_window.ui',
   'first_run_setup_dialog.ui',
   'main_window.ui',

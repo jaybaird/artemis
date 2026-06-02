@@ -70,7 +70,7 @@ template $SpotDetail : Box {
               Adw.Avatar detail_avatar {
                 size: 72;
                 halign: center;
-                text: "?";
+                text: _("");
               }
 
               Label detail_callsign {
@@ -86,6 +86,27 @@ template $SpotDetail : Box {
                 wrap-mode: word_char;
                 justify: center;
                 styles ["title-2"]
+              }
+
+              Box detail_shift_badge {
+                spacing: 4;
+                orientation: horizontal;
+                halign: center;
+                visible: false;
+
+                styles ["shift-badge"]
+
+                Image detail_shift_icon {
+                  icon-name: "sunrise-outline-symbolic";
+
+                  accessibility {
+                    label: _("Early/Late shift icon");
+                  }
+                }
+
+                Label detail_shift_label {
+                  label: _("Early Shift");
+                }
               }
 
               Stack weather_stack {
@@ -150,6 +171,11 @@ template $SpotDetail : Box {
                     max-width-chars: 18;
                   }
 
+                  Separator {
+                    orientation: vertical;
+                    styles ["spot-badge-separator"]
+                  }
+
                   Image {
                     icon-name: "thermometer-symbolic";
                     valign: baseline;
@@ -163,6 +189,11 @@ template $SpotDetail : Box {
                   Label wx_temp {
                     label: _("48");
                     styles ["numeric"]
+                  }
+
+                  Separator {
+                    orientation: vertical;
+                    styles ["spot-badge-separator"]
                   }
 
                   Image {

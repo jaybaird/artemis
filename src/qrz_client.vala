@@ -100,6 +100,12 @@ public sealed class QrzClient : Object, QrzQsoUploader {
             );
         }
 
+        message (
+            "QRZ HTTP upload starting: api_key_configured=%s adif_length=%d",
+            (api_key != "").to_string (),
+            normalized_adif.length
+        );
+
         var form_body = "KEY=%s&ACTION=INSERT&ADIF=%s".printf (
             encode_form_value (api_key),
             encode_form_value (normalized_adif)
@@ -164,6 +170,11 @@ public sealed class QrzClient : Object, QrzQsoUploader {
     }
 
     public async void upload_spot_qso (Spot spot) throws Error {
+        message (
+            "QrzClient.upload_spot_qso called for %s @ %s",
+            spot != null ? spot.callsign : "(null)",
+            spot != null ? spot.park_ref : "(null)"
+        );
         try {
             yield upload_adif_payload (Artemis.Adif.spot_qso_to_string (spot));
         } catch (Artemis.Adif.Error error) {
@@ -174,6 +185,10 @@ public sealed class QrzClient : Object, QrzQsoUploader {
     }
 
     public async void upload_adif_record (string adif) throws Error {
+        message (
+            "QrzClient.upload_adif_record called: adif_length=%d",
+            adif.length
+        );
         yield upload_adif_payload (adif);
     }
 }

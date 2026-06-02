@@ -122,10 +122,13 @@ private sealed class FakeSpotLookup : Object, Artemis.Wsjtx.SpotLookup {
 private sealed class FakeQsoStore : Object, QsoStore {
     public int saved_count = 0;
     public Spot? last_spot = null;
+    public bool next_inserted = true;
 
-    public bool add_qso_from_spot (Spot spot, out Error? error) {
+    public bool add_qso_from_spot (Spot spot, out bool inserted, out Error? error) {
         error = null;
-        saved_count++;
+        inserted = next_inserted;
+        if (inserted)
+            saved_count++;
         last_spot = spot;
         return true;
     }
@@ -191,6 +194,7 @@ private sealed class HandlerFixture {
     public FakeLocalAdifWriter adif_writer;
     public LoggingService logging_service;
     public Artemis.Wsjtx.LoggedAdifHandler handler;
+    public Gee.ArrayList<string> messages = new Gee.ArrayList<string> ();
 
     public HandlerFixture () {
         preferences = new FakeLoggingPreferences ();
@@ -211,6 +215,9 @@ private sealed class HandlerFixture {
             spot_lookup,
             preferences
         );
+        handler.user_message.connect ((message) => {
+            messages.add (message);
+        });
     }
 }
 
@@ -440,6 +447,76 @@ private void test_handler_logs_qso_logged_matching_spot () {
     assert (fixture.pota_poster.post_count == 1);
 }
 
+private void test_handler_emits_success_message () {
+    var fixture = new HandlerFixture ();
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    assert (run_handler (fixture.handler, logged_adif_packet ()));
+    assert (fixture.messages.size == 1);
+    assert (fixture.messages[0] == "WSJT-X QSO saved; POTA spot posted");
+}
+
+private void test_handler_dedupes_qso_logged_then_logged_adif () {
+    var fixture = new HandlerFixture ();
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    assert (run_qso_logged_handler (fixture.handler, qso_logged_packet ()));
+    assert (!run_handler (fixture.handler, logged_adif_packet ()));
+    assert (fixture.qso_store.saved_count == 1);
+    assert (fixture.adif_writer.append_count == 1);
+    assert (fixture.pota_poster.post_count == 1);
+    assert (fixture.messages.size == 1);
+}
+
+private void test_handler_dedupes_logged_adif_then_qso_logged () {
+    var fixture = new HandlerFixture ();
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    assert (run_handler (fixture.handler, logged_adif_packet ()));
+    assert (!run_qso_logged_handler (fixture.handler, qso_logged_packet ()));
+    assert (fixture.qso_store.saved_count == 1);
+    assert (fixture.adif_writer.append_count == 1);
+    assert (fixture.pota_poster.post_count == 1);
+    assert (fixture.messages.size == 1);
+}
+
+private void test_handler_skips_side_effects_for_existing_local_qso () {
+    var fixture = new HandlerFixture ();
+    fixture.qso_store.next_inserted = false;
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    assert (run_handler (fixture.handler, logged_adif_packet ()));
+    assert (fixture.qso_store.saved_count == 0);
+    assert (fixture.adif_writer.append_count == 0);
+    assert (fixture.pota_poster.post_count == 0);
+    assert (fixture.qrz_uploader.upload_count == 0);
+    assert (fixture.messages.size == 0);
+}
+
 private void test_handler_logs_recent_cq_pota_without_park () {
     var fixture = new HandlerFixture ();
     fixture.handler.remember_cq_pota_decode ("153000 -10 0.1 700 ~ CQ  POTA  K1ABC DM33");
@@ -547,6 +624,14 @@ public int main (string[] args) {
         test_handler_logs_matching_spot);
     Test.add_func ("/wsjtx-logged-adif/handler-logs-qso-logged-matching-spot",
         test_handler_logs_qso_logged_matching_spot);
+    Test.add_func ("/wsjtx-logged-adif/handler-emits-success-message",
+        test_handler_emits_success_message);
+    Test.add_func ("/wsjtx-logged-adif/handler-dedupes-qso-logged-then-logged-adif",
+        test_handler_dedupes_qso_logged_then_logged_adif);
+    Test.add_func ("/wsjtx-logged-adif/handler-dedupes-logged-adif-then-qso-logged",
+        test_handler_dedupes_logged_adif_then_qso_logged);
+    Test.add_func ("/wsjtx-logged-adif/handler-skips-side-effects-for-existing-local-qso",
+        test_handler_skips_side_effects_for_existing_local_qso);
     Test.add_func ("/wsjtx-logged-adif/handler-logs-recent-cq-pota-without-park",
         test_handler_logs_recent_cq_pota_without_park);
     Test.add_func ("/wsjtx-logged-adif/handler-ignores-expired-cq-pota",

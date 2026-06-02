@@ -172,9 +172,19 @@ public sealed class QsoDialog : Adw.Dialog {
             return;
         }
 
+        message (
+            "Manual QRZ retry requested for %s @ %s",
+            spot.callsign,
+            spot.park_ref
+        );
         Application.qrz_client.upload_spot_qso.begin (spot, (obj, res) => {
             try {
                 Application.qrz_client.upload_spot_qso.end (res);
+                message (
+                    "Manual retry QRZ upload completed for %s @ %s",
+                    spot.callsign,
+                    spot.park_ref
+                );
                 qrz_uploaded = true;
                 qrz_error = null;
                 update_delivery_status (spot);

@@ -15,6 +15,7 @@ namespace Artemis.Wsjtx {
         public SpotLookup spot_lookup { get; construct; }
         public LoggingPreferences preferences { get; construct; }
         private Gee.HashMap<string, int64?> recent_cq_pota_callsigns = new Gee.HashMap<string, int64?> ();
+        private Gee.HashSet<string> in_progress_logged_qso_keys = new Gee.HashSet<string> ();
 
         public signal void user_message (string message);
 
@@ -86,13 +87,10 @@ namespace Artemis.Wsjtx {
             var frequency_khz = parsed.frequency_khz > 0.0 ?
                 parsed.frequency_khz :
                 active_spot != null ? active_spot.frequency_khz : 0.0;
-            var dedupe_key = "%s|%s|%s".printf (
-                parsed.dedupe_key,
-                park_ref,
-                matched_live_spot ? "spot" : "cq-pota"
-            );
+            var dedupe_key = logged_qso_key (parsed, park_ref, mode, frequency_khz);
 
-            if (logging_service.has_completed_logged_adif (dedupe_key)) {
+            if (logging_service.has_completed_logged_adif (dedupe_key) ||
+                in_progress_logged_qso_keys.contains (dedupe_key)) {
                 message (
                     "Skipping WSJT-X %s QSO for %s: duplicate logged QSO",
                     source_name,
@@ -101,8 +99,11 @@ namespace Artemis.Wsjtx {
                 return false;
             }
 
+            in_progress_logged_qso_keys.add (dedupe_key);
+
             if ((mode == "") || (frequency_khz <= 0.0) ||
                 (parsed.station_callsign == "") || (parsed.spot_time == null)) {
+                in_progress_logged_qso_keys.remove (dedupe_key);
                 warning ("Skipping WSJT-X %s QSO for %s: QSO record missing required fields",
                     source_name,
                     parsed.call);
@@ -122,6 +123,13 @@ namespace Artemis.Wsjtx {
             );
 
             try {
+                message (
+                    "WSJT-X %s QRZ forwarding for %s @ %s: forward_wsjtx_qsos_to_qrz=%s",
+                    source_name,
+                    parsed.call,
+                    park_ref,
+                    preferences.forward_wsjtx_qsos_to_qrz.to_string ()
+                );
                 var qrz_adif = preferences.forward_wsjtx_qsos_to_qrz ?
                     build_qrz_adif (source_adif, parsed, active_spot) :
                     null;
@@ -134,6 +142,11 @@ namespace Artemis.Wsjtx {
                     qrz_adif
                 );
                 logging_service.mark_logged_adif_completed (dedupe_key);
+                in_progress_logged_qso_keys.remove (dedupe_key);
+                if (result.local_saved && result.pota_posted)
+                    user_message (_("WSJT-X QSO saved; POTA spot posted"));
+                else if (result.local_saved)
+                    user_message (_("WSJT-X QSO saved"));
                 if (result.local_adif_error != null)
                     user_message (_("WSJT-X QSO saved locally; ADIF log failed"));
                 if (result.pota_error != null)
@@ -148,6 +161,7 @@ namespace Artemis.Wsjtx {
                     err.message);
             }
 
+            in_progress_logged_qso_keys.remove (dedupe_key);
             return false;
         }
 
@@ -196,6 +210,24 @@ namespace Artemis.Wsjtx {
 
         private static string normalize_callsign (string callsign) {
             return callsign.strip ().up ();
+        }
+
+        private static string logged_qso_key (
+            ParsedLoggedAdif parsed,
+            string park_ref,
+            string mode,
+            double frequency_khz
+        ) {
+            var qso_time = parsed.spot_time != null ?
+                parsed.spot_time.to_utc ().format ("%Y%m%d%H%M%S") :
+                "";
+            return "%s|%s|%s|%s|%s".printf (
+                normalize_callsign (parsed.call),
+                park_ref.strip ().up (),
+                mode.strip ().up (),
+                format_frequency_khz (frequency_khz),
+                qso_time
+            );
         }
 
         private static string build_qrz_adif (

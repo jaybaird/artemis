@@ -8,6 +8,7 @@
     <file preprocess="xml-stripblanks">ui/preferences/logging_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/wsjtx_page.ui</file>
     <file preprocess="xml-stripblanks">ui/alerts_window.ui</file>
+    <file preprocess="xml-stripblanks">ui/avatar_detail_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/first_run_setup_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/main_window.ui</file>
     <file preprocess="xml-stripblanks">ui/help_window.ui</file>
@@ -53,6 +54,7 @@
     <file compressed="true">icons/hicolor/symbolic/actions/sound-wave-add-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/storm-outline-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/sun-outline-symbolic.svg</file>
+    <file compressed="true">icons/hicolor/symbolic/actions/sunrise-outline-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/windy-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/thermometer-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/drop-hollow-symbolic.svg</file>
@@ -83,6 +85,7 @@
     <file compressed="true">icons/hicolor/scalable/status/band-70cm.svg</file>
 
     <file compressed="true" alias="style.css">css/style.css</file>
+    <file compressed="true">tz/timezone21.bin</file>
 
     <file compressed="true">help/help.json</file>
     <file compressed="true">sql/version-001.sql</file>

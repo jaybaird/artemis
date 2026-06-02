@@ -45,6 +45,7 @@ install_data(
     'hicolor/symbolic/actions/snow-outline-symbolic.svg',
     'hicolor/symbolic/actions/storm-outline-symbolic.svg',
     'hicolor/symbolic/actions/sun-outline-symbolic.svg',
+    'hicolor/symbolic/actions/sunrise-outline-symbolic.svg',
     'hicolor/symbolic/actions/windy-symbolic.svg',
     'hicolor/symbolic/actions/thermometer-symbolic.svg',
     'hicolor/symbolic/actions/drop-hollow-symbolic.svg',

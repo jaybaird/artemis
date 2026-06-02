@@ -148,6 +148,23 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
         ));
     }
 
+    Astronomy.Shift shift;
+    if (spot_shift (spot, out shift)) {
+        if (shift == Astronomy.Shift.EARLY) {
+            badges.add (new SpotBadgeInfo (
+                "sunrise-outline-symbolic",
+                _("Early Shift"),
+                "badge-early-shift"
+            ));
+        } else if (shift == Astronomy.Shift.LATE) {
+            badges.add (new SpotBadgeInfo (
+                "moon-outline-symbolic",
+                _("Late Shift"),
+                "badge-late-shift"
+            ));
+        }
+    }
+
     return badges;
 }
 
@@ -184,12 +201,26 @@ public static Gee.ArrayList<SpotBadgeHelpInfo> spot_badge_help_items () {
         _("WSJT-X recently decoded text matching this activator."),
         "badge-heard-recently"
     ));
+    badges.add (new SpotBadgeHelpInfo (
+        "sunrise-outline-symbolic",
+        _("Early Shift"),
+        _("This spot was posted during the park's Early Shift window."),
+        "badge-early-shift"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "moon-outline-symbolic",
+        _("Late Shift"),
+        _("This spot was posted during the park's Late Shift window."),
+        "badge-late-shift"
+    ));
 
     return badges;
 }
 
-public static Gtk.Image create_spot_badge_image (SpotBadgeInfo badge) {
+public static Gtk.Widget create_spot_badge_widget (SpotBadgeInfo badge) {
     var image = new Gtk.Image.from_icon_name (badge.icon_name);
+    image.halign = Gtk.Align.CENTER;
+    image.valign = Gtk.Align.CENTER;
     image.tooltip_text = badge.tooltip;
     image.add_css_class ("spot-badge");
     image.add_css_class (badge.css_class);
@@ -204,8 +235,34 @@ public static void populate_spot_badges (Gtk.Box box, Spot spot) {
         child = next;
     }
 
-    foreach (var badge in collect_spot_badges (spot))
-        box.append (create_spot_badge_image (badge));
+    foreach (var badge in collect_spot_badges (spot)) {
+        if (box.get_first_child () != null) {
+            var separator = new Gtk.Separator (Gtk.Orientation.VERTICAL);
+            separator.add_css_class ("spot-badge-separator");
+            box.append (separator);
+        }
+        box.append (create_spot_badge_widget (badge));
+    }
+
+    box.visible = box.get_first_child () != null;
+}
+
+public static bool spot_shift (Spot spot, out Astronomy.Shift shift) {
+    shift = Astronomy.Shift.NORMAL;
+
+    var grid = ((spot.grid6 ?? "").strip () != "") ? spot.grid6 : spot.grid4;
+    grid = (grid ?? "").strip ();
+    if (grid == "")
+        return false;
+
+    try {
+        shift = Astronomy.shift_for_grid (grid, spot.spot_time);
+        return shift != Astronomy.Shift.NORMAL;
+    } catch (Error err) {
+        warning ("Failed to calculate shift for %s @ %s using grid %s: %s",
+            spot.callsign, spot.park_ref, grid, err.message);
+        return false;
+    }
 }
 
 public static bool spot_matches_current_filters (Spot spot, string band_filter) {

@@ -217,7 +217,7 @@ public sealed class CallsignCache : Object {
         try {
             var gravatar_hash = entry.gravatar_hash;
             if ((gravatar_hash != null) && (gravatar_hash.strip () != "")) {
-                var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
+                var url = "https://www.gravatar.com/avatar/%s?s=256&d=identicon"
                     .printf (gravatar_hash);
 
                 var message = new Soup.Message ("GET", url);

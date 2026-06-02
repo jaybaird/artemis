@@ -258,6 +258,27 @@
     color: var(--wsjtx-heard-color);
 }
 
+.spot-badge-drawer {
+    background-color: var(--window-bg-color);
+    border: 1px solid var(--borders);
+    border-radius: 8px;
+    padding: 0.32em 0.56em;
+}
+
+.spot-badge-separator {
+    min-height: 1em;
+    margin: 0 0.12em;
+    opacity: 0.35;
+}
+
+image.badge-early-shift {
+    color: var(--yellow-3);
+}
+
+image.badge-late-shift {
+    color: var(--purple-2);
+}
+
 .frequency-display {
     font-weight: 700;
     font-family: var(--monospace-font-family);
@@ -321,6 +342,20 @@
     -gtk-icon-size: 1.25em;
     min-width: 1.25em;
     min-height: 1.25em;
+}
+
+.shift-badge {
+    background-color: var(--card-bg-color);
+    color: var(--window-fg-color);
+    border: 1px solid var(--borders);
+    border-radius: 9999px;
+    box-shadow: 0 1px 3px alpha(black, 0.35);
+    min-height: 1.6em;
+    padding: 0.1em 0.55em;
+}
+
+.shift-badge image {
+    -gtk-icon-size: 1em;
 }
 
 .marker {

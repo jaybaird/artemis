@@ -295,8 +295,12 @@ template $SpotCard : Box {
       Box badge_box {
         orientation: horizontal;
         spacing: 4;
-        hexpand: true;
         valign: center;
+        styles ["spot-badge-drawer"]
+      }
+
+      Box {
+        hexpand: true;
       }
 
       Box {
