@@ -175,6 +175,13 @@ public sealed class Application : Adw.Application {
             radio_connection_state_changed ();
         });
         app = this;
+
+        if (settings.get_string ("callsign").strip () != "" &&
+            settings.get_string ("location").strip () != "") {
+            settings.set_boolean ("first-run-setup-complete", true);
+            return;
+        }
+
         sync_logbook_ui ();
     }
 
