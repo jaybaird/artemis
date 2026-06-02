@@ -29,6 +29,7 @@ namespace Artemis.Wsjtx {
         private string last_sender = "";
         private string last_instance_id = "";
         private uint32 last_schema = 0;
+        private uint32 negotiated_schema = MAX_SCHEMA;
         private string last_error_message = "";
         private string last_highlighted_callsign = "";
         private string last_selected_tx_callsign = "";
@@ -176,10 +177,12 @@ namespace Artemis.Wsjtx {
         }
 
         private void on_packet_received (Artemis.Wsjtx.Packet packet, string sender) {
+            var packet_id = packet.header.id ?? "";
             last_sender = sender;
-            last_instance_id = packet.header.id;
+            last_instance_id = packet_id;
             last_schema = packet.header.schema;
-            client_id = packet.header.id;
+            negotiated_schema = uint32.min (last_schema, MAX_SCHEMA);
+            client_id = packet_id;
             listening = true;
             connected = true;
             last_error_message = "";
@@ -204,8 +207,10 @@ namespace Artemis.Wsjtx {
             switch (packet.type) {
                 case MessageType.HEARTBEAT:
                     var heartbeat = packet.get_heartbeat ();
+                    negotiated_schema = uint32.min (heartbeat.max_schema, MAX_SCHEMA);
                     client_version = heartbeat.version;
                     client_revision = heartbeat.revision;
+                    send_heartbeat_response ();
                     break;
                 case MessageType.STATUS:
                     var status = packet.get_status ();
@@ -218,6 +223,7 @@ namespace Artemis.Wsjtx {
                     break;
                 case MessageType.DECODE:
                     var decode = packet.get_decode ();
+                    // log_decode (decode, sender);
                     handle_decode (decode);
                     decode_received (decode);
                     break;
@@ -278,15 +284,62 @@ namespace Artemis.Wsjtx {
             highlight_spot_callsign (spot);
         }
 
+        private void log_decode (DecodePacket decode, string sender) {
+            stdout.printf (
+                "WSJT-X decode from %s id=%s schema=%u new=%s time=%s snr=%d dt=%.3f df=%u mode=%s low_confidence=%s off_air=%s text=\"%s\"\n",
+                sender,
+                decode.header.id,
+                decode.header.schema,
+                decode.is_new.to_string (),
+                decode.time.to_display_string (),
+                decode.snr,
+                decode.delta_time,
+                decode.delta_frequency_hz,
+                decode.mode,
+                decode.low_confidence.to_string (),
+                decode.off_air.to_string (),
+                decode.text
+            );
+            stdout.flush ();
+        }
+
+        private void send_heartbeat_response () {
+            var id = last_instance_id.strip ();
+            if (id == "") {
+                warning ("Skipping WSJT-X heartbeat response: packet id is empty");
+                return;
+            }
+
+            try {
+                var datagram = PacketWriter.build_heartbeat (
+                    id,
+                    Build.VERSION,
+                    "",
+                    MAX_SCHEMA,
+                    negotiated_schema
+                );
+                if (listener != null)
+                    listener.send_to_last_sender (datagram);
+            } catch (Error err) {
+                warning ("Unable to send WSJT-X heartbeat response: %s", err.message);
+            }
+        }
+
         private void highlight_spot_callsign (Spot spot) {
             var callsign = spot.callsign.strip ().up ();
             if (callsign == "" || callsign == last_highlighted_callsign)
                 return;
 
+            var id = last_instance_id.strip ();
+            if (id == "")
+                return;
+
             try {
                 var datagram = PacketWriter.build_highlight_callsign (
-                    last_instance_id,
-                    callsign
+                    id,
+                    callsign,
+                    true,
+                    negotiated_schema
                 );
                 if (listener != null)
                     listener.send_to_last_sender (datagram);
