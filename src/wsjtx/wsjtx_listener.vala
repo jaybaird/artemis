@@ -26,9 +26,8 @@ namespace Artemis.Wsjtx {
         private SocketAddress? last_remote_address = null;
         private PacketParser parser;
 
-        private Cancellable? receive_cancellable;
-        private Thread<void*>? receive_thread;
-        private uint listener_generation = 0;
+        private Dex.Future? receive_loop;
+        private Cancellable? cancellable;
 
         public uint16 port { get; construct; }
         public string listen_ip { get; construct; }
@@ -109,26 +108,21 @@ namespace Artemis.Wsjtx {
                 socket.join_multicast_group (configured_address, false, null);
             }
 
-            is_running = true;
-            var generation = ++listener_generation;
-            receive_cancellable = new Cancellable ();
-            var receive_socket = socket;
-            var cancellable = receive_cancellable;
-            receive_thread = new Thread<void*> ("wsjtx-listener", () => {
-                receive_loop (receive_socket, cancellable, generation);
-                return null;
+            cancellable = new Cancellable ();
+
+            receive_loop = Dex.Scheduler.get_default ().spawn (0, () => {
+                do_loop ();
+                return new Dex.Future.for_boolean (true);
             });
+            receive_loop.disown ();
+
+            is_running = true;
         }
 
         public void stop () {
-            if (!is_running && socket == null)
-                return;
-
-            listener_generation++;
-
-            if (receive_cancellable != null) {
-                receive_cancellable.cancel ();
-                receive_cancellable = null;
+            if (cancellable != null) {
+                cancellable.cancel ();
+                cancellable = null;
             }
 
             if (socket != null) {
@@ -141,90 +135,78 @@ namespace Artemis.Wsjtx {
             }
 
             is_running = false;
-            receive_thread = null;
+            receive_loop = null;
         }
 
-        private void receive_loop (
-            Socket receive_socket,
-            Cancellable cancellable,
-            uint generation
-        ) {
-            while (!cancellable.is_cancelled ()) {
+        private void do_loop () {
+            while ((socket != null) && (cancellable != null) && !cancellable.is_cancelled ()) {
                 try {
-                    if (!receive_socket.condition_wait (IOCondition.IN, cancellable))
-                        continue;
-
-                    drain_ready_packets (receive_socket, cancellable, generation);
+                    wait_for_packet (socket, cancellable).await ();
+                    drain_ready_packets (socket);
                 } catch (Error err) {
-                    if (err is IOError.CANCELLED || cancellable.is_cancelled ())
+                    if (err is IOError.CANCELLED)
                         break;
 
-                    dispatch_error (err, generation);
+                    receive_error (err);
                     break;
                 }
             }
         }
 
-        private void drain_ready_packets (
-            Socket receive_socket,
-            Cancellable cancellable,
-            uint generation
-        ) throws Error {
-            while (!cancellable.is_cancelled ()) {
+        private Dex.Future wait_for_packet (Socket socket, Cancellable? cancellable) {
+            var promise = new Dex.Promise.cancellable ();
+            var source = socket.create_source (IOCondition.IN, cancellable);
+            ulong cancellable_handler = 0;
+
+            source.set_callback (() => {
+                promise.resolve_boolean (true);
+                return Source.REMOVE;
+            });
+
+            if (cancellable != null) {
+                cancellable_handler = cancellable.cancelled.connect (() => {
+                    promise.reject (new IOError.CANCELLED ("Listener stopped"));
+                });
+            }
+
+            source.attach (MainContext.default ());
+
+            new Dex.Future.finally (promise, (future) => {
+                if (cancellable != null && cancellable_handler != 0 &&
+                    SignalHandler.is_connected (cancellable, cancellable_handler)) {
+                    SignalHandler.disconnect (cancellable, cancellable_handler);
+                }
+                source.destroy ();
+                return future;
+            }).disown ();
+
+            return promise;
+        }
+
+        private void drain_ready_packets (Socket socket) throws Error {
+            while (true) {
                 uint8[] buffer = new uint8[MAX_DATAGRAM_SIZE];
                 SocketAddress remote_address;
 
                 try {
-                    var received = receive_socket.receive_from (
-                        out remote_address,
-                        buffer,
-                        cancellable
-                    );
+                    var received = socket.receive_from (out remote_address, buffer, cancellable);
                     if (received <= 0)
                         break;
 
-                    var sender = format_sender (remote_address);
+                    last_remote_address = remote_address;
                     var datagram = buffer[0: (int)received];
-
                     try {
                         var packet = parser.parse (datagram);
-                        dispatch_packet (packet, remote_address, sender, generation);
+                        packet_received (packet, format_sender (remote_address));
                     } catch (PacketError err) {
-                        dispatch_error (err, generation);
+                        receive_error (err);
                     }
                 } catch (Error err) {
                     if (err is IOError.WOULD_BLOCK)
                         break;
-
                     throw err;
                 }
             }
-        }
-
-        private void dispatch_packet (
-            Artemis.Wsjtx.Packet packet,
-            SocketAddress remote_address,
-            string sender,
-            uint generation
-        ) {
-            MainContext.default ().invoke (() => {
-                if (!is_running || generation != listener_generation)
-                    return Source.REMOVE;
-
-                last_remote_address = remote_address;
-                packet_received (packet, sender);
-                return Source.REMOVE;
-            });
-        }
-
-        private void dispatch_error (Error err, uint generation) {
-            MainContext.default ().invoke (() => {
-                if (!is_running || generation != listener_generation)
-                    return Source.REMOVE;
-
-                receive_error (err);
-                return Source.REMOVE;
-            });
         }
 
         public void send_to_last_sender (uint8[] datagram) throws Error {
