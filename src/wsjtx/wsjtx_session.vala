@@ -231,6 +231,12 @@ namespace Artemis.Wsjtx {
                     dx_call = "";
                     last_selected_tx_callsign = "";
                     break;
+                case MessageType.QSO_LOGGED:
+                    var qso_logged = packet.get_qso_logged ();
+                    logged_adif_handler.handle_qso_logged.begin (qso_logged, (obj, res) => {
+                        logged_adif_handler.handle_qso_logged.end (res);
+                    });
+                    break;
                 case MessageType.LOGGED_ADIF:
                     var logged_adif = packet.get_logged_adif ();
                     logged_adif_received (logged_adif);

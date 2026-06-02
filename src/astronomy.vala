@@ -68,6 +68,12 @@ namespace Astronomy {
         WANING_CRESCENT
     }
 
+    public enum Shift {
+        EARLY,
+        NORMAL,
+        LATE
+    }
+
     public static string moon_phase_display_name (MoonPhase phase) {
         switch (phase) {
             case MoonPhase.NEW:
@@ -231,6 +237,28 @@ namespace Astronomy {
             0.125,
             BodyKind.MOON
         );
+    }
+
+    public static Shift shift_for_grid (string grid, DateTime date) throws Error {
+        var center = Maidenhead.center (grid);
+        return shift_for_longitude (center.longitude, date);
+    }
+
+    public static Shift current_shift_for_grid (string grid) throws Error {
+        return shift_for_grid (grid, new DateTime.now_utc ());
+    }
+
+    public static Shift shift_for_longitude (double longitude, DateTime date) {
+        var early_start_hour = normalized_utc_hour ((int) Math.round (2.0 - (longitude / 15.0)));
+        var late_start_hour = normalized_utc_hour ((int) Math.round (18.0 - (longitude / 15.0)));
+        var current_hour = utc_hour_of_day (date);
+
+        if (hour_in_window (current_hour, early_start_hour, 6.0))
+            return Shift.EARLY;
+        if (hour_in_window (current_hour, late_start_hour, 8.0))
+            return Shift.LATE;
+
+        return Shift.NORMAL;
     }
 
     private static RiseSetTimes rise_set_times (
@@ -532,6 +560,27 @@ namespace Astronomy {
     public static double normalized_longitude_degrees (double degrees) {
         var normalized = normalized_degrees (degrees);
         return (normalized > 180.0) ? normalized - 360.0 : normalized;
+    }
+
+    private static int normalized_utc_hour (int hour) {
+        var normalized = hour % 24;
+        return normalized >= 0 ? normalized : normalized + 24;
+    }
+
+    private static double utc_hour_of_day (DateTime date) {
+        var utc_date = date.to_utc ();
+        return utc_date.get_hour ()
+            + (utc_date.get_minute () / 60.0)
+            + (utc_date.get_second () / 3600.0);
+    }
+
+    private static bool hour_in_window (double hour, int start_hour, double duration_hours) {
+        var end_hour = start_hour + duration_hours;
+
+        if (end_hour <= 24.0)
+            return hour >= start_hour && hour < end_hour;
+
+        return hour >= start_hour || hour < (end_hour - 24.0);
     }
 
     private static double normalized_signed_degrees (double degrees) {

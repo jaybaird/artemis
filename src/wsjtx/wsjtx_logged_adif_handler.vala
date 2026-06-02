@@ -48,13 +48,38 @@ namespace Artemis.Wsjtx {
             if (parsed == null)
                 return false;
 
+            return yield handle_parsed (parsed, packet.adif, "Logged ADIF");
+        }
+
+        public async bool handle_qso_logged (QsoLoggedPacket packet) {
+            ParsedLoggedAdif? parsed = Artemis.Wsjtx.parse_qso_logged (
+                packet,
+                preferences
+            );
+            if (parsed == null)
+                return false;
+
+            return yield handle_parsed (parsed, null, "QSO Logged");
+        }
+
+        private async bool handle_parsed (
+            ParsedLoggedAdif parsed,
+            string? source_adif,
+            string source_name
+        ) {
             prune_recent_cq_pota_callsigns ();
 
             var active_spot = spot_lookup.get_spot_for_callsign (parsed.call);
             var matched_live_spot = active_spot != null;
             var matched_recent_cq_pota = has_recent_cq_pota_callsign (parsed.call);
-            if (!matched_live_spot && !matched_recent_cq_pota)
+            if (!matched_live_spot && !matched_recent_cq_pota) {
+                message (
+                    "Skipping WSJT-X %s QSO for %s: no matching live spot or recent CQ POTA decode",
+                    source_name,
+                    parsed.call
+                );
                 return false;
+            }
 
             var park_ref = active_spot != null ? active_spot.park_ref : "";
             var mode = parsed.mode != "" ? parsed.mode : active_spot != null ? active_spot.mode : "";
@@ -67,12 +92,19 @@ namespace Artemis.Wsjtx {
                 matched_live_spot ? "spot" : "cq-pota"
             );
 
-            if (logging_service.has_completed_logged_adif (dedupe_key))
+            if (logging_service.has_completed_logged_adif (dedupe_key)) {
+                message (
+                    "Skipping WSJT-X %s QSO for %s: duplicate logged QSO",
+                    source_name,
+                    parsed.call
+                );
                 return false;
+            }
 
             if ((mode == "") || (frequency_khz <= 0.0) ||
                 (parsed.station_callsign == "") || (parsed.spot_time == null)) {
-                warning ("Skipping WSJT-X logged QSO for %s: ADIF record missing required fields",
+                warning ("Skipping WSJT-X %s QSO for %s: QSO record missing required fields",
+                    source_name,
                     parsed.call);
                 return false;
             }
@@ -91,7 +123,7 @@ namespace Artemis.Wsjtx {
 
             try {
                 var qrz_adif = preferences.forward_wsjtx_qsos_to_qrz ?
-                    build_qrz_adif (packet.adif, parsed, park_ref) :
+                    build_qrz_adif (source_adif, parsed, active_spot) :
                     null;
                 var result = yield logging_service.submit_qso_draft_with_qrz_mode (
                     draft,
@@ -110,7 +142,8 @@ namespace Artemis.Wsjtx {
                     user_message (_("WSJT-X QSO saved locally; QRZ upload failed"));
                 return true;
             } catch (Error err) {
-                warning ("Unable to auto spot WSJT-X POTA contact %s: %s",
+                warning ("Unable to auto spot WSJT-X %s POTA contact %s: %s",
+                    source_name,
                     parsed.call,
                     err.message);
             }
@@ -166,17 +199,23 @@ namespace Artemis.Wsjtx {
         }
 
         private static string build_qrz_adif (
-            string adif_text,
+            string? adif_text,
             ParsedLoggedAdif parsed,
-            string park_ref
+            Spot? active_spot
         ) throws Artemis.Adif.Error {
-            var normalized = adif_text.strip ();
+            var normalized = (adif_text ?? "").strip ();
             if (!normalized.down ().contains ("<eor>"))
                 normalized += "<eor>";
 
-            var document = Artemis.Adif.Parser.from_string (normalized);
-            if (document.records.size == 0)
-                throw new Artemis.Adif.Error.INVALID_VALUE ("ADIF document has no QSO record");
+            Artemis.Adif.Document document;
+            if (normalized != "<eor>") {
+                document = Artemis.Adif.Parser.from_string (normalized);
+                if (document.records.size == 0)
+                    throw new Artemis.Adif.Error.INVALID_VALUE ("ADIF document has no QSO record");
+            } else {
+                document = new Artemis.Adif.Document ();
+                document.records.add (new Artemis.Adif.Record ());
+            }
 
             var record = document.records[0];
             set_record_field_if_missing (record, "CALL", parsed.call);
@@ -191,6 +230,19 @@ namespace Artemis.Wsjtx {
             }
             if (has_text (parsed.comment))
                 set_record_field_if_missing (record, "COMMENT", parsed.comment);
+
+            if (parsed.spot_time != null) {
+                var qso_time = parsed.spot_time.to_utc ();
+                set_record_field_if_missing (record, "QSO_DATE", qso_time.format ("%Y%m%d"));
+                set_record_field_if_missing (record, "TIME_ON", qso_time.format ("%H%M%S"));
+            }
+
+            var park_ref = active_spot != null ? active_spot.park_ref : "";
+            var grid_square = active_spot != null ?
+                first_non_empty (active_spot.grid6, active_spot.grid4) :
+                "";
+            if (has_text (grid_square))
+                record.set ("GRIDSQUARE", grid_square);
 
             if (has_text (park_ref)) {
                 set_record_field_if_missing (record, "SIG", "POTA");

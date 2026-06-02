@@ -55,6 +55,8 @@ public class Spot : Object {
     public string spotter_comment { get; construct; }
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
+    public string grid4 { get; construct; default = ""; }
+    public string grid6 { get; construct; default = ""; }
 
     public string band {
         owned get { return "20m"; }
@@ -99,7 +101,9 @@ public class Spot : Object {
             frequency_khz: frequency_khz,
             spot_time: spot_time,
             spotter: spotter,
-            spotter_comment: ""
+            spotter_comment: "",
+            grid4: "EM10",
+            grid6: "EM10AA"
         );
     }
 }
@@ -219,11 +223,52 @@ private Artemis.Wsjtx.LoggedAdifPacket logged_adif_packet (string call = "K1ABC"
     return packet;
 }
 
+private Artemis.Wsjtx.QsoLoggedPacket qso_logged_packet (string call = "K1ABC") {
+    Artemis.Wsjtx.WsjtxDateTime time_on = {};
+    time_on.julian_day = 2461180;
+    time_on.msecs_since_midnight = 55800000;
+    time_on.time_spec = 1;
+
+    Artemis.Wsjtx.WsjtxDateTime time_off = {};
+    time_off.julian_day = 2461180;
+    time_off.msecs_since_midnight = 55860000;
+    time_off.time_spec = 1;
+
+    Artemis.Wsjtx.QsoLoggedPacket packet = {};
+    packet.time_on = time_on;
+    packet.time_off = time_off;
+    packet.dx_call = call;
+    packet.dx_grid = "FN31";
+    packet.tx_frequency_hz = 14074000;
+    packet.mode = "FT8";
+    packet.report_sent = "+04";
+    packet.report_received = "-10";
+    packet.comments = "from qso logged";
+    packet.operator_call = "K0VCZ";
+    packet.my_call = "K0VCZ";
+    packet.my_grid = "DM14";
+    return packet;
+}
+
 private bool run_handler (Artemis.Wsjtx.LoggedAdifHandler handler, Artemis.Wsjtx.LoggedAdifPacket packet) {
     var loop = new MainLoop ();
     var handled = false;
     handler.handle.begin (packet, (obj, res) => {
         handled = handler.handle.end (res);
+        loop.quit ();
+    });
+    loop.run ();
+    return handled;
+}
+
+private bool run_qso_logged_handler (
+    Artemis.Wsjtx.LoggedAdifHandler handler,
+    Artemis.Wsjtx.QsoLoggedPacket packet
+) {
+    var loop = new MainLoop ();
+    var handled = false;
+    handler.handle_qso_logged.begin (packet, (obj, res) => {
+        handled = handler.handle_qso_logged.end (res);
         loop.quit ();
     });
     loop.run ();
@@ -295,10 +340,18 @@ private void test_logged_adif_treats_invalid_frequency_as_zero () {
 }
 
 private void test_logged_adif_rejects_missing_call () {
+    Test.expect_message (
+        null,
+        LogLevelFlags.LEVEL_WARNING,
+        "*Unable to parse WSJT-X logged ADIF: QSO record is missing CALL*"
+    );
+
     assert (Artemis.Wsjtx.parse_logged_adif (
         "<MODE:3>FT8<QSO_DATE:8>20260519<TIME_ON:4>1530<EOR>",
         preferences ()
     ) == null);
+
+    Test.assert_expected_messages ();
 }
 
 private void test_logged_adif_rejects_malformed_field_specifier () {
@@ -327,6 +380,22 @@ private void test_logged_adif_from_wsjtx () {
     assert (parsed.call == "N1PRR");
 }
 
+private void test_qso_logged_parse () {
+    var parsed = Artemis.Wsjtx.parse_qso_logged (
+        qso_logged_packet (),
+        preferences ()
+    );
+
+    assert (parsed != null);
+    assert (parsed.call == "K1ABC");
+    assert (parsed.mode == "FT8");
+    assert (Math.fabs (parsed.frequency_khz - 14074.0) < 0.0001);
+    assert (parsed.station_callsign == "K0VCZ");
+    assert (parsed.comment == "from qso logged");
+    assert (parsed.spot_time != null);
+    assert (parsed.spot_time.to_utc ().format ("%Y%m%d%H%M%S") == "20260519153000");
+}
+
 private void test_handler_skips_non_pota_qso () {
     var fixture = new HandlerFixture ();
 
@@ -348,6 +417,23 @@ private void test_handler_logs_matching_spot () {
     );
 
     assert (run_handler (fixture.handler, logged_adif_packet ()));
+    assert (fixture.qso_store.saved_count == 1);
+    assert (fixture.qso_store.last_spot.park_ref == "US-0001");
+    assert (fixture.adif_writer.append_count == 1);
+    assert (fixture.pota_poster.post_count == 1);
+}
+
+private void test_handler_logs_qso_logged_matching_spot () {
+    var fixture = new HandlerFixture ();
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    assert (run_qso_logged_handler (fixture.handler, qso_logged_packet ()));
     assert (fixture.qso_store.saved_count == 1);
     assert (fixture.qso_store.last_spot.park_ref == "US-0001");
     assert (fixture.adif_writer.append_count == 1);
@@ -414,6 +500,26 @@ private void test_handler_uploads_original_wsjtx_adif_comment_to_qrz () {
     assert (fixture.qrz_uploader.last_adif.contains ("<POTA_REF:7>US-0001"));
 }
 
+private void test_handler_uploads_matched_spot_grid_to_qrz () {
+    var fixture = new HandlerFixture ();
+    fixture.preferences.api_key = "test-key";
+    fixture.preferences.forward_wsjtx_qrz = true;
+    fixture.spot_lookup.spot = new Spot.with_values (
+        "K1ABC",
+        "US-0001",
+        "FT8",
+        14074.0,
+        new DateTime.from_iso8601 ("2026-05-19T15:30:00Z", new TimeZone.utc ())
+    );
+
+    Artemis.Wsjtx.LoggedAdifPacket packet = {};
+    packet.adif = "<CALL:5>K1ABC<GRIDSQUARE:4>DM33<MODE:3>FT8<FREQ:6>14.074<QSO_DATE:8>20260519<TIME_ON:6>153000<EOR>";
+
+    assert (run_handler (fixture.handler, packet));
+    assert (fixture.qrz_uploader.upload_count == 1);
+    assert (fixture.qrz_uploader.last_adif.contains ("<GRIDSQUARE:6>EM10AA"));
+}
+
 public int main (string[] args) {
     Test.init (ref args);
 
@@ -433,10 +539,14 @@ public int main (string[] args) {
         test_logged_adif_rejects_malformed_field_specifier);
     Test.add_func ("/wsjtx-logged-adif/test_logged_adif_from_wsjtx",
         test_logged_adif_from_wsjtx);
+    Test.add_func ("/wsjtx-logged-adif/qso-logged-parse",
+        test_qso_logged_parse);
     Test.add_func ("/wsjtx-logged-adif/handler-skips-non-pota-qso",
         test_handler_skips_non_pota_qso);
     Test.add_func ("/wsjtx-logged-adif/handler-logs-matching-spot",
         test_handler_logs_matching_spot);
+    Test.add_func ("/wsjtx-logged-adif/handler-logs-qso-logged-matching-spot",
+        test_handler_logs_qso_logged_matching_spot);
     Test.add_func ("/wsjtx-logged-adif/handler-logs-recent-cq-pota-without-park",
         test_handler_logs_recent_cq_pota_without_park);
     Test.add_func ("/wsjtx-logged-adif/handler-ignores-expired-cq-pota",
@@ -445,6 +555,8 @@ public int main (string[] args) {
         test_handler_respects_wsjtx_qrz_toggle);
     Test.add_func ("/wsjtx-logged-adif/handler-uploads-original-wsjtx-adif-comment-to-qrz",
         test_handler_uploads_original_wsjtx_adif_comment_to_qrz);
+    Test.add_func ("/wsjtx-logged-adif/handler-uploads-matched-spot-grid-to-qrz",
+        test_handler_uploads_matched_spot_grid_to_qrz);
 
     return Test.run ();
 }

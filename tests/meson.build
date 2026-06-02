@@ -51,6 +51,24 @@ test_frequency = executable(
 
 test('Frequency Parser/Formatter', test_frequency)
 
+test_astronomy = executable(
+  'test-astronomy',
+  [
+    meson.project_source_root() / 'src/utils/maidenhead.vala',
+    meson.project_source_root() / 'src/astronomy.vala',
+    meson.project_source_root() / 'tests/test-astronomy.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('shumate-1.0'),
+    cc.find_library('m', required: true)
+  ]
+)
+
+test('Astronomy', test_astronomy)
+
 test_csv_parser = executable(
   'test-csv-parser',
   [

@@ -35,6 +35,8 @@ namespace Artemis.Wsjtx {
                     return new Packet.decode (parse_decode (header, reader));
                 case MessageType.CLEAR:
                     return new Packet.clear (parse_clear (header, reader));
+                case MessageType.QSO_LOGGED:
+                    return new Packet.qso_logged (parse_qso_logged (header, reader));
                 case MessageType.LOGGED_ADIF:
                     return new Packet.logged_adif (parse_logged_adif (header, reader));
                 default:
@@ -150,6 +152,28 @@ namespace Artemis.Wsjtx {
                 packet.has_window = true;
             }
 
+            return packet;
+        }
+
+        private QsoLoggedPacket parse_qso_logged (Header header, PacketReader reader) throws Error {
+            QsoLoggedPacket packet = {};
+            packet.header = header;
+            packet.time_off = reader.read_qdatetime ();
+            packet.dx_call = reader.read_utf8 ();
+            packet.dx_grid = reader.read_utf8 ();
+            packet.tx_frequency_hz = reader.read_u64 ();
+            packet.mode = reader.read_utf8 ();
+            packet.report_sent = reader.read_utf8 ();
+            packet.report_received = reader.read_utf8 ();
+            packet.tx_power = reader.read_utf8 ();
+            packet.comments = reader.read_utf8 ();
+            packet.name = reader.read_utf8 ();
+            packet.time_on = reader.read_qdatetime ();
+            packet.operator_call = reader.read_utf8 ();
+            packet.my_call = reader.read_utf8 ();
+            packet.my_grid = reader.read_utf8 ();
+            packet.exchange_sent = reader.read_utf8 ();
+            packet.exchange_received = reader.read_utf8 ();
             return packet;
         }
 
