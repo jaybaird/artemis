@@ -1,7 +1,7 @@
 project(
   'com.k0vcz.Artemis', 
   ['c', 'vala'],
-  version: '2.1',
+  version: '2.1.1',
   meson_version: '>= 1.0.0',
   default_options: [
     'warning_level=2',
@@ -41,7 +41,7 @@ config.set('VERSION', meson.project_version())
 config.set('PREFIX', get_option('prefix'))
 config.set('NAME', 'Trailwave')
 config.set('TARGET', host_machine.system())
-config.set('WEBSITE', 'https://artemispota.app')
+config.set('WEBSITE', 'https://gettrailwave.app/linux')
 config.set('DONATE_WEBSITE', 'https://buymeacoffee.com/k0vcz')
 config.set('TRANSLATE_WEBSITE', '')
 config.set('OPENWEATHER_API_KEY', get_option('openweather_api_key'))

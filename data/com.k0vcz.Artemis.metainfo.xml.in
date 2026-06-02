@@ -18,7 +18,7 @@
   </developer>
 
   <!-- Required: Should be a link to the upstream homepage for the component -->
-  <url type="homepage">https://artemispota.app</url>
+  <url type="homepage">https://gettrailwave.app/linux</url>
   <!-- Recommended: It is highly recommended for open-source projects to display the source code repository -->
   <url type="vcs-browser">https://github.com/jaybaird/artemis-vala</url>
   <!-- Should point to the software's bug tracking system, for users to report new bugs -->
@@ -26,13 +26,13 @@
   <!-- Should link a FAQ page for this software, to answer some of the most-asked questions in detail -->
   <!-- URLs of this type should point to a webpage where users can submit or modify translations of the upstream project -->
   <url type="translate">https://github.com/jaybaird/artemis-vala</url>
-  <url type="faq">https://artemispota.app/support</url>
+  <url type="faq">https://gettrailwave.app/linux/support</url>
   <!-- Should provide a web link to an online user's reference, a software manual or help page -->
-  <url type="help">https://artemispota.app/support</url>
+  <url type="help">https://gettrailwave.app/linux/support</url>
   <!-- URLs of this type should point to a webpage showing information on how to donate to the described software project -->
   <url type="donation">https://buymeacoffee.com/k0vcz</url>
   <!-- This could for example be an HTTPS URL to an online form or a page describing how to contact the developer -->
-  <url type="contact">https://artemispota.app/support</url>
+  <url type="contact">https://gettrailwave.app/linux</url>
   <!-- URLs of this type should point to a webpage showing information on how to contribute to the described software project -->
   <url type="contribute">https://github.com/jaybaird/artemis-vala/pulls</url>
 
@@ -97,6 +97,12 @@
   </screenshots>
 
   <releases>
+    <release version="2.1.1" date="2026-06-01">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1.1</url>
+      <description>
+        <p>Fixes a bug with WSJT-X decode parsing where partial decodes would occur; Fixed schema negotiation to silence a WSJT-X error dialog.</p>
+      </description>
+    </release>
     <release version="2.1" date="2026-05-27">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1</url>
       <description>
