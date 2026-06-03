@@ -14,6 +14,7 @@
     --band-2m-color: #4ade80;
     --band-70cm-color: #999900;
     --wsjtx-heard-color: #35c9f4;
+    --two-way-copy-color: #2dd4bf;
 }
 
 .map-marker-all {
@@ -256,6 +257,10 @@
 
 .badge-heard-recently {
     color: var(--wsjtx-heard-color);
+}
+
+.badge-heard-reciprocally {
+    color: var(--two-way-copy-color);
 }
 
 .spot-badge-drawer {

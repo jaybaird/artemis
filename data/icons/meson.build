@@ -51,6 +51,7 @@ install_data(
     'hicolor/symbolic/actions/drop-hollow-symbolic.svg',
     'hicolor/symbolic/actions/encoder-knob-symbolic.svg',
     'hicolor/symbolic/actions/headphones-symbolic.svg',
+    'hicolor/symbolic/actions/horizontal-arrows-symbolic.svg',
     'hicolor/symbolic/actions/daytime-sunrise-symbolic.svg',
 	    'hicolor/symbolic/actions/daytime-sunset-symbolic.svg',
 	    'hicolor/symbolic/actions/moonrise-symbolic.svg',

@@ -23,6 +23,7 @@ public sealed class SpotListRow : Gtk.Box {
     [GtkChild]
     private unowned Gtk.Button spot_button;
     private ulong heard_recently_notify_handler = 0;
+    private ulong heard_reciprocally_notify_handler = 0;
 
     public SpotListRow (Spot spot) {
         Object (spot: spot);
@@ -37,6 +38,9 @@ public sealed class SpotListRow : Gtk.Box {
         mode_label.label = spot.mode;
         populate_spot_badges (badge_box, spot);
         heard_recently_notify_handler = spot.notify["heard-recently"].connect (() => {
+            populate_spot_badges (badge_box, spot);
+        });
+        heard_reciprocally_notify_handler = spot.notify["heard-reciprocally"].connect (() => {
             populate_spot_badges (badge_box, spot);
         });
         time_label.label = humanize_ago_compact (spot.spot_time);
@@ -55,6 +59,11 @@ public sealed class SpotListRow : Gtk.Box {
             if (SignalHandler.is_connected (spot, heard_recently_notify_handler))
                 SignalHandler.disconnect (spot, heard_recently_notify_handler);
             heard_recently_notify_handler = 0;
+        }
+        if (heard_reciprocally_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, heard_reciprocally_notify_handler))
+                SignalHandler.disconnect (spot, heard_reciprocally_notify_handler);
+            heard_reciprocally_notify_handler = 0;
         }
     }
 

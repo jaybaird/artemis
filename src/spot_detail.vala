@@ -258,6 +258,12 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Button open_map_button;
 
     [GtkChild]
+    private unowned Gtk.Stack detail_map_slot_stack;
+
+    [GtkChild]
+    private unowned Gtk.Box detail_map_badge_box;
+
+    [GtkChild]
     private unowned Gtk.Revealer detail_buttons_revealer;
 
     [GtkChild]
@@ -276,11 +282,14 @@ public sealed class SpotDetail : Gtk.Box {
     private string? park_url = null;
     private string? activator_url = null;
     private ulong callsign_cache_handler = 0;
+    private ulong heard_recently_handler = 0;
+    private ulong heard_reciprocally_handler = 0;
     private ulong pota_locations_handler = 0;
     private ulong radio_connected_handler = 0;
     private ulong radio_disconnected_handler = 0;
     private ulong radio_error_handler = 0;
     private uint weather_request_serial = 0;
+    private bool open_map_button_visible = true;
 
     private DetailFieldRow detail_operator_name_row;
     private DetailFieldRow detail_operator_qth_row;
@@ -422,11 +431,26 @@ public sealed class SpotDetail : Gtk.Box {
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_handler);
             callsign_cache_handler = 0;
         }
+        if (heard_recently_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, heard_recently_handler)) {
+                SignalHandler.disconnect (current_spot, heard_recently_handler);
+            }
+            heard_recently_handler = 0;
+        }
+        if (heard_reciprocally_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, heard_reciprocally_handler)) {
+                SignalHandler.disconnect (current_spot, heard_reciprocally_handler);
+            }
+            heard_reciprocally_handler = 0;
+        }
 
         current_spot = spot;
 
         if (spot == null) {
             weather_request_serial++;
+            update_map_slot ();
             detail_stack.visible_child_name = "empty";
             return;
         }
@@ -440,6 +464,12 @@ public sealed class SpotDetail : Gtk.Box {
             if (cs == spot.callsign)
                 update_avatar_from_cache (cs);
         });
+        heard_recently_handler = spot.notify["heard-recently"].connect (() => {
+            refresh_map_badges ();
+        });
+        heard_reciprocally_handler = spot.notify["heard-reciprocally"].connect (() => {
+            refresh_map_badges ();
+        });
     }
 
     private void populate (Spot spot) {
@@ -450,6 +480,7 @@ public sealed class SpotDetail : Gtk.Box {
         update_activator_profile (cached_activator);
         detail_park_name.label = spot.park_name;
         update_shift_badge (spot);
+        refresh_map_badges ();
         set_weather_loading ();
 
         detail_frequency_row.value = "%s kHz".printf (
@@ -762,7 +793,32 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     public void set_open_map_button_visible (bool visible) {
-        open_map_revealer.reveal_child = visible;
+        open_map_button_visible = visible;
+        update_map_slot ();
+    }
+
+    private void update_map_slot () {
+        if (current_spot == null) {
+            open_map_revealer.reveal_child = false;
+            return;
+        }
+
+        if (open_map_button_visible) {
+            detail_map_slot_stack.visible_child_name = "open-map";
+            open_map_revealer.reveal_child = true;
+            return;
+        }
+
+        detail_map_slot_stack.visible_child_name = "badges";
+        open_map_revealer.reveal_child = detail_map_badge_box.get_first_child () != null;
+    }
+
+    private void refresh_map_badges () {
+        if (current_spot == null)
+            return;
+
+        populate_spot_badges (detail_map_badge_box, current_spot);
+        update_map_slot ();
     }
 
     private void update_tune_button_state () {

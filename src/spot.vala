@@ -71,6 +71,7 @@ public string band_from_khz (double khz) {
 public sealed class Spot : Object, WeatherSpotDetails {
     public const uint HEARD_RECENTLY_TIMEOUT_SECONDS = 90;
     private uint heard_recently_timeout_id = 0;
+    private uint heard_reciprocally_timeout_id = 0;
 
     public string callsign { get; construct; }
     public string park_ref { get; construct; }
@@ -96,6 +97,7 @@ public sealed class Spot : Object, WeatherSpotDetails {
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
     public bool heard_recently { get; private set; default = false; }
+    public bool heard_reciprocally { get; private set; default = false; }
 
     public Spot (string callsign,
                  string park_ref,
@@ -328,6 +330,25 @@ public sealed class Spot : Object, WeatherSpotDetails {
         });
     }
 
+    public void mark_heard_reciprocally (uint timeout_seconds = HEARD_RECENTLY_TIMEOUT_SECONDS) {
+        heard_reciprocally = true;
+        notify_property ("heard-reciprocally");
+
+        if (heard_reciprocally_timeout_id != 0) {
+            Source.remove (heard_reciprocally_timeout_id);
+            heard_reciprocally_timeout_id = 0;
+        }
+
+        heard_reciprocally_timeout_id = Timeout.add_seconds (timeout_seconds, () => {
+            heard_reciprocally_timeout_id = 0;
+            if (heard_reciprocally) {
+                heard_reciprocally = false;
+                notify_property ("heard-reciprocally");
+            }
+            return Source.REMOVE;
+        });
+    }
+
     public void set_log_status (
         bool was_hunted_today,
         bool is_new_park,
@@ -351,6 +372,10 @@ public sealed class Spot : Object, WeatherSpotDetails {
         if (heard_recently_timeout_id != 0) {
             Source.remove (heard_recently_timeout_id);
             heard_recently_timeout_id = 0;
+        }
+        if (heard_reciprocally_timeout_id != 0) {
+            Source.remove (heard_reciprocally_timeout_id);
+            heard_reciprocally_timeout_id = 0;
         }
     }
 } /* class Spot */

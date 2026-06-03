@@ -253,14 +253,34 @@ template $SpotDetail : Box {
               transition-type: fade_slide_down;
               transition-duration: 250;
 
-              Button open_map_button {
-                Adw.ButtonContent {
-                  icon-name: "map-symbolic";
-                  label: _("Open Map");
+              Stack detail_map_slot_stack {
+                transition-type: crossfade;
+                transition-duration: 200;
+
+                StackPage {
+                  name: "open-map";
+                  child: Button open_map_button {
+                    Adw.ButtonContent {
+                      icon-name: "map-symbolic";
+                      label: _("Open Map");
+                    }
+
+                    accessibility {
+                      label: _("Open map with the current spot");
+                    }
+                  };
                 }
 
-                accessibility {
-                  label: _("Open map with the current spot");
+                StackPage {
+                  name: "badges";
+                  child: Box detail_map_badge_box {
+                    orientation: horizontal;
+                    spacing: 4;
+                    halign: center;
+                    valign: center;
+                    visible: false;
+                    styles ["spot-badge-drawer"]
+                  };
                 }
               }
             }

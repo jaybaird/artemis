@@ -153,6 +153,7 @@ public class SignalReportMqttSession : Object {
         var cached_reports = preload_cache.get_reports (callsign);
         if (cached_reports != null && cached_reports.size > 0) {
             model.add_reports (cached_reports);
+            mark_matching_spots_heard_reciprocally (cached_reports);
             return;
         }
 
@@ -168,6 +169,7 @@ public class SignalReportMqttSession : Object {
                 return;
 
             model.add_reports (fetched_reports);
+            mark_matching_spots_heard_reciprocally (fetched_reports);
             preload_cache.store_reports_now (fetched_reports, callsign);
         } catch (Error err) {
             warning ("Unable to preload PSKReporter signal reports: %s", err.message);
@@ -278,13 +280,24 @@ public class SignalReportMqttSession : Object {
 
     private void on_message_received (string topic, Bytes payload) {
         try {
-            model.add_report (PskReporterDecoder.decode_payload (topic, payload));
+            var report = PskReporterDecoder.decode_payload (topic, payload);
+            model.add_report (report);
+            mark_matching_spot_heard_reciprocally (report);
             received_count++;
             if (_mqtt_status == MqttStatus.SUBSCRIBED)
                 stream_state = SignalReportStreamState.RECEIVING;
         } catch (Error err) {
             warning ("Unable to decode PSKReporter MQTT payload: %s", err.message);
         }
+    }
+
+    private void mark_matching_spot_heard_reciprocally (SignalReport report) {
+        Application.spot_repo.mark_callsign_heard_reciprocally (report.call);
+    }
+
+    private void mark_matching_spots_heard_reciprocally (Gee.Collection<SignalReport> reports) {
+        foreach (var report in reports)
+            mark_matching_spot_heard_reciprocally (report);
     }
 
     private void set_mqtt_status (MqttStatus status) {

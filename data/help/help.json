@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": 3,
+  "contentVersion": 4,
   "sections": [
     {
       "id": "getting-started",
@@ -141,7 +141,7 @@
         {
           "id": "spot-badges",
           "title": "What do the spot badges mean?",
-          "summary": "Badges summarize local hunting history and recent WSJT-X activity.",
+          "summary": "Badges summarize local hunting history, shift windows, and recent digital-mode activity.",
           "icon": null,
           "badge": null,
           "content": [
@@ -154,7 +154,7 @@
             },
             {
               "type": "paragraph",
-              "text": "Badge availability depends on your local hunted history, display preferences, and WSJT-X activity. Heard recently fades automatically after a short time."
+              "text": "Badge availability depends on your local hunted history, display preferences, park shift windows, WSJT-X activity, and optional PSKReporter signal reports. Heard recently and Two-way copy fade automatically after a short time."
             }
           ],
           "keywords": [
@@ -164,6 +164,9 @@
             "previously hunted",
             "new band",
             "heard recently",
+            "two-way copy",
+            "pskreporter",
+            "signal report",
             "wsjt-x"
           ]
         },
@@ -442,7 +445,7 @@
           "badge": null,
           "paragraphs": [
             "Enable WSJT-X integration in Preferences and make sure Trailwave is listening on the same IP address and port that WSJT-X sends to.",
-            "When Trailwave receives decode text that matches an activator in the live spot feed, it marks that spot as Heard recently and can ask WSJT-X to highlight the matching callsign.",
+            "When Trailwave receives decode text that matches an activator in the live spot feed, it marks that spot as Heard recently and can ask WSJT-X to highlight the matching callsign. If optional PSKReporter signal reports also show that activator recently heard your station, Trailwave shows the Two-way copy badge.",
             "When WSJT-X reports that you are transmitting to a DX callsign that matches a visible activator, Trailwave can select the matching spot so the Park Detail View stays focused on the right park.",
             "When WSJT-X reports that a POTA QSO was logged, Trailwave can use that logged contact with its local logging workflow. The WSJT-X preferences page shows whether the listener is inactive, listening, connected, or in an error state."
           ],
@@ -453,6 +456,8 @@
             "udp",
             "decode",
             "heard recently",
+            "two-way copy",
+            "pskreporter",
             "adif"
           ]
         },
@@ -465,7 +470,7 @@
           "paragraphs": [
             "The live spot feed, park details, spot history, and location names come from POTA services. Trailwave also caches some location data so labels can be more readable.",
             "Activator profile details and avatars come from the callsign lookup path used by the app. QRZ upload only runs when external logging is enabled and an API key is configured.",
-            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access."
+            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access. PSKReporter signal reports can also contribute to the Two-way copy spot badge when WSJT-X has recently decoded the activator."
           ],
           "keywords": [
             "data",
@@ -474,6 +479,8 @@
             "weather",
             "map",
             "pskreporter",
+            "two-way copy",
+            "signal report",
             "network"
           ]
         }

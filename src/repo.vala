@@ -39,6 +39,7 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     private bool update_pending = false;
     private HashSet<uint> notified_alert_hashes;
     private HashMap<string, int64?> heard_callsign_times;
+    private HashMap<string, int64?> heard_reciprocal_callsign_times;
 
     public SpotRepo () {
         Object ();
@@ -51,6 +52,7 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
         band_counts = new HashMap<string, int> ();
         notified_alert_hashes = new HashSet<uint> ();
         heard_callsign_times = new HashMap<string, int64?> ();
+        heard_reciprocal_callsign_times = new HashMap<string, int64?> ();
     }
 
     public Spot? get_spot (Quark spot_hash) {
@@ -142,8 +144,22 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
         spot.mark_heard_recently ();
     }
 
+    public void mark_spot_heard_reciprocally (Spot spot) {
+        mark_callsign_heard_reciprocally (spot.callsign);
+    }
+
+    public void mark_callsign_heard_reciprocally (string callsign) {
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (callsign))
+            heard_reciprocal_callsign_times[key] = now;
+
+        var spot = get_spot_for_callsign (callsign);
+        if (spot != null)
+            spot.mark_heard_reciprocally ();
+    }
+
     private void apply_heard_status (Spot spot) {
-        prune_heard_callsigns ();
+        prune_heard_callsigns (heard_callsign_times);
 
         var now = monotonic_seconds ();
         foreach (var key in callsign_cache_keys (spot.callsign)) {
@@ -155,6 +171,23 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
                 continue;
 
             spot.mark_heard_recently ((uint) (HEARD_CACHE_SECONDS - age));
+            return;
+        }
+    }
+
+    private void apply_reciprocal_heard_status (Spot spot) {
+        prune_heard_callsigns (heard_reciprocal_callsign_times);
+
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign)) {
+            if (!heard_reciprocal_callsign_times.has_key (key))
+                continue;
+
+            var age = now - heard_reciprocal_callsign_times[key];
+            if (age >= HEARD_CACHE_SECONDS)
+                continue;
+
+            spot.mark_heard_reciprocally ((uint) (HEARD_CACHE_SECONDS - age));
             return;
         }
     }
@@ -214,16 +247,16 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
             log_status_refreshed ();
     }
 
-    private void prune_heard_callsigns () {
+    private void prune_heard_callsigns (HashMap<string, int64?> callsign_times) {
         var now = monotonic_seconds ();
         var expired = new ArrayList<string> ();
-        foreach (var entry in heard_callsign_times.entries) {
+        foreach (var entry in callsign_times.entries) {
             if (now - entry.value >= HEARD_CACHE_SECONDS)
                 expired.add (entry.key);
         }
 
         foreach (var key in expired)
-            heard_callsign_times.unset (key);
+            callsign_times.unset (key);
     }
 
     private static ArrayList<string> callsign_cache_keys (string callsign) {
@@ -287,6 +320,7 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
                                 parsed_band_counts[spot.band] = 1;
                             }
                             apply_heard_status (spot);
+                            apply_reciprocal_heard_status (spot);
                             parsed_spots.add (spot);
                         } catch (Error err) {
                             warning ("Skipping malformed POTA spot at index %u: %s",

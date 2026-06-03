@@ -86,6 +86,7 @@ public sealed class SpotCard : Gtk.Box {
     private ulong callsign_cache_updated_handler = 0;
     private ulong radio_connection_state_handler = 0;
     private ulong heard_recently_notify_handler = 0;
+    private ulong heard_reciprocally_notify_handler = 0;
     private uint avatar_retry_id = 0;
     private uint avatar_fetch_attempt = 0;
     private bool disposed = false;
@@ -143,6 +144,9 @@ public sealed class SpotCard : Gtk.Box {
         refresh_highlight ();
 
         heard_recently_notify_handler = spot.notify["heard-recently"].connect (() => {
+            refresh_highlight ();
+        });
+        heard_reciprocally_notify_handler = spot.notify["heard-reciprocally"].connect (() => {
             refresh_highlight ();
         });
 
@@ -253,6 +257,11 @@ public sealed class SpotCard : Gtk.Box {
             if (SignalHandler.is_connected (spot, heard_recently_notify_handler))
                 SignalHandler.disconnect (spot, heard_recently_notify_handler);
             heard_recently_notify_handler = 0;
+        }
+        if (heard_reciprocally_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, heard_reciprocally_notify_handler))
+                SignalHandler.disconnect (spot, heard_reciprocally_notify_handler);
+            heard_reciprocally_notify_handler = 0;
         }
     }
 

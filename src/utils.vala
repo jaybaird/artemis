@@ -118,6 +118,14 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
         ));
     }
 
+    if (spot.heard_recently && spot.heard_reciprocally) {
+        badges.add (new SpotBadgeInfo (
+            "horizontal-arrows-symbolic",
+            _("Two-way copy"),
+            "badge-heard-reciprocally"
+        ));
+    }
+
     if (spot.is_new_park && Application.settings.get_boolean ("highlight-unhunted-parks")) {
         badges.add (new SpotBadgeInfo (
             "starred-symbolic",
@@ -200,6 +208,12 @@ public static Gee.ArrayList<SpotBadgeHelpInfo> spot_badge_help_items () {
         _("Heard recently"),
         _("WSJT-X recently decoded text matching this activator."),
         "badge-heard-recently"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "horizontal-arrows-symbolic",
+        _("Two-way copy"),
+        _("WSJT-X recently decoded this activator, and PSKReporter says they recently heard you."),
+        "badge-heard-reciprocally"
     ));
     badges.add (new SpotBadgeHelpInfo (
         "sunrise-outline-symbolic",
