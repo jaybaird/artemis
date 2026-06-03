@@ -90,10 +90,11 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     }
 
     public Spot? get_spot_for_decode_text (string decode_text) {
-        var normalized_decode = decode_text.strip ().up ();
-        if (normalized_decode == "")
+        var heard_callsign = Artemis.Wsjtx.heard_callsign_from_decode_text (decode_text);
+        if (heard_callsign == "")
             return null;
 
+        var heard_profile = pota_profile_callsign (heard_callsign).strip ().up ();
         Spot? profile_match = null;
         for (uint i = 0 ; i < store.get_n_items () ; i++) {
             var spot = store.get_item (i) as Spot;
@@ -102,12 +103,12 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
 
             var spot_exact = spot.callsign.strip ().up ();
             var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
-            if ((spot_exact != "") && normalized_decode.contains (spot_exact))
+            if ((spot_exact != "") && spot_exact == heard_callsign)
                 return spot;
 
             if ((profile_match == null) &&
                 (spot_profile != "") &&
-                normalized_decode.contains (spot_profile)) {
+                (spot_profile == heard_callsign || spot_profile == heard_profile)) {
                 profile_match = spot;
             }
         }

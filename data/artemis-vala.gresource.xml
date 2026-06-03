@@ -25,6 +25,7 @@
     <file preprocess="xml-stripblanks">ui/band_view.ui</file>
     <file preprocess="xml-stripblanks">ui/status_bar.ui</file>
     <file preprocess="xml-stripblanks">ui/notification_row.ui</file>
+    <file preprocess="xml-stripblanks">ui/map_marker_popover.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_message_row.ui</file>
     <file preprocess="xml-stripblanks">ui/park_log_qso_row.ui</file>

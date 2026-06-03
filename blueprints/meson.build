@@ -33,7 +33,8 @@ inputs = files(
   'help_article_row.blp',
   'help_section_header_row.blp',
   'help_spot_badge_row.blp',
-  'band_button.blp'
+  'band_button.blp',
+  'map_marker_popover.blp'
 )
 
 outs = [
@@ -71,7 +72,8 @@ outs = [
   'help_article_row.ui',
   'help_section_header_row.ui',
   'help_spot_badge_row.ui',
-  'band_button.ui'
+  'band_button.ui',
+  'map_marker_popover.ui'
 ]
 
 blueprint_batch = custom_target(

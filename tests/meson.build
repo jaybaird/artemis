@@ -17,6 +17,20 @@ test_wsjtx_packet = executable(
 
 test('WSJT-X Packet Parser', test_wsjtx_packet)
 
+test_wsjtx_decode_matcher = executable(
+  'test-wsjtx-decode-matcher',
+  [
+    meson.project_source_root() / 'src/wsjtx/wsjtx_decode_matcher.vala',
+    meson.project_source_root() / 'tests/test-wsjtx-decode-matcher.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('glib-2.0')
+  ]
+)
+
+test('WSJT-X Decode Matcher', test_wsjtx_decode_matcher)
+
 adif_test_sources = [
   meson.project_source_root() / 'src/adif/adif_types.vala',
   meson.project_source_root() / 'src/adif/adif_parser.vala',

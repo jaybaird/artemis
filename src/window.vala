@@ -795,6 +795,8 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         Application.state.current_band_filter = band;
         left_sidebar.set_selected_band (band);
         band_view.set_band_filter (band);
+        if (map_view != null)
+            map_view.set_band_filter (band);
         refresh_spot_views ();
     }
 
