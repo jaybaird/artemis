@@ -96,7 +96,7 @@ public sealed class LogbookImportService : Object {
                 row[0],
                 row[1],
                 row[2],
-                normalize_first_qso_date (normalize_optional_string (row[5])),
+                normalize_first_qso_date (normalize_optional_string (row[5]), csv_row),
                 parse_qsos (row[6], csv_row),
                 out error
             );
@@ -145,20 +145,22 @@ public sealed class LogbookImportService : Object {
         return qsos;
     }
 
-    private static string? normalize_first_qso_date (string? value) throws Error {
+    private static string? normalize_first_qso_date (string? value, int csv_row) throws Error {
         var trimmed = (value ?? "").strip ();
         if (trimmed == "")
             return null;
-
-        var parsed = new DateTime.from_iso8601 (trimmed, new TimeZone.utc ());
-        if (parsed != null)
-            return parsed.to_utc ().format ("%Y-%m-%dT%H:%M:%SZ");
 
         var date_only = parse_date_only_utc (trimmed);
         if (date_only != null)
             return date_only.format ("%Y-%m-%dT%H:%M:%SZ");
 
-        throw new IOError.INVALID_DATA ("CSV row has invalid first QSO date '%s'".printf (value));
+        var parsed = new DateTime.from_iso8601 (trimmed, new TimeZone.utc ());
+        if (parsed != null)
+            return parsed.to_utc ().format ("%Y-%m-%dT%H:%M:%SZ");
+
+        throw new IOError.INVALID_DATA (
+            "CSV row %d has invalid first QSO date '%s'".printf (csv_row, value)
+        );
     }
 
     private static string? normalize_optional_string (string value) {

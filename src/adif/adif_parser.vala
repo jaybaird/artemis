@@ -20,41 +20,47 @@
 
 namespace Artemis.Adif {
     public DateTime? parse_qso_datetime_utc (string qso_date, string time_on) {
-        if ((qso_date.length != 8) || (time_on.length < 4))
+        if ((qso_date.length != 8) || (time_on.length != 4 && time_on.length != 6))
             return null;
 
-        int year;
-        int month;
-        int day;
-        int hour;
-        int minute;
+        int year = 0;
+        int month = 0;
+        int day = 0;
+        int hour = 0;
+        int minute = 0;
         int second = 0;
-        unowned string unparsed;
+        int consumed = 0;
 
-        if (!int.try_parse (qso_date.substring (0, 4), out year, out unparsed) ||
-            (unparsed != "")) {
+        var date_fields = qso_date.scanf (
+            "%4d%2d%2d%n",
+            out year,
+            out month,
+            out day,
+            out consumed
+        );
+        if (date_fields != 3 || consumed != qso_date.length)
             return null;
-        }
-        if (!int.try_parse (qso_date.substring (4, 2), out month, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if (!int.try_parse (qso_date.substring (6, 2), out day, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if (!int.try_parse (time_on.substring (0, 2), out hour, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if (!int.try_parse (time_on.substring (2, 2), out minute, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if ((time_on.length >= 6) &&
-            (!int.try_parse (time_on.substring (4, 2), out second, out unparsed) ||
-             (unparsed != ""))) {
-            return null;
+
+        consumed = 0;
+        if (time_on.length == 4) {
+            var time_fields = time_on.scanf (
+                "%2d%2d%n",
+                out hour,
+                out minute,
+                out consumed
+            );
+            if (time_fields != 2 || consumed != time_on.length)
+                return null;
+        } else {
+            var time_fields = time_on.scanf (
+                "%2d%2d%2d%n",
+                out hour,
+                out minute,
+                out second,
+                out consumed
+            );
+            if (time_fields != 3 || consumed != time_on.length)
+                return null;
         }
 
         return new DateTime.utc (year, month, day, hour, minute, (double) second);
