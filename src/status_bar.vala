@@ -18,6 +18,21 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/notification_row.ui")]
+private sealed class NotificationRow : Gtk.ListBoxRow {
+    [GtkChild]
+    private unowned Gtk.Label time_label;
+    [GtkChild]
+    private unowned Gtk.Label message_label;
+
+    public NotificationRow (AppNotification notification) {
+        Object ();
+
+        time_label.label = notification.timestamp.format ("%R");
+        message_label.label = notification.message;
+    }
+}
+
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/status_bar.ui")]
 public sealed class StatusBar : Gtk.Box {
     [GtkChild]
@@ -112,36 +127,8 @@ public sealed class StatusBar : Gtk.Box {
             if (notification == null)
                 continue;
 
-            notification_list.append (notification_row (notification));
+            notification_list.append (new NotificationRow (notification));
         }
-    }
-
-    private Gtk.Widget notification_row (AppNotification notification) {
-        var row = new Gtk.ListBoxRow ();
-        var box = new Gtk.Box (Gtk.Orientation.VERTICAL, 2) {
-            margin_top = 8,
-            margin_bottom = 8,
-            margin_start = 10,
-            margin_end = 10
-        };
-
-        var time_label = new Gtk.Label (notification.timestamp.format ("%R")) {
-            xalign = 0.0f
-        };
-        time_label.add_css_class ("caption");
-        time_label.add_css_class ("numeric");
-        time_label.add_css_class ("dim-label");
-
-        var message_label = new Gtk.Label (notification.message) {
-            xalign = 0.0f,
-            wrap = true,
-            wrap_mode = Pango.WrapMode.WORD_CHAR
-        };
-
-        box.append (time_label);
-        box.append (message_label);
-        row.child = box;
-        return row;
     }
 
 }

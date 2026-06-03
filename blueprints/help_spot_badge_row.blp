@@ -1,0 +1,41 @@
+using Gtk 4.0;
+
+template $HelpSpotBadgeRow : ListBoxRow {
+  activatable: false;
+  selectable: false;
+
+  child: Box {
+    orientation: horizontal;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Image icon {
+      pixel-size: 18;
+      valign: start;
+      margin-top: 2;
+      styles ["spot-badge"]
+    }
+
+    Box {
+      orientation: vertical;
+      spacing: 3;
+      hexpand: true;
+
+      Label label {
+        xalign: 0.0;
+        wrap: true;
+        styles ["heading"]
+      }
+
+      Label description {
+        xalign: 0.0;
+        wrap: true;
+        max-width-chars: 56;
+        styles ["body", "dim-label"]
+      }
+    }
+  };
+}

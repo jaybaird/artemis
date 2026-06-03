@@ -1,0 +1,43 @@
+using Gtk 4.0;
+
+template $HelpArticleRow : ListBoxRow {
+  child: Box {
+    orientation: vertical;
+    spacing: 6;
+    margin-top: 10;
+    margin-bottom: 10;
+    margin-start: 12;
+    margin-end: 12;
+
+    Box {
+      orientation: horizontal;
+      spacing: 8;
+
+      Image icon {
+        pixel-size: 16;
+        valign: start;
+        visible: false;
+        styles ["dim-label"]
+      }
+
+      Label title_label {
+        xalign: 0.0;
+        wrap: true;
+        styles ["heading"]
+      }
+
+      Label badge_label {
+        xalign: 1.0;
+        visible: false;
+        styles ["caption", "accent"]
+      }
+    }
+
+    Label summary_label {
+      xalign: 0.0;
+      wrap: true;
+      max-width-chars: 36;
+      styles ["dim-label", "body"]
+    }
+  };
+}

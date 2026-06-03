@@ -18,9 +18,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/detail_field_row.ui")]
 public sealed class DetailFieldRow : Gtk.ListBoxRow {
-    private Gtk.Label title_label;
-    private Gtk.Label value_label;
+    [GtkChild]
+    private unowned Gtk.Image icon;
+    [GtkChild]
+    private unowned Gtk.Label title_label;
+    [GtkChild]
+    private unowned Gtk.Label value_label;
 
     public string title {
         set {
@@ -43,52 +48,30 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
     public DetailFieldRow (string title, bool wrap = false, string? icon_name = null) {
         Object ();
 
-        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
-            margin_top = 10,
-            margin_bottom = 10,
-            margin_start = 12,
-            margin_end = 12,
-            hexpand = true
-        };
-
         if (icon_name != null) {
-            var icon = new Gtk.Image.from_icon_name (icon_name) {
-                pixel_size = 16,
-                valign = Gtk.Align.CENTER
-            };
-            icon.add_css_class ("dim-label");
-            box.append (icon);
+            icon.icon_name = icon_name;
+            icon.visible = true;
         }
 
-        title_label = new Gtk.Label (title) {
-            xalign = 0.0f,
-            width_chars = 12
-        };
-        title_label.add_css_class ("caption");
-        title_label.add_css_class ("dim-label");
-        box.append (title_label);
-
-        value_label = new Gtk.Label ("") {
-            xalign = 1.0f,
-            wrap = wrap,
-            wrap_mode = Pango.WrapMode.WORD_CHAR,
-            max_width_chars = wrap ? 28 : 18,
-            ellipsize = wrap ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END,
-            selectable = true,
-            hexpand = true
-        };
-        value_label.justify = Gtk.Justification.RIGHT;
-        value_label.add_css_class ("body");
-        box.append (value_label);
-
-        child = box;
+        title_label.label = title;
+        value_label.wrap = wrap;
+        value_label.max_width_chars = wrap ? 28 : 18;
+        value_label.ellipsize = wrap ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END;
     }
 }
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/detail_time_pair_row.ui")]
 public sealed class DetailTimePairRow : Gtk.ListBoxRow {
-    private Gtk.Label title_label;
-    private Gtk.Label first_value_label;
-    private Gtk.Label second_value_label;
+    [GtkChild]
+    private unowned Gtk.Label title_label;
+    [GtkChild]
+    private unowned Gtk.Image first_icon;
+    [GtkChild]
+    private unowned Gtk.Label first_value_label;
+    [GtkChild]
+    private unowned Gtk.Image second_icon;
+    [GtkChild]
+    private unowned Gtk.Label second_value_label;
 
     public string title {
         set {
@@ -115,83 +98,20 @@ public sealed class DetailTimePairRow : Gtk.ListBoxRow {
     ) {
         Object ();
 
-        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
-            margin_top = 10,
-            margin_bottom = 10,
-            margin_start = 12,
-            margin_end = 12,
-            hexpand = true
-        };
-
-        title_label = new Gtk.Label (title) {
-            xalign = 0.0f,
-            width_chars = 12
-        };
-        title_label.add_css_class ("caption");
-        title_label.add_css_class ("dim-label");
-        box.append (title_label);
-
-        var values_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
-            hexpand = true
-        };
-        values_box.halign = Gtk.Align.END;
-
-        values_box.append (build_time_pair (first_icon_name, out first_value_label));
-        values_box.append (build_time_pair (second_icon_name, out second_value_label));
-
-        box.append (values_box);
-        child = box;
-    }
-
-    private Gtk.Box build_time_pair (string icon_name, out Gtk.Label value_label) {
-        var pair = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
-            halign = Gtk.Align.END
-        };
-
-        var icon = new Gtk.Image.from_icon_name (icon_name) {
-            valign = Gtk.Align.CENTER
-        };
-        icon.add_css_class ("detail-time-icon");
-        icon.add_css_class ("dim-label");
-        pair.append (icon);
-
-        value_label = new Gtk.Label ("") {
-            xalign = 1.0f,
-            selectable = true
-        };
-        value_label.add_css_class ("body");
-        pair.append (value_label);
-
-        return pair;
+        title_label.label = title;
+        first_icon.icon_name = first_icon_name;
+        second_icon.icon_name = second_icon_name;
     }
 }
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/detail_link_row.ui")]
 public sealed class DetailLinkRow : Gtk.ListBoxRow {
-    private Gtk.Label title_label;
+    [GtkChild]
+    private unowned Gtk.Label title_label;
 
     public DetailLinkRow (string title) {
         Object ();
-        activatable = true;
-
-        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
-            margin_top = 12,
-            margin_bottom = 12,
-            margin_start = 12,
-            margin_end = 12
-        };
-
-        title_label = new Gtk.Label (title) {
-            xalign = 0.0f,
-            hexpand = true
-        };
-        title_label.add_css_class ("accent");
-        box.append (title_label);
-
-        var arrow = new Gtk.Image.from_icon_name ("go-next-symbolic");
-        arrow.add_css_class ("dim-label");
-        box.append (arrow);
-
-        child = box;
+        title_label.label = title;
     }
 }
 
@@ -220,6 +140,9 @@ public sealed class SpotDetail : Gtk.Box {
 
     [GtkChild]
     private unowned Gtk.Label detail_shift_label;
+
+    [GtkChild]
+    private unowned Gtk.Separator detail_shift_separator;
 
     [GtkChild]
     private unowned Gtk.Box weather_summary_card;
@@ -635,23 +558,25 @@ public sealed class SpotDetail : Gtk.Box {
         Astronomy.Shift shift;
         if (!spot_shift (spot, out shift)) {
             detail_shift_badge.visible = false;
+            detail_shift_separator.visible = false;
             return;
         }
 
         if (shift == Astronomy.Shift.EARLY) {
             set_shift_badge (
                 "sunrise-outline-symbolic",
-                _("Early Shift"),
-                _("This spot was posted during the park's Early Shift window.")
+                _(""),
+                _("Early Shift")
             );
         } else if (shift == Astronomy.Shift.LATE) {
             set_shift_badge (
                 "moon-outline-symbolic",
-                _("Late Shift"),
-                _("This spot was posted during the park's Late Shift window.")
+                _(""),
+                _("Late Shift")
             );
         } else {
             detail_shift_badge.visible = false;
+            detail_shift_separator.visible = false;
         }
     }
 
@@ -664,6 +589,7 @@ public sealed class SpotDetail : Gtk.Box {
         detail_shift_label.label = label;
         detail_shift_badge.tooltip_text = tooltip;
         detail_shift_badge.visible = true;
+        detail_shift_separator.visible = true;
     }
 
     private string format_time_label (DateTime? time) {
@@ -817,7 +743,7 @@ public sealed class SpotDetail : Gtk.Box {
         if (current_spot == null)
             return;
 
-        populate_spot_badges (detail_map_badge_box, current_spot);
+        populate_spot_badges (detail_map_badge_box, current_spot, false);
         update_map_slot ();
     }
 

@@ -107,7 +107,10 @@ public class SpotBadgeHelpInfo {
     }
 }
 
-public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
+public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (
+    Spot spot,
+    bool include_shift_badges = true
+) {
     var badges = new Gee.ArrayList<SpotBadgeInfo> ();
 
     if (spot.heard_recently) {
@@ -156,20 +159,22 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
         ));
     }
 
-    Astronomy.Shift shift;
-    if (spot_shift (spot, out shift)) {
-        if (shift == Astronomy.Shift.EARLY) {
-            badges.add (new SpotBadgeInfo (
-                "sunrise-outline-symbolic",
-                _("Early Shift"),
-                "badge-early-shift"
-            ));
-        } else if (shift == Astronomy.Shift.LATE) {
-            badges.add (new SpotBadgeInfo (
-                "moon-outline-symbolic",
-                _("Late Shift"),
-                "badge-late-shift"
-            ));
+    if (include_shift_badges) {
+        Astronomy.Shift shift;
+        if (spot_shift (spot, out shift)) {
+            if (shift == Astronomy.Shift.EARLY) {
+                badges.add (new SpotBadgeInfo (
+                    "sunrise-outline-symbolic",
+                    _("Early Shift"),
+                    "badge-early-shift"
+                ));
+            } else if (shift == Astronomy.Shift.LATE) {
+                badges.add (new SpotBadgeInfo (
+                    "moon-outline-symbolic",
+                    _("Late Shift"),
+                    "badge-late-shift"
+                ));
+            }
         }
     }
 
@@ -241,7 +246,11 @@ public static Gtk.Widget create_spot_badge_widget (SpotBadgeInfo badge) {
     return image;
 }
 
-public static void populate_spot_badges (Gtk.Box box, Spot spot) {
+public static void populate_spot_badges (
+    Gtk.Box box,
+    Spot spot,
+    bool include_shift_badges = true
+) {
     var child = box.get_first_child ();
     while (child != null) {
         var next = child.get_next_sibling ();
@@ -249,7 +258,7 @@ public static void populate_spot_badges (Gtk.Box box, Spot spot) {
         child = next;
     }
 
-    foreach (var badge in collect_spot_badges (spot)) {
+    foreach (var badge in collect_spot_badges (spot, include_shift_badges)) {
         if (box.get_first_child () != null) {
             var separator = new Gtk.Separator (Gtk.Orientation.VERTICAL);
             separator.add_css_class ("spot-badge-separator");

@@ -449,14 +449,23 @@ public class MapView : Gtk.Box {
         var dot = new MapMarkerDot (spot.band);
         marker_content.set_child (dot);
 
+        var two_way_icon = new Gtk.Image.from_icon_name ("horizontal-arrows-symbolic") {
+            pixel_size = 12,
+            halign = Gtk.Align.CENTER,
+            valign = Gtk.Align.CENTER,
+            visible = spot.heard_reciprocally
+        };
+
         var heard_icon = new Gtk.Image.from_icon_name ("headphones-symbolic") {
             pixel_size = 12,
             halign = Gtk.Align.CENTER,
             valign = Gtk.Align.CENTER,
-            visible = spot.heard_recently
+            visible = spot.heard_recently && !spot.heard_reciprocally
         };
         heard_icon.add_css_class ("map-marker-heard-icon");
+        two_way_icon.add_css_class ("map-marker-heard-icon");
         marker_content.add_overlay (heard_icon);
+        marker_content.add_overlay (two_way_icon);
 
         var coordinate = spot.coordinate;
         if (coordinate == null)
@@ -507,7 +516,7 @@ public class MapView : Gtk.Box {
         Gtk.Widget heard_icon,
         Spot spot
     ) {
-        if (spot.heard_recently) {
+        if (spot.heard_recently || spot.heard_reciprocally) {
             marker.add_css_class ("marker-heard-recently");
             marker_content.add_css_class ("map-marker-heard-recently");
             heard_icon.visible = true;

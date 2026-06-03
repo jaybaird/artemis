@@ -1,0 +1,15 @@
+using Gtk 4.0;
+
+template $HelpSectionHeaderRow : ListBoxRow {
+  activatable: false;
+  selectable: false;
+
+  child: Label title_label {
+    xalign: 0.0;
+    margin-top: 16;
+    margin-bottom: 8;
+    margin-start: 12;
+    margin-end: 12;
+    styles ["caption-heading", "dim-label"]
+  };
+}

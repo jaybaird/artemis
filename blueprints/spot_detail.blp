@@ -88,128 +88,138 @@ template $SpotDetail : Box {
                 styles ["title-2"]
               }
 
-              Box detail_shift_badge {
-                spacing: 4;
+              Box detail_context_card {
                 orientation: horizontal;
+                spacing: 4;
                 halign: center;
-                visible: false;
+                margin-top: 12;
+                styles ["card", "weather-summary-card"]
 
-                styles ["shift-badge"]
+                Box detail_shift_badge {
+                  spacing: 4;
+                  orientation: horizontal;
+                  valign: center;
+                  visible: false;
 
-                Image detail_shift_icon {
-                  icon-name: "sunrise-outline-symbolic";
+                  Image detail_shift_icon {
+                    icon-name: "sunrise-outline-symbolic";
+                    valign: baseline;
+                    styles ["weather-summary-icon"]
 
-                  accessibility {
-                    label: _("Early/Late shift icon");
+                    accessibility {
+                      label: _("Early/Late shift icon");
+                    }
+                  }
+
+                  Label detail_shift_label {
+                    label: _("Early Shift");
                   }
                 }
 
-                Label detail_shift_label {
-                  label: _("Early Shift");
+                Separator detail_shift_separator {
+                  orientation: vertical;
+                  visible: false;
+                  styles ["spot-badge-separator"]
                 }
-              }
 
-              Stack weather_stack {
-                margin-top: 12;
-                transition-type: crossfade;
-                transition-duration: 250;
+                Stack weather_stack {
+                  transition-type: crossfade;
+                  transition-duration: 250;
 
-                Box weather_unavailable_card {
-                  spacing: 4;
-                  halign: center;
-                  styles ["card", "weather-summary-card"]
+                  Box weather_unavailable_card {
+                    spacing: 4;
+                    halign: center;
 
-                  Image {
-                    icon-name: "cloud-disabled-symbolic";
-                    width-request: 24;
-                    height-request: 24;
+                    Image {
+                      icon-name: "cloud-disabled-symbolic";
+                      width-request: 24;
+                      height-request: 24;
 
-                    accessibility {
+                      accessibility {
+                        label: _("Weather unavailable");
+                      }
+                    }
+
+                    Label {
                       label: _("Weather unavailable");
                     }
                   }
 
-                  Label {
-                    label: _("Weather unavailable");
-                  }
-                }
+                  Box weather_loading_card {
+                    spacing: 4;
+                    halign: center;
 
-                Box weather_loading_card {
-                  spacing: 4;
-                  halign: center;
-                  styles ["card", "weather-summary-card"]
+                    Adw.Spinner {
+                      width-request: 24;
+                      height-request: 24;
+                    }
 
-                  Adw.Spinner {
-                    width-request: 24;
-                    height-request: 24;
-                  }
-
-                  Label {
-                    label: _("Loading weather…");
-                  }
-                }
-
-                Box weather_summary_card {
-                  halign: center;
-                  orientation: horizontal;
-                  spacing: 4;
-                  styles ["card", "weather-summary-card"]
-
-                  Image wx_conditions {
-                    icon-name: "storm-outline-symbolic";
-                    valign: baseline;
-                    styles ["weather-summary-icon"]
-                    accessibility {
-                      label: _("Weather Conditions");
-                      role-description: _("icon");
+                    Label {
+                      label: _("Loading weather…");
                     }
                   }
 
-                  Label wx_conditions_txt {
-                    label: _("Thunderstorms");
-                    ellipsize: end;
-                    max-width-chars: 18;
-                  }
+                  Box weather_summary_card {
+                    halign: center;
+                    orientation: horizontal;
+                    spacing: 4;
 
-                  Separator {
-                    orientation: vertical;
-                    styles ["spot-badge-separator"]
-                  }
-
-                  Image {
-                    icon-name: "thermometer-symbolic";
-                    valign: baseline;
-                    styles ["weather-summary-icon"]
-                    accessibility {
-                      label: _("Temperature");
-                      role-description: _("icon");
+                    Image wx_conditions {
+                      icon-name: "storm-outline-symbolic";
+                      valign: baseline;
+                      styles ["weather-summary-icon"]
+                      accessibility {
+                        label: _("Weather Conditions");
+                        role-description: _("icon");
+                      }
                     }
-                  }
 
-                  Label wx_temp {
-                    label: _("48");
-                    styles ["numeric"]
-                  }
-
-                  Separator {
-                    orientation: vertical;
-                    styles ["spot-badge-separator"]
-                  }
-
-                  Image {
-                    icon-name: "drop-hollow-symbolic";
-                    valign: baseline;
-                    styles ["weather-summary-icon"]
-                    accessibility {
-                      label: _("Relative Humidity");
-                      role-description: _("icon");
+                    Label wx_conditions_txt {
+                      label: _("Thunderstorms");
+                      ellipsize: end;
+                      max-width-chars: 18;
                     }
-                  }
 
-                  Label wx_humidity {
-                    label: _("60%");
-                    tooltip-text: _("Relative humidity");
-                    styles ["numeric"]
+                    Separator {
+                      orientation: vertical;
+                      styles ["spot-badge-separator"]
+                    }
+
+                    Image {
+                      icon-name: "thermometer-symbolic";
+                      valign: baseline;
+                      styles ["weather-summary-icon"]
+                      accessibility {
+                        label: _("Temperature");
+                        role-description: _("icon");
+                      }
+                    }
+
+                    Label wx_temp {
+                      label: _("48");
+                      styles ["numeric"]
+                    }
+
+                    Separator {
+                      orientation: vertical;
+                      styles ["spot-badge-separator"]
+                    }
+
+                    Image {
+                      icon-name: "drop-hollow-symbolic";
+                      valign: baseline;
+                      styles ["weather-summary-icon"]
+                      accessibility {
+                        label: _("Relative Humidity");
+                        role-description: _("icon");
+                      }
+                    }
+
+                    Label wx_humidity {
+                      label: _("60%");
+                      tooltip-text: _("Relative humidity");
+                      styles ["numeric"]
+                    }
                   }
                 }
               }

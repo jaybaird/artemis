@@ -18,63 +18,35 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-private Gtk.Widget create_spot_row (Json.Object spot_obj) {
-    string spotter = spot_obj.get_string_member_with_default ("spotter", "");
-    string frequency = spot_obj.get_string_member_with_default ("frequency", "");
-    string mode = spot_obj.get_string_member_with_default ("mode", "");
-    string spot_time = spot_obj.get_string_member_with_default ("spotTime", "");
-    string comments = spot_obj.get_string_member_with_default ("comments", "");
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_history_row.ui")]
+private sealed class SpotHistoryRow : Gtk.ListBoxRow {
+    [GtkChild]
+    private unowned Gtk.Label comment_label;
+    [GtkChild]
+    private unowned Gtk.Label spotter_label;
+    [GtkChild]
+    private unowned Gtk.Label frequency_label;
+    [GtkChild]
+    private unowned Gtk.Label time_label;
 
-    var dt = new DateTime.from_iso8601 (spot_time, new GLib.TimeZone.utc ());
-    string spot_dt = dt != null ? dt.format ("%x %X UTC") : spot_time;
+    public SpotHistoryRow (Json.Object spot_obj) {
+        Object ();
 
-    var row = new Gtk.ListBoxRow () {
-        margin_top = 6,
-        margin_bottom = 6,
-        margin_start = 6,
-        margin_end = 6
-    };
-    row.add_css_class ("card");
+        string spotter = spot_obj.get_string_member_with_default ("spotter", "");
+        string frequency = spot_obj.get_string_member_with_default ("frequency", "");
+        string mode = spot_obj.get_string_member_with_default ("mode", "");
+        string spot_time = spot_obj.get_string_member_with_default ("spotTime", "");
+        string comments = spot_obj.get_string_member_with_default ("comments", "");
 
-    var main_box = new Gtk.Box (Gtk.Orientation.VERTICAL, 8) {
-        margin_top = 12,
-        margin_bottom = 12,
-        margin_start = 12,
-        margin_end = 12
-    };
-    row.set_child (main_box);
+        var dt = new DateTime.from_iso8601 (spot_time, new GLib.TimeZone.utc ());
+        string spot_dt = dt != null ? dt.format ("%x %X UTC") : spot_time;
 
-    if ((comments != null) && (comments.strip () != "")) {
-        var comment_label = new Gtk.Label (comments) {
-            xalign = 0,
-            wrap = true,
-            wrap_mode = Pango.WrapMode.WORD_CHAR,
-            margin_top = 4
-        };
-        comment_label.add_css_class ("title-4");
-        main_box.append (comment_label);
+        comment_label.visible = comments.strip () != "";
+        comment_label.label = comments;
+        spotter_label.label = spotter;
+        frequency_label.label = @"$frequency kHz $mode";
+        time_label.label = spot_dt;
     }
-
-    var header_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12);
-    main_box.append (header_box);
-
-    var spotter_label = new Gtk.Label (spotter) {
-        xalign = 0
-    };
-    header_box.append (spotter_label);
-
-    var freq_label = new Gtk.Label (@"$frequency kHz $mode") {
-        xalign = 0,
-        hexpand = true
-    };
-    header_box.append (freq_label);
-
-    var time_label = new Gtk.Label (spot_dt) {
-        xalign = 1
-    };
-    header_box.append (time_label);
-
-    return row;
 }
 
 [GtkTemplate (ui = "/com/k0vcz/artemis/ui/spot_history_dialog.ui")]
@@ -126,8 +98,7 @@ public class SpotHistoryDialog : Adw.Dialog {
         for (uint i = 0 ; i < spots_array.get_length () ; i++) {
             var spot_obj = spots_array.get_object_element (i);
             if (spot_obj != null) {
-                var row = create_spot_row (spot_obj);
-                history_list.append (row);
+                history_list.append (new SpotHistoryRow (spot_obj));
             }
         }
 
