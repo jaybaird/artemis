@@ -47,19 +47,16 @@ public static DateTime? parse_date_only_utc (string value) {
     int year = 0;
     int month = 0;
     int day = 0;
-    unowned string unparsed;
-    if (!int.try_parse (value.substring (0, 4), out year, out unparsed, 10) ||
-        unparsed != "") {
+    char trailing = '\0';
+    var parsed_fields = value.scanf (
+        "%d-%d-%d%c",
+        out year,
+        out month,
+        out day,
+        out trailing
+    );
+    if (parsed_fields != 3 || trailing != '\0')
         return null;
-    }
-    if (!int.try_parse (value.substring (5, 2), out month, out unparsed, 10) ||
-        unparsed != "") {
-        return null;
-    }
-    if (!int.try_parse (value.substring (8, 2), out day, out unparsed, 10) ||
-        unparsed != "") {
-        return null;
-    }
 
     return new DateTime.utc (year, month, day, 0, 0, 0);
 }

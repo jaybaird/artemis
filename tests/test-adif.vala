@@ -140,6 +140,10 @@ private void test_adif_parse_qso_datetime_utc () {
     var without_seconds = parse_qso_datetime_utc ("20260517", "1945");
     assert (without_seconds != null);
     assert (without_seconds.to_utc ().format ("%Y%m%d%H%M%S") == "20260517194500");
+
+    var leading_zero_digits = parse_qso_datetime_utc ("20260907", "090809");
+    assert (leading_zero_digits != null);
+    assert (leading_zero_digits.to_utc ().format ("%Y%m%d%H%M%S") == "20260907090809");
 }
 
 private void test_adif_reject_invalid_qso_datetime () {

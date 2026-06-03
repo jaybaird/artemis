@@ -321,9 +321,9 @@ private void test_psk_reporter_xml_parse_payload () throws Error {
         "<?xml version=\"1.0\"?>" +
         "<receptionReports>" +
         "<receptionReport receiverCallsign=\"VK2XYZ\" receiverLocator=\"QF56ab12\" " +
-        "senderCallsign=\"K0VCZ\" senderLocator=\"DM79\" frequency=\"14074000\" " +
-        "flowStartSeconds=\"1704067200\" mode=\"FT8\" isSender=\"1\" " +
-        "receiverDXCC=\"Australia\" receiverDXCCCode=\"150\" sNR=\"-9\"/>" +
+        "senderCallsign=\"K0VCZ\" senderLocator=\"DM79\" frequency=\"014074000\" " +
+        "flowStartSeconds=\"01704067200\" mode=\"FT8\" isSender=\"1\" " +
+        "receiverDXCC=\"Australia\" receiverDXCCCode=\"150\" sNR=\"-09\"/>" +
         "<receptionReport receiverCallsign=\"BAD\" receiverLocator=\"NOPE\" " +
         "senderCallsign=\"K0VCZ\" frequency=\"14074000\" flowStartSeconds=\"1704067200\" " +
         "mode=\"FT8\" sNR=\"-9\"/>" +
@@ -342,6 +342,22 @@ private void test_psk_reporter_xml_parse_payload () throws Error {
     assert_cmpstr (reports[0].reporter, CompareOperator.EQ, "K0VCZ");
     assert_cmpstr (reports[0].dxcc, CompareOperator.EQ, "150");
     assert_cmpstr (reports[0].country, CompareOperator.EQ, "Australia");
+}
+
+private void test_psk_reporter_xml_rejects_partial_numeric_values () throws Error {
+    var payload = bytes_from_string (
+        "<?xml version=\"1.0\"?>" +
+        "<receptionReports>" +
+        "<receptionReport receiverCallsign=\"VK2XYZ\" receiverLocator=\"QF56ab12\" " +
+        "senderCallsign=\"K0VCZ\" senderLocator=\"DM79\" frequency=\"14074000\" " +
+        "flowStartSeconds=\"1704067200\" mode=\"FT8\" isSender=\"1\" " +
+        "receiverDXCC=\"Australia\" receiverDXCCCode=\"150\" sNR=\"-9dB\"/>" +
+        "</receptionReports>"
+    );
+
+    var reports = PskReporterClient.parse_reception_reports (payload);
+
+    assert_cmpint (reports.size, CompareOperator.EQ, 0);
 }
 
 private void test_psk_reporter_cache_round_trip () throws Error {
@@ -485,6 +501,13 @@ public int main (string[] args) {
     Test.add_func ("/heatmap-model/psk-reporter-xml-parse-payload", () => {
         try {
             test_psk_reporter_xml_parse_payload ();
+        } catch (Error err) {
+            error ("Unexpected error: %s", err.message);
+        }
+    });
+    Test.add_func ("/heatmap-model/psk-reporter-xml-rejects-partial-numeric-values", () => {
+        try {
+            test_psk_reporter_xml_rejects_partial_numeric_values ();
         } catch (Error err) {
             error ("Unexpected error: %s", err.message);
         }

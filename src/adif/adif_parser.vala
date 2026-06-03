@@ -23,39 +23,34 @@ namespace Artemis.Adif {
         if ((qso_date.length != 8) || (time_on.length < 4))
             return null;
 
-        int year;
-        int month;
-        int day;
-        int hour;
-        int minute;
+        int year = 0;
+        int month = 0;
+        int day = 0;
+        int hour = 0;
+        int minute = 0;
         int second = 0;
-        unowned string unparsed;
+        char trailing = '\0';
 
-        if (!int.try_parse (qso_date.substring (0, 4), out year, out unparsed) ||
-            (unparsed != "")) {
+        var date_fields = qso_date.scanf (
+            "%4d%2d%2d%c",
+            out year,
+            out month,
+            out day,
+            out trailing
+        );
+        if (date_fields != 3 || trailing != '\0')
             return null;
-        }
-        if (!int.try_parse (qso_date.substring (4, 2), out month, out unparsed) ||
-            (unparsed != "")) {
+
+        trailing = '\0';
+        var time_fields = time_on.scanf (
+            "%2d%2d%2d%c",
+            out hour,
+            out minute,
+            out second,
+            out trailing
+        );
+        if (time_fields < 2 || time_fields > 3 || trailing != '\0')
             return null;
-        }
-        if (!int.try_parse (qso_date.substring (6, 2), out day, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if (!int.try_parse (time_on.substring (0, 2), out hour, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if (!int.try_parse (time_on.substring (2, 2), out minute, out unparsed) ||
-            (unparsed != "")) {
-            return null;
-        }
-        if ((time_on.length >= 6) &&
-            (!int.try_parse (time_on.substring (4, 2), out second, out unparsed) ||
-             (unparsed != ""))) {
-            return null;
-        }
 
         return new DateTime.utc (year, month, day, hour, minute, (double) second);
     }

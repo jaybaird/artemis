@@ -364,7 +364,8 @@ public sealed class PskReporterClient : Object {
             return null;
 
         int parsed;
-        if (!int.try_parse (value, out parsed))
+        unowned string unparsed;
+        if (!int.try_parse (value, out parsed, out unparsed, 10) || unparsed != "")
             return null;
 
         return parsed;
@@ -376,7 +377,8 @@ public sealed class PskReporterClient : Object {
             return null;
 
         int64 parsed;
-        if (!int64.try_parse (value, out parsed))
+        unowned string unparsed;
+        if (!int64.try_parse (value, out parsed, out unparsed, 10) || unparsed != "")
             return null;
 
         return parsed;
