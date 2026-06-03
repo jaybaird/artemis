@@ -150,6 +150,7 @@ private void test_adif_reject_invalid_qso_datetime () {
     assert (parse_qso_datetime_utc ("2026051", "194500") == null);
     assert (parse_qso_datetime_utc ("20260517", "194") == null);
     assert (parse_qso_datetime_utc ("20260517", "19A500") == null);
+    assert (parse_qso_datetime_utc ("20260517", "1945AA") == null);
     assert (parse_qso_datetime_utc ("2026AA17", "194500") == null);
 }
 

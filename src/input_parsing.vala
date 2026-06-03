@@ -47,15 +47,15 @@ public static DateTime? parse_date_only_utc (string value) {
     int year = 0;
     int month = 0;
     int day = 0;
-    char trailing = '\0';
+    int consumed = 0;
     var parsed_fields = value.scanf (
-        "%d-%d-%d%c",
+        "%4d-%2d-%2d%n",
         out year,
         out month,
         out day,
-        out trailing
+        out consumed
     );
-    if (parsed_fields != 3 || trailing != '\0')
+    if (parsed_fields != 3 || consumed != value.length)
         return null;
 
     return new DateTime.utc (year, month, day, 0, 0, 0);

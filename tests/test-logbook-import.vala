@@ -174,6 +174,24 @@ private void test_import_rejects_impossible_first_qso_date () {
     }
 }
 
+private void test_import_rejects_partial_first_qso_date () {
+    try {
+        var store = new FakeParkStore ();
+        var service = new LogbookImportService (store);
+        var file = write_temp_csv (
+            "DX Entity,Location,HASC,Reference,Park Name,First QSO Date,QSOs\n" +
+            "United States,Minnesota,US.MN,US-1234,Test Park,2025-08-7a,3\n"
+        );
+
+        service.import_pota_csv (file);
+        assert_not_reached ();
+    } catch (IOError.INVALID_DATA err) {
+        assert (err.message.contains ("invalid first QSO date"));
+    } catch (Error err) {
+        assert_not_reached ();
+    }
+}
+
 private void test_import_rejects_wrong_column_count () {
     try {
         var store = new FakeParkStore ();
@@ -225,6 +243,8 @@ public int main (string[] args) {
         test_import_rejects_invalid_first_qso_date);
     Test.add_func ("/logbook-import/rejects-impossible-first-qso-date",
         test_import_rejects_impossible_first_qso_date);
+    Test.add_func ("/logbook-import/rejects-partial-first-qso-date",
+        test_import_rejects_partial_first_qso_date);
     Test.add_func ("/logbook-import/rejects-wrong-column-count",
         test_import_rejects_wrong_column_count);
     Test.add_func ("/logbook-import/rejects-invalid-header",
