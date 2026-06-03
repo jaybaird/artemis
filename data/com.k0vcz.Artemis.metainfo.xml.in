@@ -97,6 +97,12 @@
   </screenshots>
 
   <releases>
+    <release version="2.1.2" date="2026-06-03">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1.2</url>
+      <description>
+        <p>Fixes importing POTA hunter CSV exports with date-only first QSO dates containing leading-zero month or day values.</p>
+      </description>
+    </release>
     <release version="2.1.1" date="2026-06-01">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1.1</url>
       <description>

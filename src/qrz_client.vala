@@ -54,20 +54,21 @@ public sealed class QrzClient : Object, QrzQsoUploader {
 
     private static GLib.HashTable<string, string> parse_response_body (string body) {
         var params = new GLib.HashTable<string, string> (GLib.str_hash, GLib.str_equal);
+        var iter = GLib.UriParamsIter (
+            body,
+            -1,
+            "&",
+            GLib.UriParamsFlags.WWW_FORM
+        );
 
-        foreach (var chunk in body.split ("&")) {
-            if (chunk == "")
-                continue;
-
-            int sep = chunk.index_of_char ('=');
-            if (sep < 0)
-                continue;
-
-            var key = chunk.substring (0, sep).up ();
-            var raw_value = chunk.substring (sep + 1);
-            var value = GLib.Uri.unescape_string (raw_value.replace ("+", " "), null);
-
-            params.insert (key, value ?? "");
+        try {
+            string key;
+            string value;
+            while (iter.next (out key, out value)) {
+                params.insert (key.up (), value);
+            }
+        } catch (Error err) {
+            warning ("Unable to parse QRZ response parameters: %s", err.message);
         }
 
         return params;
