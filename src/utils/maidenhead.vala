@@ -18,19 +18,11 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+using Shumate;
+
 public errordomain MaidenheadLocatorError {
     INVALID_LENGTH,
     INVALID_CHARACTER
-}
-
-public struct MaidenheadCenter {
-    public double latitude;
-    public double longitude;
-
-    public MaidenheadCenter (double latitude, double longitude) {
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
 }
 
 namespace Maidenhead {
@@ -70,7 +62,7 @@ namespace Maidenhead {
         }
     }
 
-    public MaidenheadCenter center (string grid) throws Error {
+    public Coordinate center (string grid) throws Error {
         var loc = normalize (grid);
 
         double lon = -180.0;
@@ -107,7 +99,7 @@ namespace Maidenhead {
             lat += (loc[9] - 'A') * lat_width;
         }
 
-        return MaidenheadCenter (lat + (lat_width * 0.5), lon + (lon_width * 0.5));
+        return new Coordinate.full (lat + (lat_width * 0.5), lon + (lon_width * 0.5));
     }
 
     private void validate_pair (string grid, int offset, char min_char, char max_char) throws Error {

@@ -4,10 +4,6 @@
  */
 
 namespace Artemis.Wsjtx {
-    public interface SpotLookup : Object {
-        public abstract Spot? get_spot_for_callsign (string callsign);
-    }
-
     public sealed class LoggedAdifHandler : Object {
         private const int64 CQ_POTA_CACHE_SECONDS = 30 * 60;
 

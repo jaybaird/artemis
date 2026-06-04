@@ -139,6 +139,7 @@ test_callsign_cache = executable(
   [
     meson.project_source_root() / 'src/activator.vala',
     meson.project_source_root() / 'src/callsign_cache.vala',
+    meson.project_source_root() / 'src/utils/callsign_utils.vala',
     meson.project_build_root() / 'src/build.vala',
     meson.project_source_root() / 'tests/test-callsign-cache.vala'
   ],
@@ -251,6 +252,7 @@ test_heatmap_model = executable(
     dependency('json-glib-1.0'),
     dependency('libsoup-3.0'),
     dependency('libxml-2.0'),
+    dependency('shumate-1.0'),
     cc.find_library('m', required: true)
   ]
 )
@@ -264,6 +266,7 @@ test_wsjtx_logged_adif = executable(
     meson.project_source_root() / 'src/adif/adif_parser.vala',
     meson.project_source_root() / 'src/adif/adif_generator.vala',
     meson.project_source_root() / 'src/frequency.vala',
+    meson.project_source_root() / 'src/spot_lookup.vala',
     meson.project_source_root() / 'src/string_utils.vala',
     meson.project_source_root() / 'src/logging_service.vala',
     meson.project_source_root() / 'src/logging_preferences.vala',

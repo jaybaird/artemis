@@ -23,6 +23,7 @@ public sealed class Activator : Object {
     public string name { get; construct; }
     public string qth { get; construct; }
     public string gravatar_hash { get; construct; }
+    public uint awards { get; construct; }
     public uint endorsements { get; construct; }
     public uint activations { get; construct; }
     public uint parks { get; construct; }
@@ -31,6 +32,7 @@ public sealed class Activator : Object {
                       string name,
                       string qth,
                       string gravatar_hash,
+                      uint awards,
                       uint endorsements,
                       uint activations,
                       uint parks,
@@ -40,6 +42,7 @@ public sealed class Activator : Object {
             name: name,
             qth: qth,
             gravatar_hash: gravatar_hash,
+            awards: awards,
             endorsements: endorsements,
             activations: activations,
             parks: parks,
@@ -53,6 +56,7 @@ public sealed class Activator : Object {
             name: object.get_string_member_with_default ("name", ""),
             qth: object.get_string_member_with_default ("qth", ""),
             gravatar_hash: object.get_string_member_with_default ("gravatar", ""),
+            awards: (uint)object.get_int_member_with_default ("awards", 0),
             endorsements: (uint)object.get_int_member_with_default ("endorsements", 0),
             activations: (uint)object.get_int_member_with_default (
                 "activations",
@@ -60,8 +64,5 @@ public sealed class Activator : Object {
             parks: (uint)object.get_int_member_with_default ("parks", 0),
             qsos: (uint)object.get_int_member_with_default ("qsos", 0)
         );
-    }
-
-    construct {
     }
 } /* class Activator */

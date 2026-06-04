@@ -828,8 +828,8 @@ public class MapView : Gtk.Box {
         var report_count = signal_report_model != null ? signal_report_model.report_count () : 0;
 
         signal_report_status_title.label = ngettext (
-            "%u signal report",
-            "%u signal reports",
+            "%'u signal report",
+            "%'u signal reports",
             report_count
         ).printf (report_count);
 

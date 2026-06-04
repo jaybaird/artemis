@@ -108,7 +108,7 @@ public class Spot : Object {
     }
 }
 
-private sealed class FakeSpotLookup : Object, Artemis.Wsjtx.SpotLookup {
+private sealed class FakeSpotLookup : Object, SpotLookup {
     public Spot? spot = null;
 
     public Spot? get_spot_for_callsign (string callsign) {

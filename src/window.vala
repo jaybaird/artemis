@@ -942,6 +942,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private void update_clock_label () {
         var now = new GLib.DateTime.now_utc ().format ("%R UTC");
         status_bar.set_time (now);
+        spot_detail.update_local_time_row ();
     }
 
     private void on_add_button_clicked () {

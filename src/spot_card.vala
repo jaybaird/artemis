@@ -134,7 +134,7 @@ public sealed class SpotCard : Gtk.Box {
         frequency.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));
         mode.label = spot.mode;
         time.label = humanize_ago (spot.spot_time);
-        spot_count.label = spot.spot_count.to_string ();
+        spot_count.label = spot.spot_count.to_string ("%'d");
 
         callsign_cache_updated_handler = Application.callsign_cache.entry_updated.connect ((updated_callsign) => {
             update_avatars_from_cache (updated_callsign);

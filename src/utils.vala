@@ -61,19 +61,6 @@ public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error
     return GlyGtk4.frame_get_texture (frame);
 }
 
-public static string pota_profile_callsign (string callsign) {
-    var stripped_callsign = callsign.strip ();
-    var profile_callsign = "";
-
-    foreach (var part in stripped_callsign.split ("/")) {
-        var candidate = part.strip ();
-        if (candidate.length > profile_callsign.length)
-            profile_callsign = candidate;
-    }
-
-    return (profile_callsign != "") ? profile_callsign : stripped_callsign;
-}
-
 public sealed class SpotBadgeInfo : Object {
     public string icon_name { get; construct; }
     public string tooltip { get; construct; }

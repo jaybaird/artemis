@@ -216,6 +216,7 @@ public sealed class SpotDetail : Gtk.Box {
 
     private DetailFieldRow detail_operator_name_row;
     private DetailFieldRow detail_operator_qth_row;
+    private DetailFieldRow detail_operator_awards_row;
     private DetailFieldRow detail_operator_endorsements_row;
     private DetailLinkRow detail_activator_link_row;
     private DetailFieldRow detail_frequency_row;
@@ -288,10 +289,14 @@ public sealed class SpotDetail : Gtk.Box {
     private void build_detail_lists () {
         detail_operator_name_row = new DetailFieldRow (_("Activator Name"), true);
         detail_operator_qth_row = new DetailFieldRow (_("QTH"), true);
+        detail_operator_awards_row = new DetailFieldRow (_("Awards"), true);
+        detail_operator_awards_row.add_css_class ("numeric");
         detail_operator_endorsements_row = new DetailFieldRow (_("Endorsements"), true);
+        detail_operator_endorsements_row.add_css_class ("numeric");
         detail_activator_link_row = new DetailLinkRow (_("View Activator Details"));
         detail_activator_list.append (detail_operator_name_row);
         detail_activator_list.append (detail_operator_qth_row);
+        detail_activator_list.append (detail_operator_awards_row);
         detail_activator_list.append (detail_operator_endorsements_row);
         detail_activator_list.append (detail_activator_link_row);
 
@@ -432,7 +437,7 @@ public sealed class SpotDetail : Gtk.Box {
             detail_grid_row.value = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
         }
 
-        update_local_time_row (spot);
+        update_local_time_row ();
 
         detail_coordinate_row.visible = spot.coordinate != null;
         if (detail_coordinate_row.visible) {
@@ -494,14 +499,17 @@ public sealed class SpotDetail : Gtk.Box {
         activator_url = @"https://pota.app/#/profile/$escaped_callsign";
     }
 
-    private void update_local_time_row (Spot spot) {
+    public void update_local_time_row () {
         detail_localtime_row.visible = false;
         detail_localtime_row.value = "";
 
-        if (spot.coordinate == null || !Application.tz_db_available)
+        if (current_spot == null)
             return;
 
-        var tzid = timezone_id_for_coordinate (spot.coordinate);
+        if (current_spot.coordinate == null || !Application.tz_db_available)
+            return;
+
+        var tzid = timezone_id_for_coordinate (current_spot.coordinate);
         if (tzid == null)
             return;
 
@@ -510,11 +518,11 @@ public sealed class SpotDetail : Gtk.Box {
             timezone = new TimeZone.identifier (tzid);
         } catch (Error err) {
             warning ("ZoneDetect returned unusable timezone id %s for %s @ %s: %s",
-                tzid, spot.callsign, spot.park_ref, err.message);
+                tzid, current_spot.callsign, current_spot.park_ref, err.message);
             return;
         }
 
-        var local_time = spot.spot_time.to_timezone (timezone);
+        var local_time = new DateTime.now_utc ().to_timezone (timezone);
         detail_localtime_row.value = format_local_time_label (local_time);
         detail_localtime_row.tooltip_text = tzid;
         detail_localtime_row.visible = true;
@@ -706,9 +714,11 @@ public sealed class SpotDetail : Gtk.Box {
             activator.qth : "—";
 
         if (activator != null) {
-            detail_operator_endorsements_row.value = activator.endorsements.to_string ();
+            detail_operator_awards_row.value = activator.awards.to_string ("%'u");
+            detail_operator_endorsements_row.value = activator.endorsements.to_string ("%'u");
         } else {
             detail_operator_endorsements_row.value = "—";
+            detail_operator_awards_row.value = "—";
         }
     }
 

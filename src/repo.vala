@@ -19,7 +19,8 @@
  */
 
 using Gee;
-public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
+
+public sealed class SpotRepo : Object, SpotLookup {
     private const int64 HEARD_CACHE_SECONDS = Spot.HEARD_RECENTLY_TIMEOUT_SECONDS;
 
     public GLib.ListStore store { get; construct; }

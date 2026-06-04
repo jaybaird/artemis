@@ -82,19 +82,6 @@ public sealed class CallsignCache : Object {
         avatar_session.add_feature (cache);
     }
 
-    private static string profile_callsign (string callsign) {
-        var stripped_callsign = callsign.strip ();
-        var profile = "";
-
-        foreach (var part in stripped_callsign.split ("/")) {
-            var candidate = part.strip ();
-            if (candidate.length > profile.length)
-                profile = candidate;
-        }
-
-        return (profile != "") ? profile : stripped_callsign;
-    }
-
     private async Gdk.Texture load_avatar_texture (GLib.Bytes bytes) throws Error {
         var loader = new Gly.Loader.for_bytes (bytes);
         var image = yield loader.load_async (null);
@@ -146,7 +133,7 @@ public sealed class CallsignCache : Object {
     }
 
     private string remember_profile_alias (string callsign) {
-        var profile = profile_callsign (callsign);
+        var profile = pota_profile_callsign (callsign);
         var aliases = profile_aliases.get (profile);
         if (aliases == null) {
             aliases = new HashSet<string> ();
@@ -182,7 +169,7 @@ public sealed class CallsignCache : Object {
         prune_expired_entries ();
         var entry = ham_cache.get (callsign);
         if ((entry == null) || is_entry_expired (entry)) {
-            var profile = profile_callsign (callsign);
+            var profile = pota_profile_callsign (callsign);
             entry = ham_cache.get (profile);
         }
         if (is_entry_expired (entry) || (entry == null))
