@@ -186,7 +186,7 @@ namespace Artemis.Wsjtx {
         }
 
         private static string cq_pota_callsign_from_decode (string decode_text) {
-            var normalized = decode_text.strip ().up ();
+            var normalized = strip_up (decode_text);
             if (normalized == "")
                 return "";
 
@@ -198,14 +198,10 @@ namespace Artemis.Wsjtx {
 
             for (var i = 0; i + 2 < tokens.size; i++) {
                 if (tokens[i] == "CQ" && tokens[i + 1] == "POTA")
-                    return normalize_callsign (tokens[i + 2]);
+                    return strip_up (tokens[i + 2]);
             }
 
             return "";
-        }
-
-        private static string normalize_callsign (string callsign) {
-            return callsign.strip ().up ();
         }
 
         private static string logged_qso_key (
@@ -219,8 +215,8 @@ namespace Artemis.Wsjtx {
                 "";
             return "%s|%s|%s|%s|%s".printf (
                 normalize_callsign (parsed.call),
-                park_ref.strip ().up (),
-                mode.strip ().up (),
+                strip_up (park_ref),
+                strip_up (mode),
                 format_frequency_khz (frequency_khz),
                 qso_time
             );
@@ -265,10 +261,12 @@ namespace Artemis.Wsjtx {
                 set_record_field_if_missing (record, "TIME_ON", qso_time.format ("%H%M%S"));
             }
 
-            var park_ref = active_spot != null ? active_spot.park_ref : "";
-            var grid_square = active_spot != null ?
-                first_non_empty (active_spot.grid6, active_spot.grid4) :
-                "";
+            var park_ref = "";
+            var grid_square = "";
+            if (active_spot != null) {
+                park_ref = active_spot.park_ref;
+                grid_square = active_spot.grid ();
+            }
             if (has_text (grid_square))
                 record.set ("GRIDSQUARE", grid_square);
 

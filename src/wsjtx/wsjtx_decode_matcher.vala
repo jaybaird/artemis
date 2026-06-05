@@ -147,7 +147,7 @@ namespace Artemis.Wsjtx {
     }
 
     private string normalize_decode_token (string token) {
-        return token.strip ().up ().delimit ("<>", ' ').strip ();
+        return strip_up (token).delimit ("<>", ' ').strip ();
     }
 
     private string profile_callsign_from_token (string callsign) {

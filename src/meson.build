@@ -56,6 +56,7 @@ artemis_vala_sources = [
   'src/string_utils.vala',
   'src/utils/callsign_utils.vala',
   'src/utils/maidenhead.vala',
+  'src/utils/map.vala',
   'src/utils/spot_format.vala',
   'src/map/bounding_box.vala',
   'src/map/grayline_overlay.vala',

@@ -922,7 +922,7 @@ public class MapView : Gtk.Box {
             return;
 
         try {
-            qth_coordinate = Distance.maidenhead_to_latlon (grid);
+            qth_coordinate = Maidenhead.center (grid);
             has_qth_coordinate = true;
         } catch (Error err) {
             warning ("Failed to parse maidenhead location %s: %s", grid, err.message);

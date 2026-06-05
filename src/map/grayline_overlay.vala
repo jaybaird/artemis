@@ -57,7 +57,7 @@ public class GraylineOverlay : Object {
 
         double longitude = -180.0;
         while (longitude <= 180.0) {
-            layer.add_node (new Coordinate.full (
+            layer.add_node (new Shumate.Coordinate.full (
                 Astronomy.solar_terminator_latitude (now, longitude),
                 longitude
             ));
@@ -65,13 +65,13 @@ public class GraylineOverlay : Object {
         }
 
         if (longitude - LONGITUDE_STEP_DEGREES < 180.0) {
-            layer.add_node (new Coordinate.full (
+            layer.add_node (new Shumate.Coordinate.full (
                 Astronomy.solar_terminator_latitude (now, 180.0),
                 180.0
             ));
         }
 
-        layer.add_node (new Coordinate.full (closure_latitude, 180.0));
-        layer.add_node (new Coordinate.full (closure_latitude, -180.0));
+        layer.add_node (new Shumate.Coordinate.full (closure_latitude, 180.0));
+        layer.add_node (new Shumate.Coordinate.full (closure_latitude, -180.0));
     }
 }

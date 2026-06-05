@@ -90,7 +90,7 @@ namespace Artemis.Wsjtx {
         QsoLoggedPacket packet,
         LoggingPreferences preferences
     ) {
-        var call = packet.dx_call.strip ().up ();
+        var call = normalize_callsign (packet.dx_call);
         if (call == "") {
             warning ("Unable to parse WSJT-X QSO Logged packet: DX call is empty");
             return null;
@@ -111,7 +111,7 @@ namespace Artemis.Wsjtx {
         ParsedLoggedAdif parsed = {};
         parsed.call = call;
         parsed.station_callsign = station_callsign.up ();
-        parsed.mode = packet.mode.strip ().up ();
+        parsed.mode = strip_up (packet.mode);
         parsed.frequency_khz = (double) packet.tx_frequency_hz / 1000.0;
         parsed.rst_sent = packet.report_sent.strip ();
         parsed.rst_rcvd = packet.report_received.strip ();

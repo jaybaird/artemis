@@ -18,8 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Shumate;
-
 public const uint32 BLANK_HASH = uint32.MAX;
 
 public class RadioConstants {
@@ -89,7 +87,7 @@ public sealed class Spot : Object, WeatherSpotDetails {
     public string grid6 { get; construct; }
     public double distance { get; construct; }
     public double bearing { get; construct; }
-    public Coordinate coordinate { get; construct; }
+    public Coordinate? coordinate { get; construct; }
     public Quark hash { get; construct; default = BLANK_HASH; }
     public bool is_new_park { get; private set; default = false; }
     public bool was_hunted_today { get; private set; default = false; }
@@ -134,12 +132,15 @@ public sealed class Spot : Object, WeatherSpotDetails {
         return park_ref;
     }
 
-    public string weather_grid4 () {
-        return grid4;
+    public string weather_grid () {
+        return grid ();
     }
 
-    public string weather_grid6 () {
-        return grid6;
+    public string grid () {
+        if (has_text (grid6))
+            return grid6.strip ();
+
+        return (grid4 ?? "").strip ();
     }
 
     public Spot.from_add_spot (
@@ -250,10 +251,10 @@ public sealed class Spot : Object, WeatherSpotDetails {
         distance = -1.0;
         bearing = -1.0;
 
-        var park_grid = ((grid6 ?? "") == "") ? (grid4 ?? "") : grid6;
+        var park_grid = grid ();
         if ((park_grid != null) && (park_grid.strip () != "")) {
             try {
-                coordinate = Distance.maidenhead_to_latlon (park_grid);
+                coordinate = Maidenhead.center (park_grid);
             } catch (Error error) {
                 warning (error.message);
                 coordinate = null;
@@ -263,8 +264,8 @@ public sealed class Spot : Object, WeatherSpotDetails {
         var grid = Application.settings.get_string ("location");
         if ((coordinate != null) && (grid != "")) {
             try {
-                var latlon = Distance.maidenhead_to_latlon (grid);
-                distance = Distance.haversine_distance_km (latlon, coordinate);
+                var latlon = Maidenhead.center (grid);
+                distance = latlon.distance_km (coordinate);
                 bearing = Distance.bearing (latlon, coordinate);
             } catch (Error error) {
                 warning (error.message);

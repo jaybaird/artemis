@@ -18,8 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Shumate;
-
 public errordomain MaidenheadLocatorError {
     INVALID_LENGTH,
     INVALID_CHARACTER
@@ -27,7 +25,7 @@ public errordomain MaidenheadLocatorError {
 
 namespace Maidenhead {
     public string normalize (string grid) throws Error {
-        var normalized = grid.strip ().ascii_up ();
+        var normalized = strip_up (grid);
 
         if (normalized.length != 4 &&
             normalized.length != 6 &&
@@ -60,6 +58,10 @@ namespace Maidenhead {
         } catch (Error err) {
             return false;
         }
+    }
+
+    public string grid4 (string grid) throws Error {
+        return normalize (grid).substring (0, 4);
     }
 
     public Coordinate center (string grid) throws Error {

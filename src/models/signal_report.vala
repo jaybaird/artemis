@@ -53,8 +53,8 @@ public class SignalReport : Object {
         string? raw_payload = null
     ) {
         Object (
-            call: normalize_call (call),
-            grid: normalize_grid_unchecked (grid),
+            call: normalize_callsign (call),
+            grid: strip_up (grid),
             latitude: latitude,
             longitude: longitude,
             band: normalize_optional_upper (band),
@@ -126,16 +126,8 @@ public class SignalReport : Object {
         );
     }
 
-    public static string normalize_call (string call) {
-        return call.strip ().ascii_up ();
-    }
-
-    public static string normalize_grid_unchecked (string grid) {
-        return grid.strip ().ascii_up ();
-    }
-
     public static string normalize_source (string source) {
-        var normalized = source.strip ().ascii_up ();
+        var normalized = strip_up (source);
         return normalized == "" ? "UNKNOWN" : normalized;
     }
 
@@ -143,7 +135,7 @@ public class SignalReport : Object {
         if (value == null)
             return null;
 
-        var normalized = value.strip ().ascii_up ();
+        var normalized = strip_up (value);
         return normalized == "" ? null : normalized;
     }
 

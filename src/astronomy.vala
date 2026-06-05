@@ -18,7 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Shumate;
 using Gee;
 
 namespace Astronomy {
@@ -159,35 +158,6 @@ namespace Astronomy {
         ) > 0.0;
     }
 
-    public static ArrayList<Coordinate> solar_terminator_points (
-        DateTime date,
-        double longitude_step_degrees = 2.0
-    ) {
-        var points = new ArrayList<Coordinate> ();
-        var subsolar = solar_subsolar_point (date);
-        var declination_radians = subsolar.latitude * Math.PI / 180.0;
-        var tangent = Math.tan (declination_radians);
-
-        if (Math.fabs (tangent) < 1e-6)
-            tangent = (tangent < 0.0) ? -1e-6 : 1e-6;
-
-        for (double longitude = -180.0; longitude <= 180.0; longitude += longitude_step_degrees) {
-            points.add (new Coordinate.full (
-                solar_terminator_latitude (date, longitude),
-                longitude
-            ));
-        }
-
-        if (points.size == 0 || points[points.size - 1].longitude < 180.0) {
-            points.add (new Coordinate.full (
-                solar_terminator_latitude (date, 180.0),
-                180.0
-            ));
-        }
-
-        return points;
-    }
-
     public static double moon_illuminated_fraction (DateTime date) {
         var elongation = lunar_elongation_degrees (date) * Math.PI / 180.0;
         return Math.ceil (((1.0 - Math.cos (elongation)) / 2.0) * 100.0);
@@ -242,10 +212,6 @@ namespace Astronomy {
     public static Shift shift_for_grid (string grid, DateTime date) throws Error {
         var center = Maidenhead.center (grid);
         return shift_for_longitude (center.longitude, date);
-    }
-
-    public static Shift current_shift_for_grid (string grid) throws Error {
-        return shift_for_grid (grid, new DateTime.now_utc ());
     }
 
     public static Shift shift_for_longitude (double longitude, DateTime date) {

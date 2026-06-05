@@ -19,30 +19,9 @@
  */
 
 using GLib;
-using Shumate;
-
-public static inline uint clampi (uint v, uint min, uint max) {
-    return (v < min) ? min : (max < v) ? max : v;
-}
 
 public static inline double clamp (double v, double min, double max) {
     return (v < min) ? min : (max < v) ? max : v;
-}
-
-public static T random_choice<T> (T[] array) {
-    if (array.length == 0)
-        critical ("Cannot choose from an empty array");
-    return array[Random.int_range (0, array.length)];
-}
-
-public static Gee.ArrayList<T> to_array<T> (Gee.Iterator<T> iter) {
-    var list = new Gee.ArrayList<T> ();
-
-    while (iter.next ()) {
-        list.add (iter.get ());
-    }
-
-    return list;
 }
 
 public static string format_vfo (double freq_khz) {
@@ -52,13 +31,6 @@ public static string format_vfo (double freq_khz) {
     uint64 hz = freq_hz % 1000;
 
     return "%lu.%03lu.%02lu".printf ((ulong)mhz, (ulong)khz, (ulong)(hz / 10));
-}
-
-public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error {
-    var loader = new Gly.Loader.for_bytes (bytes);
-    var image = yield loader.load_async (null);
-    var frame = yield image.next_frame_async (null);
-    return GlyGtk4.frame_get_texture (frame);
 }
 
 public sealed class SpotBadgeInfo : Object {
@@ -147,21 +119,24 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (
     }
 
     if (include_shift_badges) {
-        Astronomy.Shift shift;
-        if (spot_shift (spot, out shift)) {
-            if (shift == Astronomy.Shift.EARLY) {
+        Astronomy.Shift shift = spot_shift (spot);
+        switch (shift) {
+            case Astronomy.Shift.EARLY:
                 badges.add (new SpotBadgeInfo (
                     "sunrise-outline-symbolic",
                     _("Early Shift"),
                     "badge-early-shift"
                 ));
-            } else if (shift == Astronomy.Shift.LATE) {
+                break;
+            case Astronomy.Shift.LATE:
                 badges.add (new SpotBadgeInfo (
                     "moon-outline-symbolic",
                     _("Late Shift"),
                     "badge-late-shift"
                 ));
-            }
+                break;
+            default:
+                break;
         }
     }
 
@@ -257,21 +232,17 @@ public static void populate_spot_badges (
     box.visible = box.get_first_child () != null;
 }
 
-public static bool spot_shift (Spot spot, out Astronomy.Shift shift) {
-    shift = Astronomy.Shift.NORMAL;
-
-    var grid = ((spot.grid6 ?? "").strip () != "") ? spot.grid6 : spot.grid4;
-    grid = (grid ?? "").strip ();
+public static Astronomy.Shift spot_shift (Spot spot) {
+    var grid = spot.grid ();
     if (grid == "")
-        return false;
+        return Astronomy.Shift.NORMAL;
 
     try {
-        shift = Astronomy.shift_for_grid (grid, spot.spot_time);
-        return shift != Astronomy.Shift.NORMAL;
+        return Astronomy.shift_for_grid (grid, spot.spot_time);
     } catch (Error err) {
         warning ("Failed to calculate shift for %s @ %s using grid %s: %s",
             spot.callsign, spot.park_ref, grid, err.message);
-        return false;
+        return Astronomy.Shift.NORMAL;
     }
 }
 

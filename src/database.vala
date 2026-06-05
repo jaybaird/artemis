@@ -1434,7 +1434,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             error = new DatabaseError.SQLITE_FAILED ("Failed to prepare park details lookup: %s".printf (db.errmsg ()));
             return null;
         }
-        st.bind_text (1, reference.strip ().up ());
+        st.bind_text (1, strip_up (reference));
 
         if (st.step () != Sqlite.ROW)
             return null;

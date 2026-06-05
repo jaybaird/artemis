@@ -197,7 +197,7 @@ namespace Artemis.Adif {
     }
 
     internal string normalize_field_name (string name) throws Error {
-        string normalized = name.strip ().up ();
+        string normalized = strip_up (name);
         if (normalized == "") {
             throw new Error.INVALID_VALUE ("ADIF field names must not be empty");
         }

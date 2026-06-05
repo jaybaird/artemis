@@ -20,7 +20,7 @@ private sealed class FakeWeatherProvider : Object, WeatherProvider {
     public int fetch_count { get; private set; default = 0; }
     public string last_units { get; private set; default = ""; }
 
-    public async WeatherData fetch_weather (Shumate.Coordinate coord, string units) throws Error {
+    public async WeatherData fetch_weather (Coordinate coord, string units) throws Error {
         fetch_count++;
         last_units = units;
         return WeatherData (57.0 + fetch_count, 65, "overcast clouds", "04d");

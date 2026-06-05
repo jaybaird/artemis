@@ -332,7 +332,7 @@ namespace Artemis.Wsjtx {
         }
 
         private void highlight_spot_callsign (Spot spot) {
-            var callsign = spot.callsign.strip ().up ();
+            var callsign = normalize_callsign (spot.callsign);
             if (callsign == "" || callsign == last_highlighted_callsign)
                 return;
 
@@ -356,7 +356,7 @@ namespace Artemis.Wsjtx {
         }
 
         private void select_transmitting_spot_if_needed () {
-            var callsign = dx_call.strip ().up ();
+            var callsign = normalize_callsign (dx_call);
             if (!transmitting || callsign == "") {
                 last_selected_tx_callsign = "";
                 return;

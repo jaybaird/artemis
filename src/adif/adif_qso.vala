@@ -8,9 +8,9 @@ namespace Artemis.Adif {
         var station_callsign = (spot.spotter ?? "").strip ();
         var contacted_callsign = (spot.callsign ?? "").strip ();
         var band = (spot.band ?? "").strip ();
-        var mode = (spot.mode ?? "").strip ().up ();
+        var mode = strip_up (spot.mode ?? "");
         var park_ref = (spot.park_ref ?? "").strip ();
-        var grid_square = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
+        var grid_square = spot.grid ();
 
         if (station_callsign == "")
             throw new Error.INVALID_VALUE ("Station callsign is required");

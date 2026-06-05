@@ -62,6 +62,13 @@ public class Spot : Object {
         owned get { return "20m"; }
     }
 
+    public string grid () {
+        if (has_text (grid6))
+            return grid6.strip ();
+
+        return (grid4 ?? "").strip ();
+    }
+
     public Spot.from_add_spot (
         string callsign,
         string park_ref,
@@ -115,7 +122,7 @@ private sealed class FakeSpotLookup : Object, SpotLookup {
         if (spot == null)
             return null;
 
-        return spot.callsign == callsign.strip ().up () ? spot : null;
+        return spot.callsign == normalize_callsign (callsign) ? spot : null;
     }
 }
 

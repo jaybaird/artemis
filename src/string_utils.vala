@@ -28,3 +28,7 @@ public static bool is_empty_or_whitespace (string? value) {
 public static bool has_text (string? value) {
     return !is_empty_or_whitespace (value);
 }
+
+public static inline string strip_up (string str) {
+    return str.strip ().ascii_up ();
+}

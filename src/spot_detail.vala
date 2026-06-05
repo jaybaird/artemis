@@ -415,7 +415,7 @@ public sealed class SpotDetail : Gtk.Box {
             format_frequency_khz (spot.frequency_khz)
         );
         detail_mode_row.value = spot.mode;
-        detail_spot_count_row.value = ngettext ("%d spot", "%d spots", spot.spot_count)
+        detail_spot_count_row.value = ngettext ("%'d spot", "%'d spots", spot.spot_count)
             .printf (spot.spot_count);
 
         var locations = spot.location_desc.split (",", -1);
@@ -432,22 +432,23 @@ public sealed class SpotDetail : Gtk.Box {
         }
         detail_location_row.value = loc_str;
 
-        detail_grid_row.visible = has_text (spot.grid6) || has_text (spot.grid4);
-        if (detail_grid_row.visible) {
-            detail_grid_row.value = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
-        }
+        var grid = spot.grid ();
+        detail_grid_row.visible = grid != "";
+        if (detail_grid_row.visible)
+            detail_grid_row.value = grid;
 
         update_local_time_row ();
 
-        detail_coordinate_row.visible = spot.coordinate != null;
-        if (detail_coordinate_row.visible) {
+        var coordinate = spot.coordinate;
+        detail_coordinate_row.visible = coordinate != null;
+        if (coordinate != null) {
             detail_coordinate_row.value = "%.4f, %.4f".printf (
-                spot.coordinate.latitude,
-                spot.coordinate.longitude
+                coordinate.latitude,
+                coordinate.longitude
             );
             var now = new DateTime.now_utc ();
-            var sun_times = Astronomy.sun_rise_set_times (now, spot.coordinate);
-            var moon_times = Astronomy.moon_rise_set_times (now, spot.coordinate);
+            var sun_times = Astronomy.sun_rise_set_times (now, coordinate);
+            var moon_times = Astronomy.moon_rise_set_times (now, coordinate);
 
             detail_sun_row.visible = (sun_times.rise != null) || (sun_times.set != null);
             detail_sun_row.first_value = format_time_label (sun_times.rise);
@@ -544,7 +545,7 @@ public sealed class SpotDetail : Gtk.Box {
         );
     }
 
-    private string? timezone_id_for_coordinate (Shumate.Coordinate coordinate) {
+    private string? timezone_id_for_coordinate (Coordinate coordinate) {
         unowned ZoneDetect.Database? tz_db = Application.tz_db;
         if (tz_db == null)
             return null;
@@ -563,29 +564,30 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void update_shift_badge (Spot spot) {
-        Astronomy.Shift shift;
-        if (!spot_shift (spot, out shift)) {
-            detail_shift_badge.visible = false;
-            detail_shift_separator.visible = false;
-            return;
+        Astronomy.Shift shift = spot_shift (spot);
+
+        switch (shift) {
+            case Astronomy.Shift.EARLY:
+                set_shift_badge (
+                    "sunrise-outline-symbolic",
+                    _(""),
+                    _("Early Shift")
+                );
+                break;
+            case Astronomy.Shift.LATE:
+                set_shift_badge (
+                    "moon-outline-symbolic",
+                    _(""),
+                    _("Late Shift")
+                );
+                break;
+            default:
+                break;
         }
 
-        if (shift == Astronomy.Shift.EARLY) {
-            set_shift_badge (
-                "sunrise-outline-symbolic",
-                _(""),
-                _("Early Shift")
-            );
-        } else if (shift == Astronomy.Shift.LATE) {
-            set_shift_badge (
-                "moon-outline-symbolic",
-                _(""),
-                _("Late Shift")
-            );
-        } else {
-            detail_shift_badge.visible = false;
-            detail_shift_separator.visible = false;
-        }
+        var visible = shift != Astronomy.Shift.NORMAL;
+        detail_shift_badge.visible = visible;
+        detail_shift_separator.visible = visible;
     }
 
     private void set_shift_badge (

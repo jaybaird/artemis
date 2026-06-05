@@ -67,8 +67,8 @@ public sealed class SpotRepo : Object, SpotLookup {
     }
 
     public Spot? get_spot_for_callsign (string callsign) {
-        var normalized_exact = callsign.strip ().up ();
-        var normalized_profile = pota_profile_callsign (callsign).strip ().up ();
+        var normalized_exact = normalize_callsign (callsign);
+        var normalized_profile = normalize_callsign (pota_profile_callsign (callsign));
         if ((normalized_exact == "") && (normalized_profile == ""))
             return null;
 
@@ -78,8 +78,8 @@ public sealed class SpotRepo : Object, SpotLookup {
             if (spot == null)
                 continue;
 
-            var spot_exact = spot.callsign.strip ().up ();
-            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            var spot_exact = normalize_callsign (spot.callsign);
+            var spot_profile = normalize_callsign (pota_profile_callsign (spot.callsign));
             if (spot_exact == normalized_exact)
                 return spot;
 
@@ -95,15 +95,15 @@ public sealed class SpotRepo : Object, SpotLookup {
         if (heard_callsign == "")
             return null;
 
-        var heard_profile = pota_profile_callsign (heard_callsign).strip ().up ();
+        var heard_profile = normalize_callsign (pota_profile_callsign (heard_callsign));
         Spot? profile_match = null;
         for (uint i = 0 ; i < store.get_n_items () ; i++) {
             var spot = store.get_item (i) as Spot;
             if (spot == null)
                 continue;
 
-            var spot_exact = spot.callsign.strip ().up ();
-            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            var spot_exact = normalize_callsign (spot.callsign);
+            var spot_profile = normalize_callsign (pota_profile_callsign (spot.callsign));
             if ((spot_exact != "") && spot_exact == heard_callsign)
                 return spot;
 
@@ -263,8 +263,8 @@ public sealed class SpotRepo : Object, SpotLookup {
 
     private static ArrayList<string> callsign_cache_keys (string callsign) {
         var keys = new ArrayList<string> ();
-        var exact = callsign.strip ().up ();
-        var profile = pota_profile_callsign (callsign).strip ().up ();
+        var exact = normalize_callsign (callsign);
+        var profile = normalize_callsign (pota_profile_callsign (callsign));
         if (exact != "")
             keys.add (exact);
         if (profile != "" && profile != exact)

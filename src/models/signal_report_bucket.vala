@@ -29,7 +29,7 @@ public class SignalReportBucketKey : Object {
     public string stable_id { get; construct; }
 
     public SignalReportBucketKey (SignalReport report) {
-        var call = SignalReport.normalize_call (report.call);
+        var call = normalize_callsign (report.call);
         var grid = normalize_bucket_grid (report.grid);
         var band = SignalReport.normalize_optional_upper (report.band) ?? "";
         var mode = SignalReport.normalize_optional_upper (report.mode) ?? "";
@@ -46,7 +46,7 @@ public class SignalReportBucketKey : Object {
     }
 
     public static string normalize_bucket_grid (string grid) {
-        var normalized = SignalReport.normalize_grid_unchecked (grid);
+        var normalized = strip_up (grid);
         return normalized.length > 4 ? normalized.substring (0, 4) : normalized;
     }
 }

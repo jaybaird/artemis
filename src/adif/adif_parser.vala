@@ -19,6 +19,9 @@
  */
 
 namespace Artemis.Adif {
+    public const string EOH = "EOH";
+    public const string EOR = "EOR";
+
     public DateTime? parse_qso_datetime_utc (string qso_date, string time_on) {
         if ((qso_date.length != 8) || (time_on.length != 4 && time_on.length != 6))
             return null;
@@ -99,10 +102,10 @@ namespace Artemis.Adif {
 
                 var tag = read_tag (input, tag_start);
 
-                if (is_end_tag (tag.contents, "EOH"))
+                if (is_end_tag (tag.contents, EOH))
                     return true;
 
-                if (is_end_tag (tag.contents, "EOR"))
+                if (is_end_tag (tag.contents, EOR))
                     return false;
 
                 // If this is a data field, skip its payload so field values containing
@@ -134,7 +137,7 @@ namespace Artemis.Adif {
                     text.append_len (input.substring (position), tag_start - position);
 
                 var tag = read_tag (input, tag_start);
-                if (is_end_tag (tag.contents, "EOH")) {
+                if (is_end_tag (tag.contents, EOH)) {
                     header.text = text.str;
                     return tag.next_position;
                 }
@@ -163,13 +166,13 @@ namespace Artemis.Adif {
 
                 var tag = read_tag (input, tag_start);
 
-                if (is_end_tag (tag.contents, "EOH")) {
+                if (is_end_tag (tag.contents, EOH)) {
                     throw new Error.INVALID_FORMAT (
                         "Unexpected <EOH> after the ADIF header"
                     );
                 }
 
-                if (is_end_tag (tag.contents, "EOR")) {
+                if (is_end_tag (tag.contents, EOR)) {
                     if (current_record == null || current_record.fields.size == 0) {
                         throw new Error.INVALID_FORMAT (
                             "Encountered <EOR> without any preceding record fields"
@@ -259,7 +262,7 @@ namespace Artemis.Adif {
         }
 
         private bool is_end_tag (string tag_contents, string expected) {
-            return tag_contents.strip ().up () == expected;
+            return strip_up (tag_contents) == expected;
         }
 
         private Tag read_tag (string input, int tag_start) throws Error {

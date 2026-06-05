@@ -87,14 +87,6 @@ public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkD
         return parser.get_root ();
     }
 
-    public PotaLocation? lookup_location (string location_desc) {
-        return location_lookup.get (normalize_location_desc (location_desc));
-    }
-
-    private static string normalize_location_desc (string location_desc) {
-        return location_desc.strip ().up ();
-    }
-
     private void ensure_cache_dir () {
         var cache_dir = Path.get_dirname (locations_cache_path);
         if (DirUtils.create_with_parents (cache_dir, 0700) != 0) {
@@ -168,7 +160,7 @@ public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkD
                 ""
             ).strip ();
 
-            next_lookup.set (normalize_location_desc (location.location_desc), location);
+            next_lookup.set (strip_up (location.location_desc), location);
         }
 
         location_lookup = next_lookup;
@@ -277,7 +269,7 @@ public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkD
     }
 
     public async PotaParkDetails fetch_park_details (string park_ref) throws Error {
-        var escaped_ref = GLib.Uri.escape_string (park_ref.strip ().up (), null, false);
+        var escaped_ref = GLib.Uri.escape_string (strip_up (park_ref), null, false);
         var root = yield fetch_worker ("%s/park/%s".printf (POTA_BASE_URL, escaped_ref));
         if ((root == null) || (root.get_node_type () != Json.NodeType.OBJECT))
             throw new IOError.INVALID_DATA ("POTA park response was not an object");
@@ -307,5 +299,9 @@ public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkD
         string url = "%s/v1/spots".printf (POTA_BASE_URL);
 
         return yield fetch_worker (url);
+    }
+
+    public PotaLocation? lookup_location (string location_desc) {
+        return location_lookup.get (strip_up (location_desc));
     }
 } /* class PotaClient */

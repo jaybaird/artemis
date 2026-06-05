@@ -126,7 +126,7 @@ public sealed class SpotCard : Gtk.Box {
         title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
         park_label.label = spot.park_name;
         location_desc.label = spot.location_desc;
-        var grid = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
+        var grid = spot.grid ();
         grid_square.label = grid;
         grid_square.visible = grid != "";
 

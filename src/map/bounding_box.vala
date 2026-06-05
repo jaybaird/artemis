@@ -19,7 +19,6 @@
  */
 
 using Gee;
-using Shumate;
 
 const double MIN_LATITUDE = -85.0511287798;
 const double MAX_LATITUDE = 85.0511287798;

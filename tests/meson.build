@@ -20,6 +20,7 @@ test('WSJT-X Packet Parser', test_wsjtx_packet)
 test_wsjtx_decode_matcher = executable(
   'test-wsjtx-decode-matcher',
   [
+    meson.project_source_root() / 'src/string_utils.vala',
     meson.project_source_root() / 'src/wsjtx/wsjtx_decode_matcher.vala',
     meson.project_source_root() / 'tests/test-wsjtx-decode-matcher.vala'
   ],
@@ -32,6 +33,7 @@ test_wsjtx_decode_matcher = executable(
 test('WSJT-X Decode Matcher', test_wsjtx_decode_matcher)
 
 adif_test_sources = [
+  meson.project_source_root() / 'src/string_utils.vala',
   meson.project_source_root() / 'src/adif/adif_types.vala',
   meson.project_source_root() / 'src/adif/adif_parser.vala',
   meson.project_source_root() / 'src/adif/adif_generator.vala',
@@ -68,6 +70,9 @@ test('Frequency Parser/Formatter', test_frequency)
 test_astronomy = executable(
   'test-astronomy',
   [
+    meson.project_source_root() / 'src/string_utils.vala',
+    meson.project_source_root() / 'src/distance.vala',
+    meson.project_source_root() / 'src/utils/map.vala',
     meson.project_source_root() / 'src/utils/maidenhead.vala',
     meson.project_source_root() / 'src/astronomy.vala',
     meson.project_source_root() / 'tests/test-astronomy.vala'
@@ -161,7 +166,10 @@ test('Callsign Cache', test_callsign_cache)
 test_weather_cache = executable(
   'test-weather-cache',
   [
+    meson.project_source_root() / 'src/string_utils.vala',
     meson.project_source_root() / 'src/distance.vala',
+    meson.project_source_root() / 'src/utils/map.vala',
+    meson.project_source_root() / 'src/utils/maidenhead.vala',
     meson.project_source_root() / 'src/weather_cache.vala',
     meson.project_build_root() / 'src/build.vala',
     meson.project_source_root() / 'tests/test-weather-cache.vala'
@@ -233,7 +241,11 @@ test('Spot Filter', test_spot_filter)
 test_heatmap_model = executable(
   'test-heatmap-model',
   [
+    meson.project_source_root() / 'src/string_utils.vala',
+    meson.project_source_root() / 'src/distance.vala',
+    meson.project_source_root() / 'src/utils/map.vala',
     meson.project_source_root() / 'src/utils/maidenhead.vala',
+    meson.project_source_root() / 'src/utils/callsign_utils.vala',
     meson.project_source_root() / 'src/frequency.vala',
     meson.project_source_root() / 'src/models/heatmap_model.vala',
     meson.project_source_root() / 'src/models/heatmap_point.vala',
@@ -268,6 +280,7 @@ test_wsjtx_logged_adif = executable(
     meson.project_source_root() / 'src/frequency.vala',
     meson.project_source_root() / 'src/spot_lookup.vala',
     meson.project_source_root() / 'src/string_utils.vala',
+    meson.project_source_root() / 'src/utils/callsign_utils.vala',
     meson.project_source_root() / 'src/logging_service.vala',
     meson.project_source_root() / 'src/logging_preferences.vala',
     meson.project_source_root() / 'src/wsjtx/wsjtx_packet.vala',
