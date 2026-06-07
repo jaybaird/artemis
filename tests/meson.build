@@ -238,6 +238,22 @@ test_spot_filter = executable(
 
 test('Spot Filter', test_spot_filter)
 
+test_spot_alert_matcher = executable(
+  'test-spot-alert-matcher',
+  [
+    meson.project_source_root() / 'src/utils/callsign_utils.vala',
+    meson.project_source_root() / 'src/spot_alert_matcher.vala',
+    meson.project_source_root() / 'tests/test-spot-alert-matcher.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0')
+  ]
+)
+
+test('Spot Alert Matcher', test_spot_alert_matcher)
+
 test_heatmap_model = executable(
   'test-heatmap-model',
   [

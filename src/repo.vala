@@ -437,32 +437,12 @@ public sealed class SpotRepo : Object, SpotLookup {
     }
 
     private ArrayList<string> normalized_alert_keywords () {
-        var keywords = new ArrayList<string> ();
-        foreach (var keyword in Application.settings.get_strv ("spot-alert-keywords")) {
-            var normalized = keyword.strip ().down ();
-            if (normalized != "")
-                keywords.add (normalized);
-        }
-        return keywords;
+        return SpotAlerts.normalized_keywords (
+            Application.settings.get_strv ("spot-alert-keywords")
+        );
     }
 
     private bool spot_matches_keywords (Spot spot, ArrayList<string> keywords) {
-        var haystack = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s".printf (
-            spot.callsign,
-            spot.park_ref,
-            spot.park_name,
-            spot.location_desc,
-            spot.grid4,
-            spot.grid6,
-            spot.activator_comment,
-            spot.spotter_comment
-        ).down ();
-
-        foreach (var keyword in keywords) {
-            if (haystack.contains (keyword))
-                return true;
-        }
-
-        return false;
+        return SpotAlerts.spot_matches_keywords (spot, keywords);
     }
 }     /* class SpotRepo */

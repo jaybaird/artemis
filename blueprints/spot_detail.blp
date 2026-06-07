@@ -98,38 +98,13 @@ template $SpotDetail : Box {
                 Box {
                   orientation: horizontal;
                   spacing: 4;
-                  halign: center;
-
-                  Box detail_shift_badge {
-                    spacing: 4;
-                    orientation: horizontal;
-                    valign: center;
-                    visible: false;
-
-                    Image detail_shift_icon {
-                      icon-name: "sunrise-outline-symbolic";
-                      valign: baseline;
-                      styles ["weather-summary-icon"]
-
-                      accessibility {
-                        label: _("Early/Late shift icon");
-                      }
-                    }
-
-                    Label detail_shift_label {
-                      label: _("Early Shift");
-                    }
-                  }
-
-                  Separator detail_shift_separator {
-                    orientation: vertical;
-                    visible: false;
-                    styles ["spot-badge-separator"]
-                  }
+                  halign: fill;
+                  hexpand: true;
 
                   Stack weather_stack {
                     transition-type: crossfade;
                     transition-duration: 250;
+                    hexpand: true;
 
                     Box weather_unavailable_card {
                       spacing: 4;
@@ -224,12 +199,40 @@ template $SpotDetail : Box {
                       label: _("60%");
                       tooltip-text: _("Relative humidity");
                       styles ["numeric"]
+                      }
+                    }
+                  }
+
+                  Separator detail_shift_separator {
+                    orientation: vertical;
+                    visible: false;
+                    styles ["spot-badge-separator"]
+                  }
+
+                  Box detail_shift_badge {
+                    spacing: 4;
+                    orientation: horizontal;
+                    halign: end;
+                    valign: center;
+                    visible: false;
+
+                    Image detail_shift_icon {
+                      icon-name: "sunrise-outline-symbolic";
+                      valign: baseline;
+                      styles ["weather-summary-icon"]
+
+                      accessibility {
+                        label: _("Early/Late shift icon");
+                      }
+                    }
+
+                    Label detail_shift_label {
+                      label: _("Early Shift");
                     }
                   }
                 }
                 }
               }
-            }
           
             Revealer detail_buttons_revealer {
               transition-type: fade_slide_down;

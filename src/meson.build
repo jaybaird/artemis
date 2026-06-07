@@ -32,6 +32,7 @@ artemis_vala_sources = [
   'src/psk_reporter_client.vala',
   'src/psk_reporter_decoder.vala',
   'src/spot_filter.vala',
+  'src/spot_alert_matcher.vala',
   'src/models/signal_report_mqtt_session.vala',
   'src/window.vala',
   'src/pota_client.vala',
