@@ -188,6 +188,27 @@ test_weather_cache = executable(
 
 test('Weather Cache', test_weather_cache)
 
+test_space_weather_client = executable(
+  'test-space-weather-client',
+  [
+    meson.project_source_root() / 'src/space_weather_snapshot.vala',
+    meson.project_source_root() / 'src/space_weather_client.vala',
+    meson.project_build_root() / 'src/build.vala',
+    meson.project_source_root() / 'tests/test-space-weather-client.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('json-glib-1.0'),
+    dependency('libsoup-3.0'),
+    cc.find_library('m', required: true)
+  ]
+)
+
+test('Space Weather Client', test_space_weather_client)
+
 test_database = executable(
   'test-database',
   [

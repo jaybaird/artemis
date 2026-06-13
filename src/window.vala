@@ -98,6 +98,12 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     [GtkChild]
     private unowned Adw.Spinner refresh_spinner;
 
+    [GtkChild]
+    private unowned Gtk.MenuButton space_weather_menu_button;
+
+    [GtkChild]
+    private unowned SpaceWeatherButton space_weather_button;
+
     private uint refresh_timer_id = 0;
     private int64 next_refresh_at_us = 0;
     private int64 next_clock_update_at_us = 0;
@@ -114,6 +120,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
     private ulong radio_status_handler = 0;
     private ulong radio_error_handler = 0;
+    private ulong space_weather_changed_handler = 0;
     private bool syncing_inspector_toggle = false;
     private bool restoring_window_state = false;
     private Adw.TimedAnimation? search_margin_animation = null;
@@ -142,6 +149,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         add_action (search_action);
 
         restore_window_state ();
+        space_weather_menu_button.popover = space_weather_button.create_popover ();
 
         active_error_keys = new Gee.HashSet<string> ();
         left_sidebar.set_mode_visible (Application.is_radio_configured);
@@ -359,6 +367,10 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         set_sidebar_visible (true);
         update_collapsed_sidebar_controls ();
         set_inspector_visible (false);
+        update_space_weather_view ();
+        space_weather_changed_handler = Application.space_weather_service.changed.connect (
+            update_space_weather_view
+        );
 
         Application.settings.changed["hide-qrt"].connect (refresh_spot_views);
         Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
@@ -945,6 +957,29 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         spot_detail.update_local_time_row ();
     }
 
+    private void update_space_weather_view () {
+        var service = Application.space_weather_service;
+
+        if (!service.has_snapshot ()) {
+            if (service.loading) {
+                space_weather_menu_button.sensitive = false;
+                space_weather_button.show_loading ();
+            } else {
+                space_weather_menu_button.sensitive = true;
+                space_weather_button.show_unavailable ();
+            }
+            return;
+        }
+
+        var snapshot = service.snapshot;
+        if (snapshot == null)
+            return;
+
+        space_weather_menu_button.sensitive = !service.loading;
+        space_weather_menu_button.tooltip_text = snapshot.secondary_text ();
+        space_weather_button.show_snapshot (snapshot);
+    }
+
     private void on_add_button_clicked () {
         AddSpot? add_spot = null;
         if (Application.radio_control.is_rig_connected && Application.radio_control.frequency > 0) {
@@ -1001,6 +1036,11 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         if (auto_radio_start_id != 0) {
             Source.remove (auto_radio_start_id);
             auto_radio_start_id = 0;
+        }
+
+        if (space_weather_changed_handler != 0) {
+            SignalHandler.disconnect (Application.space_weather_service, space_weather_changed_handler);
+            space_weather_changed_handler = 0;
         }
 
         disconnect_radio_handlers ();

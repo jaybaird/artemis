@@ -153,6 +153,18 @@ template $AppWindow : Adw.ApplicationWindow {
                 }
               }
 
+              MenuButton space_weather_menu_button {
+                tooltip-text: _("Solar Conditions");
+                styles ["image-button", "flat"]
+
+                child: $SpaceWeatherButton space_weather_button {};
+
+                accessibility {
+                  label: _("Solar Conditions");
+                  role-description: _("menu button");
+                }
+              }
+
               Button {
                 tooltip-text: _("Alerts");
                 action-name: "app.alerts";

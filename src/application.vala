@@ -54,6 +54,7 @@ public sealed class Application : Adw.Application {
     public static ParkDetailsCache park_details_cache { get; private set; }
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
+    public static SpaceWeatherService space_weather_service { get; private set; }
     public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
     private static ZoneDetect.Database? _tz_db = null;
     public static unowned ZoneDetect.Database? tz_db {
@@ -169,6 +170,7 @@ public sealed class Application : Adw.Application {
         });
         logbook_import_service = new LogbookImportService (spot_database);
         weather_cache = new WeatherCache (new SettingsWeatherUnitsProvider (settings));
+        space_weather_service = new SpaceWeatherService ();
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
         radio_control = new RadioControl ();
         radio_control.radio_connected.connect (() => {
@@ -276,6 +278,7 @@ public sealed class Application : Adw.Application {
         );
 
         win = this.active_window ?? new AppWindow (this);
+        space_weather_service.start ();
         win.close_request.connect (() => {
             return false;
         });

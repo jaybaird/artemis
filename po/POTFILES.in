@@ -52,6 +52,7 @@ src/spot_card.vala
 src/spot_detail.vala
 src/spot_history_dialog.vala
 src/spot_list_view.vala
+src/space_weather_snapshot.vala
 src/status_bar.vala
 src/utils.vala
 src/utils/spot_format.vala
