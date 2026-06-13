@@ -22,6 +22,7 @@ using Gee;
 
 public sealed class SpotRepo : Object, SpotLookup {
     private const int64 HEARD_CACHE_SECONDS = Spot.HEARD_RECENTLY_TIMEOUT_SECONDS;
+    private const int64 NOT_HEARD_CACHE_SECONDS = Spot.NOT_HEARD_RECENTLY_TIMEOUT_SECONDS;
 
     public GLib.ListStore store { get; construct; }
 
@@ -41,6 +42,7 @@ public sealed class SpotRepo : Object, SpotLookup {
     private HashSet<uint> notified_alert_hashes;
     private HashMap<string, int64?> heard_callsign_times;
     private HashMap<string, int64?> heard_reciprocal_callsign_times;
+    private HashMap<string, int64?> not_heard_callsign_times;
 
     public SpotRepo () {
         Object ();
@@ -54,6 +56,7 @@ public sealed class SpotRepo : Object, SpotLookup {
         notified_alert_hashes = new HashSet<uint> ();
         heard_callsign_times = new HashMap<string, int64?> ();
         heard_reciprocal_callsign_times = new HashMap<string, int64?> ();
+        not_heard_callsign_times = new HashMap<string, int64?> ();
     }
 
     public Spot? get_spot (Quark spot_hash) {
@@ -150,6 +153,14 @@ public sealed class SpotRepo : Object, SpotLookup {
         mark_callsign_heard_reciprocally (spot.callsign);
     }
 
+    public void mark_spot_not_heard (Spot spot) {
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign))
+            not_heard_callsign_times[key] = now;
+
+        spot.mark_not_heard_recently ();
+    }
+
     public void mark_callsign_heard_reciprocally (string callsign) {
         var now = monotonic_seconds ();
         foreach (var key in callsign_cache_keys (callsign))
@@ -190,6 +201,23 @@ public sealed class SpotRepo : Object, SpotLookup {
                 continue;
 
             spot.mark_heard_reciprocally ((uint) (HEARD_CACHE_SECONDS - age));
+            return;
+        }
+    }
+
+    private void apply_not_heard_status (Spot spot) {
+        prune_not_heard_callsigns ();
+
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign)) {
+            if (!not_heard_callsign_times.has_key (key))
+                continue;
+
+            var age = now - not_heard_callsign_times[key];
+            if (age >= NOT_HEARD_CACHE_SECONDS)
+                continue;
+
+            spot.mark_not_heard_recently ((uint) (NOT_HEARD_CACHE_SECONDS - age));
             return;
         }
     }
@@ -261,6 +289,18 @@ public sealed class SpotRepo : Object, SpotLookup {
             callsign_times.unset (key);
     }
 
+    private void prune_not_heard_callsigns () {
+        var now = monotonic_seconds ();
+        var expired = new ArrayList<string> ();
+        foreach (var entry in not_heard_callsign_times.entries) {
+            if (now - entry.value >= NOT_HEARD_CACHE_SECONDS)
+                expired.add (entry.key);
+        }
+
+        foreach (var key in expired)
+            not_heard_callsign_times.unset (key);
+    }
+
     private static ArrayList<string> callsign_cache_keys (string callsign) {
         var keys = new ArrayList<string> ();
         var exact = normalize_callsign (callsign);
@@ -323,6 +363,7 @@ public sealed class SpotRepo : Object, SpotLookup {
                             }
                             apply_heard_status (spot);
                             apply_reciprocal_heard_status (spot);
+                            apply_not_heard_status (spot);
                             parsed_spots.add (spot);
                         } catch (Error err) {
                             warning ("Skipping malformed POTA spot at index %u: %s",

@@ -248,6 +248,20 @@
     -gtk-icon-size: 1.15em;
 }
 
+.spot-card-floating-button {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 0;
+}
+
+.spot-card-floating-button image {
+    -gtk-icon-size: 1.05em;
+}
+
+.spot-detail-icon-button image {
+    -gtk-icon-size: 1.05em;
+}
+
 .badge-new-park {
     color: #f2c40c;
 }
@@ -283,6 +297,10 @@
     min-height: 1em;
     margin: 0 0.12em;
     opacity: 0.35;
+}
+
+.spot-deprioritized {
+    opacity: 0.55;
 }
 
 image.badge-early-shift {

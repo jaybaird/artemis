@@ -112,6 +112,7 @@ public sealed class Application : Adw.Application {
         { "about", about_activated },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
+        { "not-heard", mark_current_spot_not_heard },
         { "tune", tune_current_spot },
         { "quit", quit_activated }
     };
@@ -130,6 +131,7 @@ public sealed class Application : Adw.Application {
         set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
+        set_accels_for_action ("app.not-heard", { "<primary>m" });
         set_accels_for_action ("app.tune", { "<primary>t" });
         set_accels_for_action ("app.quit", { "<primary>q" });
         set_accels_for_action ("win.search", { "<Ctrl>F" });
@@ -456,6 +458,7 @@ public sealed class Application : Adw.Application {
         general.add (new Adw.ShortcutsItem.from_action (_("Add Spot"), "app.add-spot"));
         general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
         general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Mark Not Heard"), "app.not-heard"));
         general.add (new Adw.ShortcutsItem.from_action (_("Tune"), "app.tune"));
         if (settings.get_boolean ("show-logbook"))
             general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
@@ -483,6 +486,12 @@ public sealed class Application : Adw.Application {
         if (spot != null) {
             _radio_control.tune_to_spot (spot);
         }
+    }
+
+    private void mark_current_spot_not_heard () {
+        Spot? spot = _spot_repo.get_spot (_state.current_spot_hash);
+        if (spot != null)
+            _spot_repo.mark_spot_not_heard (spot);
     }
 
     private void quit_activated () {

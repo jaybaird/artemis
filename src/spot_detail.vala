@@ -175,6 +175,9 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Button detail_spot_button;
 
     [GtkChild]
+    private unowned Gtk.Button detail_not_heard_button;
+
+    [GtkChild]
     private unowned Gtk.Button open_map_button;
 
     [GtkChild]
@@ -203,6 +206,8 @@ public sealed class SpotDetail : Gtk.Box {
     private ulong callsign_cache_handler = 0;
     private ulong heard_recently_handler = 0;
     private ulong heard_reciprocally_handler = 0;
+    private ulong not_heard_recently_handler = 0;
+    private ulong was_hunted_today_handler = 0;
     private ulong pota_locations_handler = 0;
     private ulong radio_connected_handler = 0;
     private ulong radio_disconnected_handler = 0;
@@ -246,6 +251,7 @@ public sealed class SpotDetail : Gtk.Box {
         build_detail_lists ();
         detail_tune_button.clicked.connect (on_tune_clicked);
         detail_spot_button.clicked.connect (on_spot_clicked);
+        detail_not_heard_button.clicked.connect (on_not_heard_clicked);
         open_map_button.clicked.connect (on_open_map_clicked);
         detail_buttons_revealer.reveal_child = false;
 
@@ -374,12 +380,27 @@ public sealed class SpotDetail : Gtk.Box {
             }
             heard_reciprocally_handler = 0;
         }
+        if (not_heard_recently_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, not_heard_recently_handler)) {
+                SignalHandler.disconnect (current_spot, not_heard_recently_handler);
+            }
+            not_heard_recently_handler = 0;
+        }
+        if (was_hunted_today_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, was_hunted_today_handler)) {
+                SignalHandler.disconnect (current_spot, was_hunted_today_handler);
+            }
+            was_hunted_today_handler = 0;
+        }
 
         current_spot = spot;
 
         if (spot == null) {
             weather_request_serial++;
             update_map_slot ();
+            refresh_visual_state ();
             detail_stack.visible_child_name = "empty";
             return;
         }
@@ -399,6 +420,13 @@ public sealed class SpotDetail : Gtk.Box {
         heard_reciprocally_handler = spot.notify["heard-reciprocally"].connect (() => {
             refresh_map_badges ();
         });
+        not_heard_recently_handler = spot.notify["not-heard-recently"].connect (() => {
+            refresh_visual_state ();
+        });
+        was_hunted_today_handler = spot.notify["was-hunted-today"].connect (() => {
+            refresh_map_badges ();
+            refresh_visual_state ();
+        });
     }
 
     private void populate (Spot spot) {
@@ -410,6 +438,7 @@ public sealed class SpotDetail : Gtk.Box {
         detail_park_name.label = spot.park_name;
         update_shift_badge (spot);
         refresh_map_badges ();
+        refresh_visual_state ();
         set_weather_loading ();
 
         detail_frequency_row.value = "%s kHz".printf (
@@ -717,6 +746,8 @@ public sealed class SpotDetail : Gtk.Box {
     public void set_action_buttons_visible (bool visible) {
         detail_buttons_revealer.reveal_child = visible;
         detail_tune_button.visible = visible && Application.is_radio_configured;
+        detail_spot_button.visible = visible;
+        detail_not_heard_button.visible = visible;
         update_tune_button_state ();
     }
 
@@ -774,6 +805,18 @@ public sealed class SpotDetail : Gtk.Box {
         if (current_spot == null)
             return;
         new AddSpot.from_spot (current_spot).present (get_root ());
+    }
+
+    private void on_not_heard_clicked () {
+        if (current_spot == null)
+            return;
+        Application.spot_repo.mark_spot_not_heard (current_spot);
+    }
+
+    private void refresh_visual_state () {
+        remove_css_class ("spot-deprioritized");
+        if ((current_spot != null) && spot_is_greyed_out (current_spot))
+            add_css_class ("spot-deprioritized");
     }
 
     private void on_history_clicked () {

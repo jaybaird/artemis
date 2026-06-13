@@ -240,31 +240,47 @@ template $SpotDetail : Box {
 
               Box {
                 orientation: horizontal;
-                styles ["linked"]
+                spacing: 8;
 
+                Button detail_not_heard_button {
+                  tooltip-text: _("Mark this spot as not heard for 10 minutes");
+                  styles ["circular", "spot-detail-icon-button"]
+                  icon-name: "headphones-muted-symbolic";
 
-                Button detail_tune_button {
-                  label: _("Tune");
-                  tooltip-text: _("Tune your radio to this frequency");
-                  hexpand: true;
-                  visible: false;
                   accessibility {
+                    label: _("Not Heard");
+                    role-description: _("button");
+                  }
+                }
+
+                Box {
+                  hexpand: true;
+                  styles ["linked"]
+
+                  Button detail_tune_button {
                     label: _("Tune");
-                    role-description: _("button");
+                    tooltip-text: _("Tune your radio to this frequency");
+                    hexpand: true;
+                    visible: false;
+                    accessibility {
+                      label: _("Tune");
+                      role-description: _("button");
+                    }
+                  }
+
+                  Button detail_spot_button {
+                    label: _("Spot");
+                    tooltip-text: _("Add your spot for this park");
+                    hexpand: true;
+                    visible: true;
+                    styles ["suggested-action"]
+                    accessibility {
+                      label: _("Spot");
+                      role-description: _("button");
+                    }
                   }
                 }
 
-                Button detail_spot_button {
-                  label: _("Spot");
-                  tooltip-text: _("Add your spot for this park");
-                  hexpand: true;
-                  visible: true;
-                  styles ["suggested-action"]
-                  accessibility {
-                    label: _("Spot");
-                    role-description: _("button");
-                  }
-                }
               }
             }
 

@@ -108,5 +108,13 @@ template $SpotListRow : Box {
       visible: false;
       styles ["suggested-action", "spot-list-icon-button"]
     }
+
+    Button not_heard_button {
+      icon-name: "headphones-muted-symbolic";
+      tooltip-text: _("Mark this spot as not heard for 10 minutes");
+      valign: center;
+      visible: false;
+      styles ["flat", "spot-list-icon-button"]
+    }
   }
 }

@@ -91,11 +91,7 @@ public sealed class SpaceWeatherButton : Gtk.Box {
         update_storm_scale_css (snapshot);
         update_kp_scale_history (snapshot);
 
-        if (snapshot.has_kp ()) {
-            title_label.label = _("Kp %s").printf ("%.1f".printf (snapshot.kp));
-        } else {
-            title_label.label = _("Kp —");
-        }
+        title_label.label = _("Geomagnetic Conditions");
 
         status_label.label = _("HF: %s").printf (snapshot.geomagnetic_label);
         updated_label.label = snapshot.updated_at_utc != null

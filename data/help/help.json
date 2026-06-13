@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": 4,
+  "contentVersion": 5,
   "sections": [
     {
       "id": "getting-started",
@@ -56,7 +56,8 @@
           "paragraphs": [
             "Open Preferences to choose your default band, default mode, refresh interval, stale-spot limit, units, map scale, and whether Trailwave highlights unhunted parks. Those settings shape the main window when Trailwave opens.",
             "During a session, use the sidebar to filter by band, mode, and POTA program. Use Search to match callsigns, park references, or park names, and switch between Cards, List, and Map depending on whether you want scanning density or geographic context.",
-            "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload."
+            "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload.",
+            "Use the space weather button in the main toolbar to open a compact NOAA SWPC conditions popover. It shows the current Kp reading, geomagnetic condition label, recent Kp trend, and supporting solar values such as solar flux, sunspots, and A-index when NOAA provides them."
           ],
           "keywords": [
             "customize",
@@ -67,18 +68,22 @@
             "search",
             "cards",
             "list",
-            "map"
+            "map",
+            "space weather",
+            "solar",
+            "kp"
           ]
         },
         {
           "id": "keyboard-shortcuts",
           "title": "What keyboard shortcuts are available?",
-          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, and tuning.",
+          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, tuning, and marking a spot Not Heard.",
           "icon": null,
           "badge": null,
           "paragraphs": [
             "Open Keyboard Shortcuts from the application menu to see the current shortcut list.",
-            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Toggle Sidebar, Help, Preferences, and Quit.",
+            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Mark Not Heard, Toggle Sidebar, Help, Preferences, and Quit.",
+            "Mark Not Heard uses Ctrl+M and temporarily pushes the selected spot to the bottom of the visible list for about 10 minutes.",
             "Shortcuts follow the same rules as the visible controls. For example, Tune still requires a selected spot and a connected radio."
           ],
           "keywords": [
@@ -87,7 +92,9 @@
             "search",
             "refresh",
             "tune",
-            "spot"
+            "spot",
+            "not heard",
+            "mute"
           ]
         }
       ]
@@ -103,9 +110,9 @@
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Cards is the main scanning view. It groups each spot into an easy-to-read card with the activator, park reference, park name, location, grid, frequency, mode, age, spot count, and badges.",
-            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune and Spot actions.",
-            "Map places spots with usable grid information on the map. Selecting a card, row, or marker selects the same spot everywhere and opens the Park Detail View."
+            "Cards is the main scanning view. It groups each spot into an easy-to-read card with the activator, park reference, park name, location, grid, frequency, mode, age, spot count, and badges. Each card also includes a quick Not Heard button in the upper-right corner.",
+            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune, Spot, and Not Heard actions.",
+            "Map places spots with usable grid information on the map. Selecting a card, row, or marker selects the same spot everywhere and opens the Park Detail View, where the same Not Heard action is available beside the main operating buttons."
           ],
           "keywords": [
             "cards",
@@ -113,7 +120,9 @@
             "map",
             "views",
             "spot list",
-            "markers"
+            "markers",
+            "not heard",
+            "mute"
           ]
         },
         {
@@ -125,7 +134,8 @@
           "paragraphs": [
             "Use the sidebar to filter by band, mode, and POTA program. Program filtering uses the prefix in the park reference, such as K or VE.",
             "Use Search to match visible spots by callsign, park reference, or park name. Search is combined with the active band, mode, program, and display filters.",
-            "Preferences can hide spots marked QRT, parks you have already hunted today, and spots older than the stale-spot limit. If a view is empty, Trailwave tells you whether there are no spots on that band or no spots matching your filters."
+            "Preferences can hide spots marked QRT, parks you have already hunted today, and spots older than the stale-spot limit. If a view is empty, Trailwave tells you whether there are no spots on that band or no spots matching your filters.",
+            "When QRT and hunted-today spots are still visible, Trailwave sorts them below normal spots. Spots you mark Not Heard are also greyed out and moved to that lower-priority group for about 10 minutes before returning to normal automatically."
           ],
           "keywords": [
             "search",
@@ -135,7 +145,9 @@
             "program",
             "qrt",
             "stale",
-            "hunted"
+            "hunted",
+            "not heard",
+            "sorting"
           ]
         },
         {
@@ -179,7 +191,8 @@
           "paragraphs": [
             "Trailwave refreshes the live feed at the interval set in Preferences. The status bar shows the current UTC time, the next refresh timing, and how many spots are hidden by filters.",
             "Use Pause when you want the current feed to stop changing while you review, tune, or log a contact. Resume updates when you are ready to return to the live feed.",
-            "If a refresh fails, Trailwave shows an error dialog with a Retry option. If no spots are available or no spots match your filters, the spot views show an empty-state message instead of a blank screen."
+            "If a refresh fails, Trailwave shows an error dialog with a Retry option. If no spots are available or no spots match your filters, the spot views show an empty-state message instead of a blank screen.",
+            "Space weather updates separately from the spot feed. Trailwave fetches NOAA SWPC conditions after startup and then refreshes them about every 30 minutes without blocking spot loading."
           ],
           "keywords": [
             "refresh",
@@ -187,7 +200,9 @@
             "resume",
             "empty",
             "error",
-            "status bar"
+            "status bar",
+            "space weather",
+            "solar"
           ]
         }
       ]
@@ -204,7 +219,8 @@
           "badge": null,
           "paragraphs": [
             "Select a spot to open the Park Detail View. The top section identifies the activator and park, then shows weather when it can be loaded for the park.",
-            "Operating Details includes frequency, mode, spot count, and activator comments when present. Location includes the park location, coordinates, distance, direction, sun times, moon times, and a link to park details when data is available.",
+            "Operating Details includes frequency, mode, spot count, and activator comments when present. It also includes quick actions for Not Heard, Tune, and Spot.",
+            "Location includes the park location, coordinates, distance, direction, sun times, moon times, and a link to park details when data is available.",
             "Last Spot shows the spotter, age, spotter comment, and a Spot History link. The activator section can show profile details and a link to the activator profile when Trailwave can retrieve them."
           ],
           "keywords": [
@@ -216,7 +232,10 @@
             "bearing",
             "history",
             "activator",
-            "park"
+            "park",
+            "not heard",
+            "tune",
+            "spot"
           ]
         },
         {
@@ -464,17 +483,21 @@
         {
           "id": "external-data",
           "title": "What outside data does Trailwave use?",
-          "summary": "Trailwave uses POTA spots and park data, optional QRZ data, weather, map tiles, and optional signal report data.",
+          "summary": "Trailwave uses POTA spots and park data, NOAA space weather, optional QRZ data, weather, map tiles, and optional signal report data.",
           "icon": null,
           "badge": null,
           "paragraphs": [
             "The live spot feed, park details, spot history, and location names come from POTA services. Trailwave also caches some location data so labels can be more readable.",
             "Activator profile details and avatars come from the callsign lookup path used by the app. QRZ upload only runs when external logging is enabled and an API key is configured.",
-            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access. PSKReporter signal reports can also contribute to the Two-way copy spot badge when WSJT-X has recently decoded the activator."
+            "Weather appears when it can be loaded for the selected park. The space weather popover uses NOAA SWPC data for Kp, solar flux, sunspot number, A-index, and the recent Kp trend when those products are available. Map tiles and the optional PSKReporter signal report overlay require network access. PSKReporter signal reports can also contribute to the Two-way copy spot badge when WSJT-X has recently decoded the activator."
           ],
           "keywords": [
             "data",
             "pota",
+            "noaa",
+            "swpc",
+            "space weather",
+            "solar",
             "qrz",
             "weather",
             "map",

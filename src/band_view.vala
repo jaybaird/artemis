@@ -54,6 +54,9 @@ public sealed class BandView : Gtk.Box {
     private bool just_selected = false;
     private uint sync_selection_idle_id = 0;
     private Quark pending_selection_hash = BLANK_HASH;
+    private Gee.ArrayList<Spot> watched_spots = new Gee.ArrayList<Spot> ();
+    private Gee.ArrayList<ulong> watched_not_heard_handlers = new Gee.ArrayList<ulong> ();
+    private Gee.ArrayList<ulong> watched_hunted_handlers = new Gee.ArrayList<ulong> ();
 
     public BandView (string band_label, string icon) {
         Object (
@@ -78,17 +81,7 @@ public sealed class BandView : Gtk.Box {
         sorter = new Gtk.CustomSorter ((item_a, item_b) => {
             var spot_a = item_a as Spot;
             var spot_b = item_b as Spot;
-
-            if ((spot_a == null) || (spot_b == null))
-                return Gtk.Ordering.EQUAL;
-
-            int cmp = spot_a.spot_time.compare (spot_b.spot_time);
-            if (cmp > 0)
-                return Gtk.Ordering.SMALLER;
-            else if (cmp < 0)
-                return Gtk.Ordering.LARGER;
-            else
-                return Gtk.Ordering.EQUAL;
+            return compare_spots_for_display (spot_a, spot_b);
         });
         sorted = new Gtk.SortListModel (filtered, sorter);
 
@@ -133,8 +126,13 @@ public sealed class BandView : Gtk.Box {
             update_visible_state ();
             count_changed (sorted.get_n_items ());
         });
+        Application.spot_repo.store.items_changed.connect ((position, removed, added) => {
+            reconnect_sort_watchers ();
+            refresh_sorting ();
+        });
 
         update_visible_state ();
+        reconnect_sort_watchers ();
 
         settings.changed["hide-qrt"].connect (bounce_filter);
         settings.changed["hide-hunted"].connect (bounce_filter);
@@ -239,6 +237,44 @@ public sealed class BandView : Gtk.Box {
         filter.changed (Gtk.FilterChange.DIFFERENT);
     }
 
+    private void refresh_sorting () {
+        sorter.changed (Gtk.SorterChange.DIFFERENT);
+    }
+
+    private void reconnect_sort_watchers () {
+        disconnect_sort_watchers ();
+
+        for (uint i = 0; i < Application.spot_repo.store.get_n_items (); i++) {
+            var spot = Application.spot_repo.store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            watched_spots.add (spot);
+            watched_not_heard_handlers.add (spot.notify["not-heard-recently"].connect (() => {
+                refresh_sorting ();
+            }));
+            watched_hunted_handlers.add (spot.notify["was-hunted-today"].connect (() => {
+                refresh_sorting ();
+            }));
+        }
+    }
+
+    private void disconnect_sort_watchers () {
+        for (int i = 0; i < watched_spots.size; i++) {
+            var spot = watched_spots[i];
+            var not_heard_handler = watched_not_heard_handlers[i];
+            var hunted_handler = watched_hunted_handlers[i];
+            if (SignalHandler.is_connected (spot, not_heard_handler))
+                SignalHandler.disconnect (spot, not_heard_handler);
+            if (SignalHandler.is_connected (spot, hunted_handler))
+                SignalHandler.disconnect (spot, hunted_handler);
+        }
+
+        watched_spots.clear ();
+        watched_not_heard_handlers.clear ();
+        watched_hunted_handlers.clear ();
+    }
+
     private void update_visible_state () {
         var items = sorted.get_n_items ();
         var band = Application.state.current_band_filter ?? "All";
@@ -260,5 +296,9 @@ public sealed class BandView : Gtk.Box {
             status_page.description = _("No spots on %s match your current filters").printf (band_label);
         else
             status_page.description = _("There are no spots currently on %s").printf (band_label);
+    }
+
+    ~BandView () {
+        disconnect_sort_watchers ();
     }
 } /* class BandView */

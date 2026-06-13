@@ -268,6 +268,35 @@ public static Astronomy.Shift spot_shift (Spot spot) {
     }
 }
 
+public static bool spot_is_qrt (Spot spot) {
+    return spot.activator_comment.down ().contains ("qrt");
+}
+
+public static bool spot_is_deprioritized (Spot spot) {
+    return spot.not_heard_recently || spot.was_hunted_today || spot_is_qrt (spot);
+}
+
+public static bool spot_is_greyed_out (Spot spot) {
+    return spot.not_heard_recently || spot.was_hunted_today;
+}
+
+public static Gtk.Ordering compare_spots_for_display (Spot? spot_a, Spot? spot_b) {
+    if ((spot_a == null) || (spot_b == null))
+        return Gtk.Ordering.EQUAL;
+
+    var deprioritized_a = spot_is_deprioritized (spot_a);
+    var deprioritized_b = spot_is_deprioritized (spot_b);
+    if (deprioritized_a != deprioritized_b)
+        return deprioritized_a ? Gtk.Ordering.LARGER : Gtk.Ordering.SMALLER;
+
+    var cmp = spot_a.spot_time.compare (spot_b.spot_time);
+    if (cmp > 0)
+        return Gtk.Ordering.SMALLER;
+    if (cmp < 0)
+        return Gtk.Ordering.LARGER;
+    return Gtk.Ordering.EQUAL;
+}
+
 public static bool spot_matches_current_filters (Spot spot, string band_filter) {
     var filter = new SpotFilterState (
         band_filter,

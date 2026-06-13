@@ -22,8 +22,12 @@ public sealed class SpotListRow : Gtk.Box {
     private unowned Gtk.Button tune_button;
     [GtkChild]
     private unowned Gtk.Button spot_button;
+    [GtkChild]
+    private unowned Gtk.Button not_heard_button;
     private ulong heard_recently_notify_handler = 0;
     private ulong heard_reciprocally_notify_handler = 0;
+    private ulong not_heard_recently_notify_handler = 0;
+    private ulong was_hunted_today_notify_handler = 0;
 
     public SpotListRow (Spot spot) {
         Object (spot: spot);
@@ -43,6 +47,12 @@ public sealed class SpotListRow : Gtk.Box {
         heard_reciprocally_notify_handler = spot.notify["heard-reciprocally"].connect (() => {
             populate_spot_badges (badge_box, spot);
         });
+        not_heard_recently_notify_handler = spot.notify["not-heard-recently"].connect (() => {
+            refresh_visual_state ();
+        });
+        was_hunted_today_notify_handler = spot.notify["was-hunted-today"].connect (() => {
+            refresh_visual_state ();
+        });
         time_label.label = humanize_ago_compact (spot.spot_time);
         tune_button.clicked.connect (() => {
             Application.state.current_spot_hash = spot.hash;
@@ -52,6 +62,10 @@ public sealed class SpotListRow : Gtk.Box {
             Application.state.current_spot_hash = spot.hash;
             new AddSpot.from_spot (spot).present (get_root ());
         });
+        not_heard_button.clicked.connect (() => {
+            Application.spot_repo.mark_spot_not_heard (spot);
+        });
+        refresh_visual_state ();
     }
 
     ~SpotListRow () {
@@ -65,12 +79,30 @@ public sealed class SpotListRow : Gtk.Box {
                 SignalHandler.disconnect (spot, heard_reciprocally_notify_handler);
             heard_reciprocally_notify_handler = 0;
         }
+        if (not_heard_recently_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, not_heard_recently_notify_handler))
+                SignalHandler.disconnect (spot, not_heard_recently_notify_handler);
+            not_heard_recently_notify_handler = 0;
+        }
+        if (was_hunted_today_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, was_hunted_today_notify_handler))
+                SignalHandler.disconnect (spot, was_hunted_today_notify_handler);
+            was_hunted_today_notify_handler = 0;
+        }
     }
 
     public void set_actions_visible (bool visible) {
         tune_button.visible = visible && Application.is_radio_configured;
         tune_button.sensitive = Application.radio_control.is_rig_connected;
         spot_button.visible = visible;
+        not_heard_button.visible = visible;
+    }
+
+    private void refresh_visual_state () {
+        populate_spot_badges (badge_box, spot);
+        remove_css_class ("spot-deprioritized");
+        if (spot_is_greyed_out (spot))
+            add_css_class ("spot-deprioritized");
     }
 }
 
@@ -98,6 +130,9 @@ public sealed class SpotListView : Gtk.Box {
     private bool row_actions_visible = false;
     private uint sync_selection_idle_id = 0;
     private Quark pending_selection_hash = BLANK_HASH;
+    private Gee.ArrayList<Spot> watched_spots = new Gee.ArrayList<Spot> ();
+    private Gee.ArrayList<ulong> watched_not_heard_handlers = new Gee.ArrayList<ulong> ();
+    private Gee.ArrayList<ulong> watched_hunted_handlers = new Gee.ArrayList<ulong> ();
 
     public signal void count_changed (uint count);
 
@@ -118,15 +153,7 @@ public sealed class SpotListView : Gtk.Box {
         sorter = new Gtk.CustomSorter ((item_a, item_b) => {
             var spot_a = item_a as Spot;
             var spot_b = item_b as Spot;
-            if ((spot_a == null) || (spot_b == null))
-                return Gtk.Ordering.EQUAL;
-
-            var cmp = spot_a.spot_time.compare (spot_b.spot_time);
-            if (cmp > 0)
-                return Gtk.Ordering.SMALLER;
-            if (cmp < 0)
-                return Gtk.Ordering.LARGER;
-            return Gtk.Ordering.EQUAL;
+            return compare_spots_for_display (spot_a, spot_b);
         });
 
         filtered = new Gtk.FilterListModel (Application.spot_repo.store, filter);
@@ -175,6 +202,10 @@ public sealed class SpotListView : Gtk.Box {
             update_visible_state ();
             count_changed (sorted.get_n_items ());
         });
+        Application.spot_repo.store.items_changed.connect ((position, removed, added) => {
+            reconnect_sort_watchers ();
+            refresh_sorting ();
+        });
 
         var settings = Application.settings;
         settings.changed["hide-qrt"].connect (bounce_filter);
@@ -182,6 +213,7 @@ public sealed class SpotListView : Gtk.Box {
         settings.changed["hide-older-than"].connect (bounce_filter);
 
         update_visible_state ();
+        reconnect_sort_watchers ();
     }
 
     private void update_visible_state () {
@@ -192,6 +224,44 @@ public sealed class SpotListView : Gtk.Box {
 
     public void bounce_filter () {
         filter.changed (Gtk.FilterChange.DIFFERENT);
+    }
+
+    private void refresh_sorting () {
+        sorter.changed (Gtk.SorterChange.DIFFERENT);
+    }
+
+    private void reconnect_sort_watchers () {
+        disconnect_sort_watchers ();
+
+        for (uint i = 0; i < Application.spot_repo.store.get_n_items (); i++) {
+            var spot = Application.spot_repo.store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            watched_spots.add (spot);
+            watched_not_heard_handlers.add (spot.notify["not-heard-recently"].connect (() => {
+                refresh_sorting ();
+            }));
+            watched_hunted_handlers.add (spot.notify["was-hunted-today"].connect (() => {
+                refresh_sorting ();
+            }));
+        }
+    }
+
+    private void disconnect_sort_watchers () {
+        for (int i = 0; i < watched_spots.size; i++) {
+            var spot = watched_spots[i];
+            var not_heard_handler = watched_not_heard_handlers[i];
+            var hunted_handler = watched_hunted_handlers[i];
+            if (SignalHandler.is_connected (spot, not_heard_handler))
+                SignalHandler.disconnect (spot, not_heard_handler);
+            if (SignalHandler.is_connected (spot, hunted_handler))
+                SignalHandler.disconnect (spot, hunted_handler);
+        }
+
+        watched_spots.clear ();
+        watched_not_heard_handlers.clear ();
+        watched_hunted_handlers.clear ();
     }
 
     public void set_row_actions_visible (bool visible) {
@@ -253,5 +323,9 @@ public sealed class SpotListView : Gtk.Box {
             adj.value = row_top;
         else if (row_bottom > adj.value + adj.page_size)
             adj.value = row_bottom - adj.page_size;
+    }
+
+    ~SpotListView () {
+        disconnect_sort_watchers ();
     }
 }
