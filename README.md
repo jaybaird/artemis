@@ -86,7 +86,6 @@ Run `Artemis-Setup-<version>.msi`
 - Hamlib
 - JSON-GLib
 - Dex
-- WebKitGtk
 - SQLite3
 - Shumate
 

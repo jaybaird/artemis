@@ -208,6 +208,28 @@ public static Gtk.Widget create_spot_badge_widget (SpotBadgeInfo badge) {
     return image;
 }
 
+public static void open_uri (Gtk.Widget origin, string uri, string failure_title) {
+    var launcher = new Gtk.UriLauncher (uri);
+    var parent = origin.get_root () as Gtk.Window;
+
+    launcher.launch.begin (parent, null, (obj, res) => {
+        try {
+            launcher.launch.end (res);
+        } catch (Error e) {
+            warning ("Unable to open URI %s: %s", uri, e.message);
+
+            if (parent == null) {
+                Application.show_toast ("%s: %s".printf (failure_title, e.message));
+                return;
+            }
+
+            var alert = new Adw.AlertDialog (failure_title, e.message);
+            alert.add_response ("ok", _("OK"));
+            alert.present (parent);
+        }
+    });
+}
+
 public static void populate_spot_badges (
     Gtk.Box box,
     Spot spot,

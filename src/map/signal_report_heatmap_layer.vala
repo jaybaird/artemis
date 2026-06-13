@@ -143,7 +143,7 @@ public class SignalReportHeatmapLayer : Layer {
 
         uint render_width = (uint) int.max (1, (int) Math.ceil (width / (double) RENDER_SCALE));
         uint render_height = (uint) int.max (1, (int) Math.ceil (height / (double) RENDER_SCALE));
-
+        double world_width = get_world_width_pixels ();
         var heatmap = new Heatmap (render_width, render_height);
         // Keep a single GTK snapshot bounded even if the feed produces many unique buckets.
         var rendered = 0;
@@ -155,15 +155,21 @@ public class SignalReportHeatmapLayer : Layer {
             double y;
             viewport.location_to_widget_coords (this, point.latitude, point.longitude, out x, out y);
 
-            if (x < 0 || y < 0 || x >= width || y >= height)
+            if (y < 0 || y >= height)
                 continue;
 
-            heatmap.add_weighted_point_with_stamp (
-                (uint) Math.round (x / RENDER_SCALE),
-                (uint) Math.round (y / RENDER_SCALE),
-                point.weight,
-                stamp
-            );
+            for (int world = -1; world <= 1; world++) {
+                double shifted_x = x + (world_width * world);
+                if (shifted_x < 0 || shifted_x >= width)
+                    continue;
+
+                heatmap.add_weighted_point_with_stamp (
+                    (uint) Math.round (shifted_x / RENDER_SCALE),
+                    (uint) Math.round (y / RENDER_SCALE),
+                    point.weight,
+                    stamp
+                );
+            }
             rendered++;
         }
 
@@ -203,5 +209,16 @@ public class SignalReportHeatmapLayer : Layer {
     private uint scaled_stamp_radius_pixels () {
         var scaled_radius = (_stamp_radius_pixels + RENDER_SCALE - 1) / RENDER_SCALE;
         return scaled_radius > 0 ? scaled_radius : 1;
+    }
+
+    private double get_world_width_pixels () {
+        var reference_map_source = viewport.get_reference_map_source ();
+        if (reference_map_source == null)
+            return 0.0;
+
+        return Math.fabs (
+            reference_map_source.get_x (viewport.zoom_level, 180.0) -
+            reference_map_source.get_x (viewport.zoom_level, -180.0)
+        );
     }
 }

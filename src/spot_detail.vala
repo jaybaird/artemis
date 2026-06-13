@@ -142,9 +142,6 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Label detail_shift_label;
 
     [GtkChild]
-    private unowned Gtk.Separator detail_shift_separator;
-
-    [GtkChild]
     private unowned Gtk.Box weather_summary_card;
 
     [GtkChild]
@@ -202,8 +199,7 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Box weather_unavailable_card;
 
     private Spot? current_spot = null;
-    private string? park_url = null;
-    private string? activator_url = null;
+
     private ulong callsign_cache_handler = 0;
     private ulong heard_recently_handler = 0;
     private ulong heard_reciprocally_handler = 0;
@@ -219,6 +215,7 @@ public sealed class SpotDetail : Gtk.Box {
     private DetailFieldRow detail_operator_awards_row;
     private DetailFieldRow detail_operator_endorsements_row;
     private DetailLinkRow detail_activator_link_row;
+    private DetailLinkRow detail_activator_qrz_row;
     private DetailFieldRow detail_frequency_row;
     private DetailFieldRow detail_mode_row;
     private DetailFieldRow detail_spot_count_row;
@@ -263,6 +260,8 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_list.row_activated.connect ((row) => {
             if (row == detail_activator_link_row)
                 on_activator_clicked ();
+            if (row == detail_activator_qrz_row)
+                on_qrz_clicked ();
         });
         pota_locations_handler = Application.pota_client.locations_updated.connect (() => {
             if (current_spot != null)
@@ -294,11 +293,13 @@ public sealed class SpotDetail : Gtk.Box {
         detail_operator_endorsements_row = new DetailFieldRow (_("Endorsements"), true);
         detail_operator_endorsements_row.add_css_class ("numeric");
         detail_activator_link_row = new DetailLinkRow (_("View Activator Details"));
+        detail_activator_qrz_row = new DetailLinkRow (_("View on QRZ"));
         detail_activator_list.append (detail_operator_name_row);
         detail_activator_list.append (detail_operator_qth_row);
         detail_activator_list.append (detail_operator_awards_row);
         detail_activator_list.append (detail_operator_endorsements_row);
         detail_activator_list.append (detail_activator_link_row);
+        detail_activator_list.append (detail_activator_qrz_row);
 
         detail_frequency_row = new DetailFieldRow (_("Frequency"));
         detail_frequency_row.add_css_class ("numeric");
@@ -489,15 +490,6 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_comment_row.visible = (spot.activator_comment ?? "").strip () != "";
         detail_activator_comment_row.value = detail_activator_comment_row.visible ?
             spot.activator_comment : "";
-
-        var escaped = GLib.Uri.escape_string (spot.park_ref, null, false);
-        park_url = @"https://pota.app/#/park/$escaped";
-        var escaped_callsign = GLib.Uri.escape_string (
-            pota_profile_callsign (spot.callsign),
-            null,
-            false
-        );
-        activator_url = @"https://pota.app/#/profile/$escaped_callsign";
     }
 
     public void update_local_time_row () {
@@ -587,7 +579,6 @@ public sealed class SpotDetail : Gtk.Box {
 
         var visible = shift != Astronomy.Shift.NORMAL;
         detail_shift_badge.visible = visible;
-        detail_shift_separator.visible = visible;
     }
 
     private void set_shift_badge (
@@ -599,7 +590,6 @@ public sealed class SpotDetail : Gtk.Box {
         detail_shift_label.label = label;
         detail_shift_badge.tooltip_text = tooltip;
         detail_shift_badge.visible = true;
-        detail_shift_separator.visible = true;
     }
 
     private string format_time_label (DateTime? time) {
@@ -808,29 +798,39 @@ public sealed class SpotDetail : Gtk.Box {
     }
 
     private void on_park_clicked () {
-        if (park_url == null)
+        if (current_spot == null)
             return;
-        var parent = get_root () as Gtk.Window;
-        if (parent == null)
-            return;
-#if ARTEMIS_UNIX
-        new ParkDetailsView (parent, _("Park Details"), park_url).present ();
-#else
-        GLib.AppInfo.launch_default_for_uri (park_url, null);
-#endif
+
+        var escaped = GLib.Uri.escape_string (current_spot.park_ref, null, false);
+        var park_url = @"https://pota.app/#/park/$escaped";
+
+        open_uri (this, park_url, _("Unable to Open Park Details"));
     }
 
     private void on_activator_clicked () {
-        if (activator_url == null)
+        if (current_spot == null)
             return;
-#if ARTEMIS_UNIX
-        var parent = get_root () as Gtk.Window;
-        if (parent == null)
+
+        var escaped_callsign = GLib.Uri.escape_string (
+            pota_profile_callsign (current_spot.callsign),
+            null,
+            false
+        );
+        var activator_url = @"https://pota.app/#/profile/$escaped_callsign";
+        open_uri (this, activator_url, _("Unable to Open Activator Details"));
+    }
+
+    private void on_qrz_clicked () {
+        if (current_spot == null)
             return;
-        new ParkDetailsView (parent, _("Activator Details"), activator_url).present ();
-#else
-        GLib.AppInfo.launch_default_for_uri (activator_url, null);
-#endif
+
+        var escaped_callsign = GLib.Uri.escape_string (
+            pota_profile_callsign (current_spot.callsign),
+            null,
+            false
+        );
+        var qrz_url = @"https://qrz.com/db/$escaped_callsign";
+        open_uri (this, qrz_url, _(@"Unable to open QRZ page for $current_spot.callsign"));
     }
 
     ~SpotDetail () {

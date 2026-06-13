@@ -64,6 +64,7 @@ artemis_vala_sources = [
   'src/map/map_marker_dot.vala',
   'src/map/map_marker_popover.vala',
   'src/map/signal_report_heatmap_layer.vala',
+  'src/map/wrapped_marker_layer.vala',
   'src/map/map_view.vala',
   'src/left_sidebar.vala',
   'src/astronomy.vala',
@@ -71,7 +72,6 @@ artemis_vala_sources = [
   'src/spot_list_view.vala',
   'src/spot_lookup.vala',
   'src/weather_cache.vala',
-  'src/web_views.vala',
   'src/wsjtx/wsjtx_packet.vala',
   'src/wsjtx/wsjtx_packet_reader.vala',
   'src/wsjtx/wsjtx_packet_parser.vala',
@@ -191,7 +191,6 @@ artemis_vala_deps = [
 
 if not is_windows
   artemis_vala_deps += [
-    dependency('webkitgtk-6.0'),
     dependency('glycin-2'),
     dependency('glycin-gtk4-2')
   ]

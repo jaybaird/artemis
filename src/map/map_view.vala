@@ -42,14 +42,13 @@ public class MapView : Gtk.Box {
     private SignalReportHeatmapLayer signal_report_layer;
     private SignalReportMqttSession signal_report_session;
     private GraylineOverlay grayline_overlay;
-    private MarkerLayer marker_layer;
+    private WrappedMarkerLayer marker_layer;
     private MarkerLayer astronomy_marker_layer;
-    private HashMap<Quark, Marker> markers;
-    private HashMap<Quark, MapMarkerDot> marker_dots;
-    private HashMap<Quark, ulong> marker_heard_notify_handlers;
-    private HashMap<Quark, ulong> marker_reciprocal_notify_handlers;
-    private HashMap<Quark, ulong> marker_hunted_notify_handlers;
-    private Marker? selected_marker = null;
+    private HashMap<Quark, Gee.ArrayList<Gtk.Widget>> markers;
+    private HashMap<Quark, Gee.ArrayList<MapMarkerDot>> marker_dots;
+    private HashMap<Quark, Gee.ArrayList<ulong>> marker_heard_notify_handlers;
+    private HashMap<Quark, Gee.ArrayList<ulong>> marker_reciprocal_notify_handlers;
+    private HashMap<Quark, Gee.ArrayList<ulong>> marker_hunted_notify_handlers;
     private Quark selected_marker_hash = BLANK_HASH;
     private Marker? sun_marker = null;
     private Marker? moon_marker = null;
@@ -233,11 +232,11 @@ public class MapView : Gtk.Box {
             update_qth_coordinate ();
         });
         bbox = new BoundingBox ();
-        markers = new HashMap<Quark, Marker> ();
-        marker_dots = new HashMap<Quark, MapMarkerDot> ();
-        marker_heard_notify_handlers = new HashMap<Quark, ulong> ();
-        marker_reciprocal_notify_handlers = new HashMap<Quark, ulong> ();
-        marker_hunted_notify_handlers = new HashMap<Quark, ulong> ();
+        markers = new HashMap<Quark, Gee.ArrayList<Gtk.Widget>> ();
+        marker_dots = new HashMap<Quark, Gee.ArrayList<MapMarkerDot>> ();
+        marker_heard_notify_handlers = new HashMap<Quark, Gee.ArrayList<ulong>> ();
+        marker_reciprocal_notify_handlers = new HashMap<Quark, Gee.ArrayList<ulong>> ();
+        marker_hunted_notify_handlers = new HashMap<Quark, Gee.ArrayList<ulong>> ();
 
         rebuild_base_map_layer ();
 
@@ -442,8 +441,15 @@ public class MapView : Gtk.Box {
         map_widget.add_controller (zoom);
     }
 
-    private void _create_marker (Spot spot) {
-        var marker_content = new Gtk.Overlay () {
+    private Gtk.Widget create_marker_widget (
+        Spot spot,
+        out Gtk.Overlay marker_content,
+        out MapMarkerDot dot,
+        out Gtk.Widget heard_icon,
+        out Gtk.Widget two_way_icon,
+        out Gtk.Widget hunted_icon
+    ) {
+        marker_content = new Gtk.Overlay () {
             width_request = 28,
             height_request = 28,
             halign = Gtk.Align.CENTER,
@@ -451,23 +457,22 @@ public class MapView : Gtk.Box {
         };
         marker_content.add_css_class ("map-marker-content");
 
-        var dot = new MapMarkerDot (spot.band);
+        dot = new MapMarkerDot (spot.band);
         marker_content.set_child (dot);
 
-        var two_way_icon = new Gtk.Image.from_icon_name ("horizontal-arrows-symbolic") {
+        two_way_icon = new Gtk.Image.from_icon_name ("horizontal-arrows-symbolic") {
             pixel_size = 12,
             halign = Gtk.Align.CENTER,
             valign = Gtk.Align.CENTER,
             visible = spot.heard_reciprocally
         };
-
-        var heard_icon = new Gtk.Image.from_icon_name ("headphones-symbolic") {
+        heard_icon = new Gtk.Image.from_icon_name ("headphones-symbolic") {
             pixel_size = 12,
             halign = Gtk.Align.CENTER,
             valign = Gtk.Align.CENTER,
             visible = spot.heard_recently && !spot.heard_reciprocally
         };
-        var hunted_icon = new Gtk.Image.from_icon_name ("verified-checkmark-symbolic") {
+        hunted_icon = new Gtk.Image.from_icon_name ("verified-checkmark-symbolic") {
             pixel_size = 12,
             halign = Gtk.Align.CENTER,
             valign = Gtk.Align.CENTER,
@@ -480,92 +485,122 @@ public class MapView : Gtk.Box {
         marker_content.add_overlay (two_way_icon);
         marker_content.add_overlay (hunted_icon);
 
+        var marker = new Gtk.Box (Gtk.Orientation.VERTICAL, 0) {
+            width_request = 28,
+            height_request = 28,
+            halign = Gtk.Align.CENTER,
+            valign = Gtk.Align.CENTER,
+            tooltip_markup = "<b>%s</b>\n<small>%s</small>".printf (
+                Markup.escape_text ("%s @ %s".printf (spot.callsign, spot.park_ref)),
+                Markup.escape_text (spot.park_name)
+            )
+        };
+        marker.add_css_class ("marker");
+        marker.append (marker_content);
+        return marker;
+    }
+
+    private void _create_marker (Spot spot) {
         var coordinate = spot.coordinate;
         if (coordinate == null)
             return;
 
-        var marker = new Marker () {
-            child = marker_content,
-            latitude = coordinate.latitude,
-            longitude = coordinate.longitude
-        };
-        marker.add_css_class ("marker");
-        sync_marker_badge_state (
-            marker,
-            marker_content,
-            heard_icon,
-            two_way_icon,
-            hunted_icon,
-            spot
-        );
-        if (spot.hash == Application.state.current_spot_hash) {
-            marker.add_css_class ("selected");
-            dot.selected = true;
-            selected_marker = marker;
-            selected_marker_hash = spot.hash;
+        var marker_widgets = new Gee.ArrayList<Gtk.Widget> ();
+        var dots = new Gee.ArrayList<MapMarkerDot> ();
+        var heard_handlers = new Gee.ArrayList<ulong> ();
+        var reciprocal_handlers = new Gee.ArrayList<ulong> ();
+        var hunted_handlers = new Gee.ArrayList<ulong> ();
+
+        for (int world = -1; world <= 1; world++) {
+            Gtk.Overlay marker_content;
+            MapMarkerDot dot;
+            Gtk.Widget heard_icon;
+            Gtk.Widget two_way_icon;
+            Gtk.Widget hunted_icon;
+            var marker = create_marker_widget (
+                spot,
+                out marker_content,
+                out dot,
+                out heard_icon,
+                out two_way_icon,
+                out hunted_icon
+            );
+
+            sync_marker_badge_state (
+                marker,
+                marker_content,
+                heard_icon,
+                two_way_icon,
+                hunted_icon,
+                spot
+            );
+            if (spot.hash == Application.state.current_spot_hash) {
+                marker.add_css_class ("selected");
+                dot.selected = true;
+                selected_marker_hash = spot.hash;
+            }
+
+            var click = new Gtk.GestureClick ();
+            click.pressed.connect (() => {
+                Application.state.current_spot_hash = spot.hash;
+            });
+            marker.add_controller (click);
+
+            var motion = new Gtk.EventControllerMotion ();
+            motion.enter.connect (() => {
+                marker.add_css_class ("hovered");
+                marker.set_cursor_from_name ("pointer");
+            });
+            motion.leave.connect (() => {
+                marker.remove_css_class ("hovered");
+                marker.set_cursor_from_name (null);
+            });
+            marker.add_controller (motion);
+
+            marker_layer.add_marker (marker, coordinate.latitude, coordinate.longitude, world);
+            marker_widgets.add (marker);
+            dots.add (dot);
+            heard_handlers.add (spot.notify["heard-recently"].connect (() => {
+                sync_marker_badge_state (
+                    marker,
+                    marker_content,
+                    heard_icon,
+                    two_way_icon,
+                    hunted_icon,
+                    spot
+                );
+            }));
+            reciprocal_handlers.add (spot.notify["heard-reciprocally"].connect (() => {
+                sync_marker_badge_state (
+                    marker,
+                    marker_content,
+                    heard_icon,
+                    two_way_icon,
+                    hunted_icon,
+                    spot
+                );
+            }));
+            hunted_handlers.add (spot.notify["was-hunted-today"].connect (() => {
+                sync_marker_badge_state (
+                    marker,
+                    marker_content,
+                    heard_icon,
+                    two_way_icon,
+                    hunted_icon,
+                    spot
+                );
+            }));
         }
 
-        var click = new Gtk.GestureClick ();
-        click.pressed.connect (() => {
-            Application.state.current_spot_hash = spot.hash;
-        });
-        marker.add_controller (click);
-
-        var motion = new Gtk.EventControllerMotion ();
-        motion.enter.connect (() => {
-            marker.add_css_class ("hovered");
-            marker.set_cursor_from_name ("pointer");
-        });
-        motion.leave.connect (() => {
-            marker.remove_css_class ("hovered");
-            marker.set_cursor_from_name (null);
-        });
-        marker.add_controller (motion);
-
-        var title = Markup.escape_text ("%s @ %s".printf (spot.callsign, spot.park_ref));
-        var subtitle = Markup.escape_text (spot.park_name);
-        marker.child.set_tooltip_markup ("<b>%s</b>\n<small>%s</small>".printf (title, subtitle));
-        marker.x_hotspot = 0.5;
-        marker.y_hotspot = 0.5;
-
-
-        marker_layer.add_marker (marker);
-        markers.set (spot.hash, marker);
-        marker_dots.set (spot.hash, dot);
-        marker_heard_notify_handlers.set (spot.hash, spot.notify["heard-recently"].connect (() => {
-            sync_marker_badge_state (
-                marker,
-                marker_content,
-                heard_icon,
-                two_way_icon,
-                hunted_icon,
-                spot
-            );
-        }));
-        marker_reciprocal_notify_handlers.set (spot.hash, spot.notify["heard-reciprocally"].connect (() => {
-            sync_marker_badge_state (
-                marker,
-                marker_content,
-                heard_icon,
-                two_way_icon,
-                hunted_icon,
-                spot
-            );
-        }));
-        marker_hunted_notify_handlers.set (spot.hash, spot.notify["was-hunted-today"].connect (() => {
-            sync_marker_badge_state (
-                marker,
-                marker_content,
-                heard_icon,
-                two_way_icon,
-                hunted_icon,
-                spot
-            );
-        }));
+        markers.set (spot.hash, marker_widgets);
+        marker_dots.set (spot.hash, dots);
+        marker_heard_notify_handlers.set (spot.hash, heard_handlers);
+        marker_reciprocal_notify_handlers.set (spot.hash, reciprocal_handlers);
+        marker_hunted_notify_handlers.set (spot.hash, hunted_handlers);
     } /* _create_marker */
 
     private void sync_marker_badge_state (
-        Marker marker,
+        Gtk.Widget marker,
         Gtk.Widget marker_content,
         Gtk.Widget heard_icon,
         Gtk.Widget two_way_icon,
@@ -601,40 +636,51 @@ public class MapView : Gtk.Box {
     }
 
     private void sync_marker_selection (Quark spot_hash) {
-        if (selected_marker != null) {
-            selected_marker.remove_css_class ("selected");
-            selected_marker = null;
-        }
-
         if (selected_marker_hash != BLANK_HASH) {
-            var dot = marker_dots.get (selected_marker_hash);
-            if (dot != null)
-                dot.selected = false;
+            var previous_markers = markers.get (selected_marker_hash);
+            if (previous_markers != null) {
+                foreach (var marker in previous_markers)
+                    marker.remove_css_class ("selected");
+            }
+
+            var previous_dots = marker_dots.get (selected_marker_hash);
+            if (previous_dots != null) {
+                foreach (var dot in previous_dots)
+                    dot.selected = false;
+            }
             selected_marker_hash = BLANK_HASH;
         }
 
         if (spot_hash == BLANK_HASH)
             return;
 
-        var marker = markers.get (spot_hash);
-        if (marker == null)
+        var selected_markers = markers.get (spot_hash);
+        if (selected_markers == null)
             return;
 
-        marker.add_css_class ("selected");
-        var dot = marker_dots.get (spot_hash);
-        if (dot != null)
-            dot.selected = true;
-        selected_marker = marker;
+        foreach (var marker in selected_markers)
+            marker.add_css_class ("selected");
+
+        var selected_dots = marker_dots.get (spot_hash);
+        if (selected_dots != null) {
+            foreach (var dot in selected_dots)
+                dot.selected = true;
+        }
+
         selected_marker_hash = spot_hash;
         raise_selected_marker ();
     }
 
     private void raise_selected_marker () {
-        if (marker_layer == null || selected_marker == null)
+        if (marker_layer == null || selected_marker_hash == BLANK_HASH)
             return;
 
-        marker_layer.remove_marker (selected_marker);
-        marker_layer.add_marker (selected_marker);
+        var selected_markers = markers.get (selected_marker_hash);
+        if (selected_markers == null)
+            return;
+
+        foreach (var marker in selected_markers)
+            marker_layer.raise_marker (marker);
     }
 
     public void go_to_spot (Spot? spot) {
@@ -937,20 +983,32 @@ public class MapView : Gtk.Box {
 
         foreach (var entry in marker_heard_notify_handlers.entries) {
             var spot = Application.spot_repo.get_spot (entry.key);
-            if ((spot != null) && SignalHandler.is_connected (spot, entry.value))
-                SignalHandler.disconnect (spot, entry.value);
+            if (spot != null) {
+                foreach (var handler_id in entry.value) {
+                    if (SignalHandler.is_connected (spot, handler_id))
+                        SignalHandler.disconnect (spot, handler_id);
+                }
+            }
         }
         marker_heard_notify_handlers.clear ();
         foreach (var entry in marker_reciprocal_notify_handlers.entries) {
             var spot = Application.spot_repo.get_spot (entry.key);
-            if ((spot != null) && SignalHandler.is_connected (spot, entry.value))
-                SignalHandler.disconnect (spot, entry.value);
+            if (spot != null) {
+                foreach (var handler_id in entry.value) {
+                    if (SignalHandler.is_connected (spot, handler_id))
+                        SignalHandler.disconnect (spot, handler_id);
+                }
+            }
         }
         marker_reciprocal_notify_handlers.clear ();
         foreach (var entry in marker_hunted_notify_handlers.entries) {
             var spot = Application.spot_repo.get_spot (entry.key);
-            if ((spot != null) && SignalHandler.is_connected (spot, entry.value))
-                SignalHandler.disconnect (spot, entry.value);
+            if (spot != null) {
+                foreach (var handler_id in entry.value) {
+                    if (SignalHandler.is_connected (spot, handler_id))
+                        SignalHandler.disconnect (spot, handler_id);
+                }
+            }
         }
         marker_hunted_notify_handlers.clear ();
 
@@ -959,10 +1017,9 @@ public class MapView : Gtk.Box {
             marker_layer = null;
         }
 
-        marker_layer = new MarkerLayer (viewport);
+        marker_layer = new WrappedMarkerLayer (viewport);
         markers.clear ();
         marker_dots.clear ();
-        selected_marker = null;
         selected_marker_hash = BLANK_HASH;
 
         uint spot_count = 0;
