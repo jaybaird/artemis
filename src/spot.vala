@@ -18,8 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-public const uint32 BLANK_HASH = uint32.MAX;
-
 public class RadioConstants {
     public const string UNKNOWN_MODE = "Unknown";
 

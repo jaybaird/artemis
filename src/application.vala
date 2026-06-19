@@ -39,13 +39,6 @@ public sealed class Application : Adw.Application {
     public static LoggingService logging_service { get; private set; }
     public static LogbookImportService logbook_import_service { get; private set; }
 
-    public static Quark current_spot_hash {
-        get {
-            return state.current_spot_hash;
-        } set {
-            state.current_spot_hash = value;
-        }
-    }
     public static CallsignCache callsign_cache { get; private set; }
     public static SpotDb spot_database { get; private set; }
     public static SpotRepo spot_repo { get; private set; }
@@ -77,22 +70,6 @@ public sealed class Application : Adw.Application {
     public static Application app;
     public static Gtk.Window win;
 
-    public static string? current_mode_filter {
-        get { return state.current_mode_filter; }
-        set { state.current_mode_filter = value; }
-    }
-    public static string? current_program_filter {
-        get { return state.current_program_filter; }
-        set { state.current_program_filter = value; }
-    }
-    public static string? current_search_text {
-        get { return state.current_search_text; }
-        set { state.current_search_text = value; }
-    }
-    public static string? current_band_filter {
-        get { return state.current_band_filter; }
-        set { state.current_band_filter = value ?? "All"; }
-    }
 #if ARTEMIS_WINDOWS
     private static string? windows_bundle_root = null;
 #endif
@@ -140,10 +117,6 @@ public sealed class Application : Adw.Application {
 
         state = new AppState ();
         notification_history_store = new GLib.ListStore (typeof (AppNotification));
-        state.current_spot_changed.connect ((spot_hash) => {
-            if (spot_repo != null)
-                spot_repo.current_spot_changed (spot_hash);
-        });
 
         settings = new Settings (Build.DOMAIN);
         settings.changed["show-logbook"].connect (sync_logbook_ui);

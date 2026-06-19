@@ -30,9 +30,8 @@ public sealed class SpotRepo : Object, SpotLookup {
     public signal void refreshed (uint spots_updated);
     public signal void log_status_refreshed ();
     public signal void update_error (Error err);
-    public signal void current_spot_changed (Quark spot_hash);
-    public signal void spots_replacing (Quark preserved_spot_hash);
-    public signal void spots_replaced (Quark current_spot_hash);
+    public signal void spots_replacing ();
+    public signal void spots_replaced ();
 
     public Gtk.StringList program_model { get; private set; }
     public Gtk.StringList mode_model { get; private set; }
@@ -432,11 +431,9 @@ public sealed class SpotRepo : Object, SpotLookup {
                 GLib.Object[] additions = new GLib.Object[parsed_spots.size];
                 for (int i = 0; i < parsed_spots.size; i++)
                     additions[i] = parsed_spots[i];
-                var preserved_spot_hash = Application.state.current_spot_hash;
-                spots_replacing (preserved_spot_hash);
+                spots_replacing ();
                 store.splice (0, store.get_n_items (), additions);
-                restore_preserved_selection (preserved_spot_hash);
-                spots_replaced (Application.state.current_spot_hash);
+                spots_replaced ();
                 spots_updated = parsed_spots.size;
 
                 new_program_model.append (_("All"));
@@ -461,17 +458,6 @@ public sealed class SpotRepo : Object, SpotLookup {
 
         update_in_progress = false;
     } /* update_spots */
-
-    private void restore_preserved_selection (Quark preserved_spot_hash) {
-        var restored_spot_hash = BLANK_HASH;
-        if (preserved_spot_hash != BLANK_HASH &&
-            get_spot (preserved_spot_hash) != null) {
-            restored_spot_hash = preserved_spot_hash;
-        }
-
-        if (Application.state.current_spot_hash != restored_spot_hash)
-            Application.state.current_spot_hash = restored_spot_hash;
-    }
 
     private void notify_matching_spot_alerts (ArrayList<Spot> spots) {
         if (!Application.settings.get_boolean ("spot-alerts-enabled"))

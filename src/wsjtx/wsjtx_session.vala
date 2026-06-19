@@ -369,7 +369,7 @@ namespace Artemis.Wsjtx {
             if (spot == null)
                 return;
 
-            Application.state.current_spot_hash = spot.hash;
+            Application.state.select_spot (spot.hash);
             last_selected_tx_callsign = callsign;
         }
 

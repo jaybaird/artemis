@@ -271,7 +271,7 @@ public class MapView : Gtk.Box {
                 return false;
             return spot_matches_current_filters (
                 spot,
-                Application.state.current_band_filter ?? "All"
+                Application.state.current_band_filter
             );
         });
 
@@ -281,7 +281,7 @@ public class MapView : Gtk.Box {
         Application.spot_repo.refreshed.connect (() => {
             queue_load_spots ();
         });
-        Application.spot_repo.current_spot_changed.connect (sync_marker_selection);
+        Application.state.current_spot_changed.connect (sync_marker_selection);
 
         update_astronomy_overlays ();
         astronomy_refresh_timeout_id = Timeout.add_seconds (
@@ -546,7 +546,7 @@ public class MapView : Gtk.Box {
 
             var click = new Gtk.GestureClick ();
             click.pressed.connect (() => {
-                Application.state.current_spot_hash = spot.hash;
+                Application.state.select_spot (spot.hash);
             });
             marker.add_controller (click);
 
@@ -947,7 +947,7 @@ public class MapView : Gtk.Box {
     }
 
     private void sync_signal_report_band_filter () {
-        set_band_filter (Application.state.current_band_filter ?? "All");
+        set_band_filter (Application.state.current_band_filter);
     }
 
     private void ensure_body_markers (

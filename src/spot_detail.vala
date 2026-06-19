@@ -591,14 +591,14 @@ public sealed class SpotDetail : Gtk.Box {
             case Astronomy.Shift.EARLY:
                 set_shift_badge (
                     "sunrise-outline-symbolic",
-                    _(""),
+                    "",
                     _("Early Shift")
                 );
                 break;
             case Astronomy.Shift.LATE:
                 set_shift_badge (
                     "moon-outline-symbolic",
-                    _(""),
+                    "",
                     _("Late Shift")
                 );
                 break;

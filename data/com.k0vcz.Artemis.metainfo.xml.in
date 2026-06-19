@@ -13,7 +13,7 @@
     <p>Trailwave can save worked POTA contacts for hunted-park tracking, import POTA.app history, write an ADIF backup log, and upload completed contacts to QRZ when configured.</p>
   </description>
 
-  <developer id="tld.vendor">
+  <developer id="com.k0vcz">
     <name>Jay Baird (K0VCZ)</name>
   </developer>
 
@@ -72,31 +72,42 @@
   <screenshots>
     <screenshot type="default">
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/card-view-light-v21.png</image>
-      <caption>Light theme cards view showing live POTA spots, sidebar filters, radio controls, and the spot detail inspector.</caption>
+      <caption>Cards view with live POTA spots and filters.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/card-view-dark-v21.png</image>
-      <caption>Dark theme cards view showing spot cards with band colors, activity badges, and quick tune and spot actions.</caption>
+      <caption>Dark cards view with activity badges and quick actions.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-view-light-v21.png</image>
-      <caption>Light theme list view showing current spots in a compact table-style layout with frequency, mode, location, and activity details.</caption>
+      <caption>List view with frequency, mode, and location details.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/list-view-dark-v21.png</image>
-      <caption>Dark theme list view showing filtered POTA spots with direct row actions for tuning and spotting.</caption>
+      <caption>Dark list view with filtered spots and row actions.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view-light-v21.png</image>
-      <caption>Light theme map view showing park activity markers, signal report heatmap data, the sidebar filters, and the selected spot inspector.</caption>
+      <caption>Map view with activity markers and signal reports.</caption>
     </screenshot>
     <screenshot>
       <image type="source">https://raw.githubusercontent.com/jaybaird/artemis-vala/main/screenshots/map-view-dark-v21.png</image>
-      <caption>Dark theme map view showing active parks and signal report heatmap data on an interactive map with the floating refresh status bar.</caption>
+      <caption>Dark map view with live markers and refresh status.</caption>
     </screenshot>
   </screenshots>
 
   <releases>
+    <release version="2.2" date="2026-06-19">
+      <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.2</url>
+      <description>
+        <p>Trailwave 2.2 adds operating-limit awareness and improves the release experience.</p>
+        <ul>
+          <li>Added advisory operating limit profiles with spot filtering and tune warnings.</li>
+          <li>Improved spot selection stability while live spots refresh.</li>
+          <li>Refined map overlays, signal report controls, and release metadata.</li>
+        </ul>
+      </description>
+    </release>
     <release version="2.1.2" date="2026-06-03">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.1.2</url>
       <description>

@@ -178,13 +178,13 @@
         <key name="radio-hardware-handshake" type="i">
         <default>0</default>
         <summary>Serial port handshake</summary>
-        <description></description>
+        <description>Hardware flow control mode for serial radio connections.</description>
         </key>
 
         <key name="hide-older-than" type="i">
         <default>30</default>
-        <summary>Hide Stale</summary>
-        <description>Hide parks that haven't had an update (in minutes)</description>
+        <summary>Hide stale spots</summary>
+        <description>Hide spots that have not been updated within this many minutes.</description>
         </key>
 
         <key name="highlight-unhunted-parks" type="b">
@@ -195,14 +195,14 @@
 
         <key name="hide-qrt" type="b">
         <default>false</default>
-        <summary>Hide QRT</summary>
-        <description>Hide stations that have marked themselves QRT</description>
+        <summary>Hide QRT spots</summary>
+        <description>Hide stations that have marked themselves QRT.</description>
         </key>
 
         <key name="hide-hunted" type="b">
         <default>false</default>
-        <summary>Hide Hunted</summary>
-        <description>Hide parks you've hunted today</description>
+        <summary>Hide hunted parks</summary>
+        <description>Hide parks you have hunted today.</description>
         </key>
 
         <key name="operating-limits-spot-filter-enabled" type="b">
@@ -237,8 +237,8 @@
 
         <key name="show-map-scale" type="b">
         <default>true</default>
-        <summary>Show Map Scale</summary>
-        <description>Use metric units for distance calculations and elsewhere in the app</description>
+        <summary>Show map scale</summary>
+        <description>Show a distance scale on the map.</description>
         </key>
 
         <key name="map-grayline-visible" type="b">
@@ -281,8 +281,8 @@
 
         <key name="use-metric" type="b">
         <default>false</default>
-        <summary>Metric Units</summary>
-        <description>Use metric units for distance calculations and elsewhere in the app</description>
+        <summary>Metric units</summary>
+        <description>Use metric units for distance calculations and elsewhere in the app.</description>
         </key>
 
         <key name="enable-logging" type="b">
@@ -294,13 +294,13 @@
         <key name="enable-local-adif-log" type="b">
         <default>true</default>
         <summary>Enable local ADIF log</summary>
-        <description>Enable local ADIF log.</description>
+        <description>Write logged QSOs to a local ADIF file.</description>
         </key>
 
         <key name="local-adif-log-path" type="s">
         <default>""</default>
         <summary>Local ADIF log path</summary>
-        <description>Path for the local ADIF log</description>
+        <description>Path to the local ADIF log file.</description>
         </key>
 
         <key name="window-width" type="i">

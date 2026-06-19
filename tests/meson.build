@@ -67,6 +67,21 @@ test_frequency = executable(
 
 test('Frequency Parser/Formatter', test_frequency)
 
+test_app_state = executable(
+  'test-app-state',
+  [
+    meson.project_source_root() / 'src/spot_identity.vala',
+    meson.project_source_root() / 'src/app_state.vala',
+    meson.project_source_root() / 'tests/test-app-state.vala'
+  ],
+  dependencies: [
+    dependency('glib-2.0'),
+    dependency('gobject-2.0')
+  ]
+)
+
+test('Application State', test_app_state)
+
 test_operating_limits = executable(
   'test-operating-limits',
   [
