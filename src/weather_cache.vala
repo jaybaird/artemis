@@ -75,10 +75,7 @@ public sealed class WeatherClient : Object, WeatherProvider {
     }
 
     construct {
-        session = new Soup.Session () {
-            timeout = 30,
-            user_agent = Build.USER_AGENT
-        };
+        session = HttpSessionFactory.create_cached_session (30);
     }
 
     private static string encode_query_value (string value) {

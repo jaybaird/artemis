@@ -144,6 +144,7 @@ test_callsign_cache = executable(
   [
     meson.project_source_root() / 'src/activator.vala',
     meson.project_source_root() / 'src/callsign_cache.vala',
+    meson.project_source_root() / 'src/http_session_factory.vala',
     meson.project_source_root() / 'src/utils/callsign_utils.vala',
     meson.project_build_root() / 'src/build.vala',
     meson.project_source_root() / 'tests/test-callsign-cache.vala'
@@ -170,6 +171,7 @@ test_weather_cache = executable(
     meson.project_source_root() / 'src/distance.vala',
     meson.project_source_root() / 'src/utils/map.vala',
     meson.project_source_root() / 'src/utils/maidenhead.vala',
+    meson.project_source_root() / 'src/http_session_factory.vala',
     meson.project_source_root() / 'src/weather_cache.vala',
     meson.project_build_root() / 'src/build.vala',
     meson.project_source_root() / 'tests/test-weather-cache.vala'
@@ -191,6 +193,8 @@ test('Weather Cache', test_weather_cache)
 test_space_weather_client = executable(
   'test-space-weather-client',
   [
+    meson.project_source_root() / 'src/csv/csv_parser.vala',
+    meson.project_source_root() / 'src/http_session_factory.vala',
     meson.project_source_root() / 'src/space_weather_snapshot.vala',
     meson.project_source_root() / 'src/space_weather_client.vala',
     meson.project_build_root() / 'src/build.vala',

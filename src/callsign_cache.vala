@@ -70,16 +70,7 @@ public sealed class CallsignCache : Object {
         profile_fetch_inflight = new HashSet<string> ();
         profile_miss_expires_at = new HashMap<string, int64?> ();
 
-        var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
-            "artemis");
-        var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
-        cache.set_max_size (50 * 1024 * 1024);
-
-        avatar_session = new Soup.Session () {
-            timeout = 30,
-            user_agent = Build.USER_AGENT
-        };
-        avatar_session.add_feature (cache);
+        avatar_session = HttpSessionFactory.create_cached_session (30);
     }
 
     private async Gdk.Texture load_avatar_texture (GLib.Bytes bytes) throws Error {

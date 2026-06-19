@@ -976,8 +976,20 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             return;
 
         space_weather_menu_button.sensitive = !service.loading;
-        space_weather_menu_button.tooltip_text = snapshot.secondary_text ();
-        space_weather_button.show_snapshot (snapshot);
+        space_weather_menu_button.tooltip_text = service.refresh_failed
+            ? stale_space_weather_tooltip_text (snapshot)
+            : snapshot.secondary_text ();
+        space_weather_button.show_snapshot (snapshot, service.refresh_failed);
+    }
+
+    private string stale_space_weather_tooltip_text (SpaceWeatherSnapshot snapshot) {
+        if (snapshot.updated_at_utc != null) {
+            return _("Solar conditions stale · Last update %s UTC").printf (
+                snapshot.updated_at_utc.format ("%F %R")
+            );
+        }
+
+        return _("Solar conditions stale");
     }
 
     private void on_add_button_clicked () {

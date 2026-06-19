@@ -42,17 +42,9 @@ public sealed class PotaClient : Object, PotaSpotPoster, OperatorProvider, ParkD
     public signal void locations_updated ();
 
     public PotaClient () {
-        // Configure caching
         var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
             "artemis");
-        var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
-        cache.set_max_size (50 * 1024 * 1024);
-
-        session = new Soup.Session () {
-            timeout = 30,
-            user_agent = Build.USER_AGENT
-        };
-        session.add_feature (cache);
+        session = HttpSessionFactory.create_cached_session (30);
         location_lookup = new HashMap<string, PotaLocation?> ();
         locations_cache_path = Path.build_filename (cache_dir, "pota-locations.json");
 

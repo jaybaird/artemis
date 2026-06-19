@@ -11,13 +11,15 @@ private SpotFilterSnapshot spot_snapshot (
         string band = "20m",
         string mode = "FT8",
         DateTime? spot_time = null,
-        bool was_hunted_today = false
+        bool was_hunted_today = false,
+        string frequency = "14.074"
     ) {
     return new SpotFilterSnapshot (
         callsign,
         park_ref,
         park_name,
         activator_comment,
+        frequency,
         band,
         mode,
         spot_time ?? new DateTime.now_utc (),
@@ -67,6 +69,15 @@ private void test_spot_filter_searches_callsign_reference_and_name () {
     assert (!spot_matches_filter (spot, filter_state ("All", null, null, "missing")));
 }
 
+private void test_spot_filter_searches_frequency_without_punctuation () {
+    var spot = spot_snapshot ("K1ABC", "US-1234", "Split Rock", "", "20m", "FT8", null, false, "14.074");
+
+    assert (spot_matches_filter (spot, filter_state ("All", null, null, "14.074")));
+    assert (spot_matches_filter (spot, filter_state ("All", null, null, "14074")));
+    assert (spot_matches_filter (spot, filter_state ("All", null, null, "14,074")));
+    assert (!spot_matches_filter (spot, filter_state ("All", null, null, "7074")));
+}
+
 private void test_spot_filter_hides_qrt_hunted_and_stale_spots () {
     var now = new DateTime.now_utc ();
 
@@ -93,6 +104,8 @@ public int main (string[] args) {
 
     Test.add_func ("/spot-filter/basic-filters", test_spot_filter_matches_basic_filters);
     Test.add_func ("/spot-filter/search", test_spot_filter_searches_callsign_reference_and_name);
+    Test.add_func ("/spot-filter/search-frequency-without-punctuation",
+        test_spot_filter_searches_frequency_without_punctuation);
     Test.add_func ("/spot-filter/hide-qrt-hunted-stale",
         test_spot_filter_hides_qrt_hunted_and_stale_spots);
 

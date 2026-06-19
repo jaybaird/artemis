@@ -29,6 +29,7 @@ public sealed class SpaceWeatherService : Object {
     public signal void changed ();
 
     public bool loading { get; private set; default = false; }
+    public bool refresh_failed { get; private set; default = false; }
     public SpaceWeatherSnapshot? snapshot { get; private set; default = null; }
 
     public SpaceWeatherService (SpaceWeatherClient? client = null) {
@@ -84,6 +85,7 @@ public sealed class SpaceWeatherService : Object {
         var next_snapshot = yield client.fetch_snapshot (cancellable);
         if (next_snapshot.has_any_value ()) {
             snapshot = next_snapshot.copy ();
+            refresh_failed = false;
             message (
                 "Space weather updated: %s | %s".printf (
                     snapshot.primary_text (),
@@ -91,6 +93,7 @@ public sealed class SpaceWeatherService : Object {
                 )
             );
         } else {
+            refresh_failed = true;
             message ("Space weather refresh completed with no usable values");
         }
 

@@ -1,6 +1,7 @@
 artemis_vala_sources = [
   'src/help/help_models.vala',
   'src/help/help_window.vala',
+  'src/http_session_factory.vala',
   'src/adif/adif_types.vala',
   'src/adif/adif_parser.vala',
   'src/adif/adif_generator.vala',
@@ -34,6 +35,7 @@ artemis_vala_sources = [
   'src/spot_filter.vala',
   'src/spot_alert_matcher.vala',
   'src/space_weather_button.vala',
+  'src/space_weather_popover.vala',
   'src/space_weather_client.vala',
   'src/space_weather_snapshot.vala',
   'src/space_weather_service.vala',

@@ -19,6 +19,17 @@
  */
 
 using Shumate;
+using Gee;
+
+private class RenderedHeatmapPoint : Object {
+    public HeatmapPoint point { get; construct; }
+    public double x { get; construct; }
+    public double y { get; construct; }
+
+    public RenderedHeatmapPoint (HeatmapPoint point, double x, double y) {
+        Object (point: point, x: x, y: y);
+    }
+}
 
 public class SignalReportHeatmapLayer : Layer {
     public const uint DEFAULT_STAMP_RADIUS_PIXELS = 28;
@@ -38,6 +49,8 @@ public class SignalReportHeatmapLayer : Layer {
     private int cached_width = 0;
     private int cached_height = 0;
     private bool render_dirty = true;
+    private ArrayList<RenderedHeatmapPoint> rendered_points =
+        new ArrayList<RenderedHeatmapPoint> ();
 
     public uint stamp_radius_pixels {
         get { return _stamp_radius_pixels; }
@@ -145,6 +158,7 @@ public class SignalReportHeatmapLayer : Layer {
         uint render_height = (uint) int.max (1, (int) Math.ceil (height / (double) RENDER_SCALE));
         double world_width = get_world_width_pixels ();
         var heatmap = new Heatmap (render_width, render_height);
+        rendered_points.clear ();
         // Keep a single GTK snapshot bounded even if the feed produces many unique buckets.
         var rendered = 0;
         foreach (var point in points) {
@@ -163,6 +177,7 @@ public class SignalReportHeatmapLayer : Layer {
                 if (shifted_x < 0 || shifted_x >= width)
                     continue;
 
+                rendered_points.add (new RenderedHeatmapPoint (point, shifted_x, y));
                 heatmap.add_weighted_point_with_stamp (
                     (uint) Math.round (shifted_x / RENDER_SCALE),
                     (uint) Math.round (y / RENDER_SCALE),
@@ -195,6 +210,7 @@ public class SignalReportHeatmapLayer : Layer {
         cached_texture = null;
         cached_width = 0;
         cached_height = 0;
+        rendered_points.clear ();
     }
 
     private void apply_alpha_scale (uint8[] rgba) {
@@ -209,6 +225,59 @@ public class SignalReportHeatmapLayer : Layer {
     private uint scaled_stamp_radius_pixels () {
         var scaled_radius = (_stamp_radius_pixels + RENDER_SCALE - 1) / RENDER_SCALE;
         return scaled_radius > 0 ? scaled_radius : 1;
+    }
+
+    public bool query_tooltip_at (
+        int x,
+        int y,
+        bool keyboard_mode,
+        Gtk.Tooltip tooltip
+    ) {
+        if (keyboard_mode)
+            return false;
+
+        var hovered_point = find_hovered_point ((double) x, (double) y);
+        if (hovered_point == null)
+            return false;
+
+        tooltip.set_text (tooltip_text_for_point (hovered_point.point));
+        return true;
+    }
+
+    private RenderedHeatmapPoint? find_hovered_point (double x, double y) {
+        RenderedHeatmapPoint? closest_point = null;
+        var max_distance = (double) stamp_radius_pixels;
+        var closest_distance = max_distance * max_distance;
+
+        foreach (var rendered_point in rendered_points) {
+            var dx = rendered_point.x - x;
+            var dy = rendered_point.y - y;
+            var distance_squared = (dx * dx) + (dy * dy);
+
+            if (distance_squared > closest_distance)
+                continue;
+
+            closest_distance = distance_squared;
+            closest_point = rendered_point;
+        }
+
+        return closest_point;
+    }
+
+    private string tooltip_text_for_point (HeatmapPoint point) {
+        string time_text = _("Unknown");
+        if (point.latest_timestamp_unix > 0) {
+            var timestamp = new DateTime.from_unix_utc (point.latest_timestamp_unix);
+            time_text = timestamp.format ("%H:%M UTC");
+        }
+
+        return _("%s\nStrongest: %d dB\nAverage: %.1f dB\nReports: %u\nLast heard: %s").printf (
+            point.grid,
+            point.strongest_snr,
+            point.average_snr,
+            point.count,
+            time_text
+        );
     }
 
     private double get_world_width_pixels () {

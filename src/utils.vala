@@ -312,6 +312,7 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
         spot.park_ref,
         spot.park_name,
         spot.activator_comment,
+        format_frequency_khz (spot.frequency_khz),
         spot.band,
         spot.mode,
         spot.spot_time,

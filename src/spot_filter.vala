@@ -9,6 +9,7 @@ public class SpotFilterSnapshot {
     public string park_ref;
     public string park_name;
     public string activator_comment;
+    public string frequency;
     public string band;
     public string mode;
     public DateTime spot_time;
@@ -19,6 +20,7 @@ public class SpotFilterSnapshot {
         string park_ref,
         string park_name,
         string activator_comment,
+        string frequency,
         string band,
         string mode,
         DateTime spot_time,
@@ -28,6 +30,7 @@ public class SpotFilterSnapshot {
         this.park_ref = park_ref;
         this.park_name = park_name;
         this.activator_comment = activator_comment;
+        this.frequency = frequency;
         this.band = band;
         this.mode = mode;
         this.spot_time = spot_time;
@@ -97,12 +100,25 @@ public static bool spot_matches_filter (SpotFilterSnapshot spot, SpotFilterState
 
     if (filter.search_text != null) {
         var needle = filter.search_text.down ();
+        var normalized_needle = digits_only (needle);
+        var normalized_frequency = digits_only (spot.frequency);
         if (!(spot.callsign.down ().contains (needle) ||
               spot.park_ref.down ().contains (needle) ||
-              spot.park_name.down ().contains (needle))) {
+              spot.park_name.down ().contains (needle) ||
+              (normalized_needle != "" && normalized_frequency.contains (normalized_needle)))) {
             return false;
         }
     }
 
     return true;
+}
+
+private static string digits_only (string value) {
+    var builder = new StringBuilder ();
+    for (var index = 0; index < value.length; index++) {
+        char ch = value[index];
+        if (ch >= '0' && ch <= '9')
+            builder.append_c (ch);
+    }
+    return builder.str;
 }

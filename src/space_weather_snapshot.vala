@@ -29,12 +29,15 @@ public sealed class SpaceWeatherSnapshot : Object {
     public int a_index { get; set; default = -1; }
     public int sfi { get; set; default = -1; }
     public int ssn { get; set; default = -1; }
+    public double xray_flux { get; set; default = -1.0; }
+    public double solar_wind_speed { get; set; default = -1.0; }
+    public double solar_wind_density { get; set; default = -1.0; }
     public ArrayList<double?> kp_history { get; private set; default = new ArrayList<double?> (); }
     public ArrayList<DateTime?> kp_history_times_utc { get; private set; default = new ArrayList<DateTime?> (); }
 
     public string geomagnetic_label { get; set; default = "Unknown"; }
     public string hf_note { get; set; default = ""; }
-    public string source { get; set; default = "NOAA SWPC"; }
+    public string source { get; set; default = "NOAA SWPC, SILSO"; }
 
     public bool has_kp () {
         return kp >= 0.0;
@@ -52,8 +55,25 @@ public sealed class SpaceWeatherSnapshot : Object {
         return ssn >= 0;
     }
 
+    public bool has_xray_flux () {
+        return xray_flux >= 0.0;
+    }
+
+    public bool has_solar_wind_speed () {
+        return solar_wind_speed >= 0.0;
+    }
+
+    public bool has_solar_wind_density () {
+        return solar_wind_density >= 0.0;
+    }
+
     public bool has_any_value () {
-        return has_kp () || has_a_index () || has_sfi () || has_ssn ();
+        return has_kp () ||
+            has_a_index () ||
+            has_sfi () ||
+            has_ssn () ||
+            has_xray_flux () ||
+            has_solar_wind_speed ();
     }
 
     public bool has_kp_history () {
@@ -78,6 +98,37 @@ public sealed class SpaceWeatherSnapshot : Object {
         return "%s %s".printf (storm_scale_code (), storm_scale_severity ());
     }
 
+    public string xray_flux_display () {
+        if (!has_xray_flux ())
+            return EM_DASH;
+
+        double threshold = 1.0e-8;
+        string class_name = "A";
+
+        if (xray_flux >= 1.0e-4) {
+            threshold = 1.0e-4;
+            class_name = "X";
+        } else if (xray_flux >= 1.0e-5) {
+            threshold = 1.0e-5;
+            class_name = "M";
+        } else if (xray_flux >= 1.0e-6) {
+            threshold = 1.0e-6;
+            class_name = "C";
+        } else if (xray_flux >= 1.0e-7) {
+            threshold = 1.0e-7;
+            class_name = "B";
+        }
+
+        return "%s%.1f".printf (class_name, xray_flux / threshold);
+    }
+
+    public string solar_wind_speed_display () {
+        if (!has_solar_wind_speed ())
+            return EM_DASH;
+
+        return _("%.0f km/s").printf (solar_wind_speed);
+    }
+
     public SpaceWeatherSnapshot copy () {
         var snapshot = new SpaceWeatherSnapshot ();
         snapshot.updated_at_utc = updated_at_utc;
@@ -85,6 +136,9 @@ public sealed class SpaceWeatherSnapshot : Object {
         snapshot.a_index = a_index;
         snapshot.sfi = sfi;
         snapshot.ssn = ssn;
+        snapshot.xray_flux = xray_flux;
+        snapshot.solar_wind_speed = solar_wind_speed;
+        snapshot.solar_wind_density = solar_wind_density;
         foreach (double? kp_value in kp_history)
             snapshot.kp_history.add (kp_value);
         foreach (DateTime? history_time in kp_history_times_utc)
@@ -146,6 +200,10 @@ public sealed class SpaceWeatherSnapshot : Object {
             fields.add (_("Kp"));
         if (!has_a_index ())
             fields.add (_("A-index"));
+        if (!has_xray_flux ())
+            fields.add (_("X-ray flux"));
+        if (!has_solar_wind_speed ())
+            fields.add (_("Solar wind"));
 
         if (fields.size == 0)
             return "";

@@ -112,7 +112,9 @@ private void test_bucket_deduplication () throws Error {
     assert_cmpuint (model.bucket_count (), CompareOperator.EQ, 1);
     assert_cmpint (points.size, CompareOperator.EQ, 1);
     assert_cmpuint (points[0].count, CompareOperator.EQ, 2);
+    assert_cmpstr (points[0].grid, CompareOperator.EQ, "FN31");
     assert_cmpint (points[0].strongest_snr, CompareOperator.EQ, -8);
+    assert_close (points[0].average_snr, -10.0, 0.0001);
     assert_cmpint ((int) points[0].latest_timestamp_unix, CompareOperator.EQ, 1010);
 }
 
@@ -206,6 +208,8 @@ private void test_bucket_grid_precision_deduplication () throws Error {
     assert_cmpuint (model.bucket_count (), CompareOperator.EQ, 1);
     assert_cmpint (points.size, CompareOperator.EQ, 1);
     assert_cmpuint (points[0].count, CompareOperator.EQ, 3);
+    assert_cmpstr (points[0].grid, CompareOperator.EQ, "FN31");
+    assert_close (points[0].average_snr, -10.0, 0.0001);
     assert_true (points[0].bucket_key.has_prefix ("K1ABC|FN31|"));
 }
 

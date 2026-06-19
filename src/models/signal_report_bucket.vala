@@ -132,9 +132,11 @@ public class SignalReportBucket : Object {
         return new HeatmapPoint (
             latitude,
             longitude,
+            key.grid,
             weight,
             count,
             strongest_snr,
+            average_snr,
             latest_timestamp_unix,
             key.stable_id
         );

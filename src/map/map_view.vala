@@ -43,15 +43,15 @@ public class MapView : Gtk.Box {
     private SignalReportMqttSession signal_report_session;
     private GraylineOverlay grayline_overlay;
     private WrappedMarkerLayer marker_layer;
-    private MarkerLayer astronomy_marker_layer;
+    private WrappedMarkerLayer astronomy_marker_layer;
     private HashMap<Quark, Gee.ArrayList<Gtk.Widget>> markers;
     private HashMap<Quark, Gee.ArrayList<MapMarkerDot>> marker_dots;
     private HashMap<Quark, Gee.ArrayList<ulong>> marker_heard_notify_handlers;
     private HashMap<Quark, Gee.ArrayList<ulong>> marker_reciprocal_notify_handlers;
     private HashMap<Quark, Gee.ArrayList<ulong>> marker_hunted_notify_handlers;
     private Quark selected_marker_hash = BLANK_HASH;
-    private Marker? sun_marker = null;
-    private Marker? moon_marker = null;
+    private Gee.ArrayList<Gtk.Widget>? sun_markers = null;
+    private Gee.ArrayList<Gtk.Widget>? moon_markers = null;
     private uint astronomy_refresh_timeout_id = 0;
     private bool grayline_visible = true;
     private bool astronomy_visible = true;
@@ -99,6 +99,10 @@ public class MapView : Gtk.Box {
             hexpand = true
         };
         map_widget.set_map_source (map_source);
+        map_widget.has_tooltip = true;
+        map_widget.query_tooltip.connect ((x, y, keyboard_mode, tooltip) => {
+            return query_signal_report_tooltip (x, y, keyboard_mode, tooltip);
+        });
 
         install_map_interaction_tracking ();
 
@@ -258,7 +262,7 @@ public class MapView : Gtk.Box {
         signal_report_session.state_changed.connect (update_signal_report_status);
         map_widget.insert_layer_above (signal_report_layer, grayline_overlay.layer);
 
-        astronomy_marker_layer = new MarkerLayer (viewport);
+        astronomy_marker_layer = new WrappedMarkerLayer (viewport);
         map_widget.insert_layer_above (astronomy_marker_layer, signal_report_layer);
 
         filter = new Gtk.CustomFilter ((item) => {
@@ -707,6 +711,7 @@ public class MapView : Gtk.Box {
 
         var normalized_band = band.strip ();
         signal_report_model.band_filter = normalized_band == "All" ? null : normalized_band;
+        bounce_filter ();
     }
 
     private void queue_load_spots () {
@@ -727,8 +732,8 @@ public class MapView : Gtk.Box {
         var moon_coordinate = bodies.moon.coordinate;
         grayline_overlay.update (now);
 
-        ensure_body_marker (
-            ref sun_marker,
+        ensure_body_markers (
+            ref sun_markers,
             sun_coordinate,
             "sun-outline-symbolic",
             _("Sun"),
@@ -742,8 +747,8 @@ public class MapView : Gtk.Box {
                 Astronomy.moon_illuminated_fraction (now)
             )
         );
-        ensure_body_marker (
-            ref moon_marker,
+        ensure_body_markers (
+            ref moon_markers,
             moon_coordinate,
             "moon-outline-symbolic",
             moon_tooltip,
@@ -832,6 +837,11 @@ public class MapView : Gtk.Box {
             return;
 
         this.active = active;
+        if (active) {
+            sync_signal_report_band_filter ();
+            queue_load_spots ();
+        }
+
         if (signal_report_session == null)
             return;
 
@@ -924,40 +934,48 @@ public class MapView : Gtk.Box {
         }
     }
 
+    private bool query_signal_report_tooltip (
+        int x,
+        int y,
+        bool keyboard_mode,
+        Gtk.Tooltip tooltip
+    ) {
+        if (!signal_reports_visible || signal_report_layer == null)
+            return false;
+
+        return signal_report_layer.query_tooltip_at (x, y, keyboard_mode, tooltip);
+    }
+
     private void sync_signal_report_band_filter () {
         set_band_filter (Application.state.current_band_filter ?? "All");
     }
 
-    private void ensure_body_marker (
-        ref Marker? marker,
+    private void ensure_body_markers (
+        ref Gee.ArrayList<Gtk.Widget>? markers,
         Coordinate coordinate,
         string icon_name,
         string tooltip_text,
         string base_css_class,
         string accent_css_class
     ) {
-        if (marker == null) {
-            var icon = new Gtk.Image.from_icon_name (icon_name) {
+        if (markers != null) {
+            foreach (var marker in markers)
+                astronomy_marker_layer.remove_marker (marker);
+        }
+
+        markers = new Gee.ArrayList<Gtk.Widget> ();
+
+        for (int world = -1; world <= 1; world++) {
+            var marker = new Gtk.Image.from_icon_name (icon_name) {
                 pixel_size = 18,
                 tooltip_text = tooltip_text
             };
-            icon.add_css_class (base_css_class);
-            icon.add_css_class (accent_css_class);
-
-            marker = new Marker () {
-                child = icon,
-                selectable = false
-            };
             marker.add_css_class ("astronomy-map-marker");
-            marker.x_hotspot = 0.5;
-            marker.y_hotspot = 0.5;
-            astronomy_marker_layer.add_marker (marker);
-        } else if (marker.child != null) {
-            marker.child.tooltip_text = tooltip_text;
+            marker.add_css_class (base_css_class);
+            marker.add_css_class (accent_css_class);
+            astronomy_marker_layer.add_marker (marker, coordinate.latitude, coordinate.longitude, world);
+            markers.add (marker);
         }
-
-        marker.latitude = coordinate.latitude;
-        marker.longitude = coordinate.longitude;
     }
 
     private void update_qth_coordinate () {

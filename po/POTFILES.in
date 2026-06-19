@@ -22,6 +22,7 @@ data/ui/preferences/wsjtx_page.ui
 data/ui/qso_dialog.ui
 data/ui/spot_card.ui
 data/ui/spot_detail.ui
+data/ui/space_weather_popover.ui
 data/ui/spot_history_dialog.ui
 data/ui/spot_list_row.ui
 data/ui/spot_list_view.ui
@@ -53,6 +54,7 @@ src/spot_detail.vala
 src/spot_history_dialog.vala
 src/spot_list_view.vala
 src/space_weather_snapshot.vala
+src/space_weather_popover.vala
 src/status_bar.vala
 src/utils.vala
 src/utils/spot_format.vala
