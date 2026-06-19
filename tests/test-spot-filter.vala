@@ -35,7 +35,8 @@ private SpotFilterState filter_state (
     bool hide_qrt = false,
     bool hide_hunted = false,
     int hide_older_than_minutes = 30,
-    DateTime? now_utc = null
+    DateTime? now_utc = null,
+    OperatingLimitEvaluator? operating_limits = null
 ) {
     return new SpotFilterState (
         band,
@@ -45,7 +46,8 @@ private SpotFilterState filter_state (
         hide_qrt,
         hide_hunted,
         hide_older_than_minutes,
-        now_utc ?? new DateTime.now_utc ()
+        now_utc ?? new DateTime.now_utc (),
+        operating_limits
     );
 }
 
@@ -99,6 +101,66 @@ private void test_spot_filter_hides_qrt_hunted_and_stale_spots () {
     ));
 }
 
+private OperatingLimitEvaluator operating_limits_for_test () {
+    var modes = new Gee.ArrayList<string> ();
+    modes.add ("CW");
+    modes.add ("FT8");
+    modes.add ("FT4");
+    modes.add ("RTTY");
+    modes.add ("JT65");
+
+    var rules = new Gee.ArrayList<OperatingLimitRule> ();
+    rules.add (new OperatingLimitRule ("20m", 14000.0, 14150.0, modes));
+
+    var profile = new OperatingLimitProfile (
+        "TS",
+        "Testland",
+        "TEST",
+        "Test",
+        false,
+        new Gee.ArrayList<string> (),
+        rules
+    );
+    return new OperatingLimitEvaluator (profile);
+}
+
+private void test_spot_filter_operating_limits_disabled_by_default () {
+    assert (spot_matches_filter (
+        spot_snapshot ("K1ABC", "US-1234", "Test Park", "", "20m", "SSB", null, false, "14.225"),
+        filter_state ()
+    ));
+}
+
+private void test_spot_filter_operating_limits_allow_and_block_spots () {
+    var evaluator = operating_limits_for_test ();
+
+    assert (spot_matches_filter (
+        spot_snapshot ("K1ABC", "US-1234", "Test Park", "", "20m", "FT8", null, false, "14.074"),
+        filter_state ("All", null, null, null, false, false, 30, null, evaluator)
+    ));
+    assert (!spot_matches_filter (
+        spot_snapshot ("K1ABC", "US-1234", "Test Park", "", "20m", "SSB", null, false, "14.225"),
+        filter_state ("All", null, null, null, false, false, 30, null, evaluator)
+    ));
+}
+
+private void test_spot_filter_operating_limits_unknown_mode_blocks () {
+    assert (!spot_matches_filter (
+        spot_snapshot ("K1ABC", "US-1234", "Test Park", "", "20m", "Unknown", null, false, "14.074"),
+        filter_state (
+            "All",
+            null,
+            null,
+            null,
+            false,
+            false,
+            30,
+            null,
+            operating_limits_for_test ()
+        )
+    ));
+}
+
 public int main (string[] args) {
     Test.init (ref args);
 
@@ -108,6 +170,12 @@ public int main (string[] args) {
         test_spot_filter_searches_frequency_without_punctuation);
     Test.add_func ("/spot-filter/hide-qrt-hunted-stale",
         test_spot_filter_hides_qrt_hunted_and_stale_spots);
+    Test.add_func ("/spot-filter/operating-limits-disabled-by-default",
+        test_spot_filter_operating_limits_disabled_by_default);
+    Test.add_func ("/spot-filter/operating-limits-allow-and-block",
+        test_spot_filter_operating_limits_allow_and_block_spots);
+    Test.add_func ("/spot-filter/operating-limits-unknown-mode-blocks",
+        test_spot_filter_operating_limits_unknown_mode_blocks);
 
     return Test.run ();
 }

@@ -5,6 +5,7 @@
     <file preprocess="xml-stripblanks">ui/preferences/general_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/map_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/radio_page.ui</file>
+    <file preprocess="xml-stripblanks">ui/preferences/operating_limits_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/logging_page.ui</file>
     <file preprocess="xml-stripblanks">ui/preferences/wsjtx_page.ui</file>
     <file preprocess="xml-stripblanks">ui/alerts_window.ui</file>
@@ -101,6 +102,7 @@
     <file compressed="true">tz/timezone21.bin</file>
 
     <file compressed="true">help/help.json</file>
+    <file compressed="true">operating-limits.json</file>
     <file compressed="true">sql/version-001.sql</file>
 
     <file preprocess="xml-stripblanks" alias="metainfo.xml">com.k0vcz.Artemis.metainfo.xml.in</file>

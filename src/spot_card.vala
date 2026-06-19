@@ -186,7 +186,7 @@ public sealed class SpotCard : Gtk.Box {
 
     private void on_tune_clicked () {
         Application.state.current_spot_hash = spot.hash;
-        Application.radio_control.tune_to_spot (spot);
+        tune_spot_with_operating_limit_warning (spot, this);
     }
 
     private void on_spot_clicked () {

@@ -305,7 +305,9 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
         Application.state.current_search_text,
         Application.settings.get_boolean ("hide-qrt"),
         Application.settings.get_boolean ("hide-hunted"),
-        Application.settings.get_int ("hide-older-than")
+        Application.settings.get_int ("hide-older-than"),
+        null,
+        operating_limit_spot_filter_evaluator_from_settings (Application.settings)
     );
     var snapshot = new SpotFilterSnapshot (
         spot.callsign,
@@ -319,6 +321,52 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
         spot.was_hunted_today
     );
     return spot_matches_filter (snapshot, filter);
+}
+
+public static void tune_spot_with_operating_limit_warning (
+    Spot spot,
+    Gtk.Widget? origin = null
+) {
+    var evaluator = operating_limit_tune_warning_evaluator_from_settings (Application.settings);
+    if (evaluator == null) {
+        Application.radio_control.tune_to_spot (spot);
+        return;
+    }
+
+    var result = evaluator.evaluate (spot.frequency_khz, spot.mode);
+    if (result.allowed) {
+        Application.radio_control.tune_to_spot (spot);
+        return;
+    }
+
+    Gtk.Window? parent = null;
+    if (origin != null)
+        parent = origin.get_root () as Gtk.Window;
+    if (parent == null)
+        parent = Application.win;
+
+    if (parent == null) {
+        Application.show_toast (_("Tune blocked by operating limits"));
+        return;
+    }
+
+    var alert = new Adw.AlertDialog (_("Tune Outside Operating Limits?"), null);
+    alert.format_body (
+        _("%s MHz %s is outside %s.\n\n%s"),
+        format_frequency_mhz_from_khz (spot.frequency_khz),
+        spot.mode,
+        result.profile_label,
+        result.reason
+    );
+    alert.add_response ("cancel", _("Cancel"));
+    alert.add_response ("tune", _("Tune Anyway"));
+    alert.set_response_appearance ("tune", Adw.ResponseAppearance.DESTRUCTIVE);
+    alert.set_default_response ("cancel");
+    alert.set_close_response ("cancel");
+    alert.choose.begin (parent, null, (obj, res) => {
+        if (alert.choose.end (res) == "tune")
+            Application.radio_control.tune_to_spot (spot);
+    });
 }
 
 public static Gdk.RGBA rgba (double red, double green, double blue, double alpha) {

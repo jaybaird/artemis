@@ -24,7 +24,6 @@ using Shumate;
 private sealed class GraylineLayer : Layer {
     private ArrayList<Coordinate> points = new ArrayList<Coordinate> ();
     private Gdk.RGBA fill_color = rgba (0.05, 0.08, 0.16, 0.22);
-    private Gdk.RGBA stroke_color = rgba (1.0, 1.0, 1.0, 0.35);
     private ulong viewport_changed_handler_id = 0;
 
     public GraylineLayer (Viewport viewport) {
@@ -64,10 +63,7 @@ private sealed class GraylineLayer : Layer {
         for (int world = -1; world <= 1; world++) {
             append_world_path (cr, world_width * world);
             Gdk.cairo_set_source_rgba (cr, fill_color);
-            cr.fill_preserve ();
-            Gdk.cairo_set_source_rgba (cr, stroke_color);
-            cr.set_line_width (1.5);
-            cr.stroke ();
+            cr.fill ();
         }
     }
 

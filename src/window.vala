@@ -375,6 +375,12 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         Application.settings.changed["hide-qrt"].connect (refresh_spot_views);
         Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
         Application.settings.changed["hide-older-than"].connect (refresh_spot_views);
+        Application.settings.changed["operating-limits-spot-filter-enabled"].connect (
+            refresh_spot_views
+        );
+        Application.settings.changed["operating-limits-country-code"].connect (refresh_spot_views);
+        Application.settings.changed["operating-limits-profile-id"].connect (refresh_spot_views);
+        Application.settings.changed["operating-limits-custom-rules-json"].connect (refresh_spot_views);
     }
 
     private void set_search_content_margin (int margin) {

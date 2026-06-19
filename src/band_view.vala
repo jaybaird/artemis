@@ -52,7 +52,10 @@ public sealed class BandView : Gtk.Box {
     private Gtk.SortListModel sorted;
 
     private bool just_selected = false;
+    private bool syncing_selection = false;
+    private bool suppress_selection_changes = false;
     private uint sync_selection_idle_id = 0;
+    private uint clear_selection_suppression_idle_id = 0;
     private Quark pending_selection_hash = BLANK_HASH;
     private Gee.ArrayList<Spot> watched_spots = new Gee.ArrayList<Spot> ();
     private Gee.ArrayList<ulong> watched_not_heard_handlers = new Gee.ArrayList<ulong> ();
@@ -105,6 +108,9 @@ public sealed class BandView : Gtk.Box {
             }
         });
         band_spot_cards.selected_children_changed.connect (() => {
+            if (syncing_selection || suppress_selection_changes)
+                return;
+
             var selected = band_spot_cards.get_selected_children ();
             if ((selected != null) && (selected.length () > 0)) {
                 var child = selected.nth_data (0) as Gtk.FlowBoxChild;
@@ -130,6 +136,12 @@ public sealed class BandView : Gtk.Box {
             reconnect_sort_watchers ();
             refresh_sorting ();
         });
+        Application.spot_repo.spots_replacing.connect ((spot_hash) => {
+            begin_model_selection_sync ();
+        });
+        Application.spot_repo.spots_replaced.connect ((spot_hash) => {
+            finish_model_selection_sync ();
+        });
 
         update_visible_state ();
         reconnect_sort_watchers ();
@@ -152,13 +164,13 @@ public sealed class BandView : Gtk.Box {
 
             if (current_hash == BLANK_HASH) {
                 sync_card_selection (BLANK_HASH);
-                band_spot_cards.unselect_all ();
+                select_current_child (null);
                 return Source.REMOVE;
             }
 
             var selected_child = sync_card_selection (current_hash);
             if (selected_child != null) {
-                band_spot_cards.select_child (selected_child);
+                select_current_child (selected_child);
                 Idle.add (() => {
                     scroll_to_child (selected_child);
                     return Source.REMOVE;
@@ -166,9 +178,18 @@ public sealed class BandView : Gtk.Box {
                 return Source.REMOVE;
             }
 
-            band_spot_cards.unselect_all ();
+            select_current_child (null);
             return Source.REMOVE;
         });
+    }
+
+    private void select_current_child (Gtk.FlowBoxChild? child) {
+        syncing_selection = true;
+        if (child != null)
+            band_spot_cards.select_child (child);
+        else
+            band_spot_cards.unselect_all ();
+        syncing_selection = false;
     }
 
     private Gtk.FlowBoxChild? sync_card_selection (Quark current_hash) {
@@ -234,11 +255,36 @@ public sealed class BandView : Gtk.Box {
     }
 
     public void bounce_filter (string? key = null) {
+        begin_model_selection_sync ();
         filter.changed (Gtk.FilterChange.DIFFERENT);
+        finish_model_selection_sync ();
     }
 
     private void refresh_sorting () {
+        begin_model_selection_sync ();
         sorter.changed (Gtk.SorterChange.DIFFERENT);
+        finish_model_selection_sync ();
+    }
+
+    private void begin_model_selection_sync () {
+        suppress_selection_changes = true;
+
+        if (clear_selection_suppression_idle_id != 0) {
+            Source.remove (clear_selection_suppression_idle_id);
+            clear_selection_suppression_idle_id = 0;
+        }
+    }
+
+    private void finish_model_selection_sync () {
+        set_current_spot (Application.state.current_spot_hash);
+
+        if (clear_selection_suppression_idle_id != 0)
+            Source.remove (clear_selection_suppression_idle_id);
+        clear_selection_suppression_idle_id = Idle.add (() => {
+            clear_selection_suppression_idle_id = 0;
+            suppress_selection_changes = false;
+            return Source.REMOVE;
+        });
     }
 
     private void reconnect_sort_watchers () {
@@ -299,6 +345,14 @@ public sealed class BandView : Gtk.Box {
     }
 
     ~BandView () {
+        if (sync_selection_idle_id != 0) {
+            Source.remove (sync_selection_idle_id);
+            sync_selection_idle_id = 0;
+        }
+        if (clear_selection_suppression_idle_id != 0) {
+            Source.remove (clear_selection_suppression_idle_id);
+            clear_selection_suppression_idle_id = 0;
+        }
         disconnect_sort_watchers ();
     }
 } /* class BandView */

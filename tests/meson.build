@@ -67,6 +67,25 @@ test_frequency = executable(
 
 test('Frequency Parser/Formatter', test_frequency)
 
+test_operating_limits = executable(
+  'test-operating-limits',
+  [
+    meson.project_source_root() / 'src/frequency.vala',
+    meson.project_source_root() / 'src/operating_limits.vala',
+    meson.project_source_root() / 'tests/test-operating-limits.vala'
+  ],
+  dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
+    dependency('glib-2.0'),
+    dependency('gobject-2.0'),
+    dependency('json-glib-1.0'),
+    cc.find_library('m', required: true)
+  ]
+)
+
+test('Operating Limits', test_operating_limits)
+
 test_astronomy = executable(
   'test-astronomy',
   [
@@ -252,12 +271,18 @@ test('Local ADIF File Writer', test_local_adif_file)
 test_spot_filter = executable(
   'test-spot-filter',
   [
+    meson.project_source_root() / 'src/frequency.vala',
+    meson.project_source_root() / 'src/operating_limits.vala',
     meson.project_source_root() / 'src/spot_filter.vala',
     meson.project_source_root() / 'tests/test-spot-filter.vala'
   ],
   dependencies: [
+    dependency('gee-0.8'),
+    dependency('gio-2.0'),
     dependency('glib-2.0'),
-    dependency('gobject-2.0')
+    dependency('gobject-2.0'),
+    dependency('json-glib-1.0'),
+    cc.find_library('m', required: true)
   ]
 )
 

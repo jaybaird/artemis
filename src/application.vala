@@ -484,7 +484,7 @@ public sealed class Application : Adw.Application {
     private void tune_current_spot () {
         Spot? spot = _spot_repo.get_spot (_state.current_spot_hash);
         if (spot != null) {
-            _radio_control.tune_to_spot (spot);
+            tune_spot_with_operating_limit_warning (spot, win);
         }
     }
 

@@ -80,7 +80,7 @@ public sealed class SpaceWeatherPopover : Gtk.Popover {
         show_loading ();
     }
 
-    public void show_loading () {
+    private void update_status (string hero_text, string title_text) {
         hero_kp_label.label = "…";
         storm_scale_badge.visible = false;
         update_kp_scale_history (null);
@@ -90,14 +90,12 @@ public sealed class SpaceWeatherPopover : Gtk.Popover {
         set_metric_labels ("—", "—", "—", "—", "—", _("Sources: NOAA SWPC, SILSO"));
     }
 
-    public void show_unavailable () {
-        hero_kp_label.label = "—";
-        storm_scale_badge.visible = false;
-        update_kp_scale_history (null);
+    public void show_loading () {
+        update_status ("…", _("Loading current conditions."));
+    }
 
-        title_label.label = _("Solar Unavailable");
-        updated_label.label = "";
-        set_metric_labels ("—", "—", "—", "—", "—", _("Sources: NOAA SWPC, SILSO"));
+    public void show_unavailable () {
+        update_status ("—", _("Space weather unavailable"));
     }
 
     public void show_snapshot (SpaceWeatherSnapshot snapshot, bool refresh_failed = false) {

@@ -49,6 +49,7 @@ public class SpotFilterState {
     public bool hide_hunted;
     public int hide_older_than_minutes;
     public DateTime now_utc;
+    public OperatingLimitEvaluator? operating_limits;
 
     public SpotFilterState (
         string band,
@@ -58,7 +59,8 @@ public class SpotFilterState {
         bool hide_qrt,
         bool hide_hunted,
         int hide_older_than_minutes,
-        DateTime? now_utc = null
+        DateTime? now_utc = null,
+        OperatingLimitEvaluator? operating_limits = null
     ) {
         this.band = band;
         this.mode = mode;
@@ -68,6 +70,7 @@ public class SpotFilterState {
         this.hide_hunted = hide_hunted;
         this.hide_older_than_minutes = hide_older_than_minutes;
         this.now_utc = now_utc ?? new DateTime.now_utc ();
+        this.operating_limits = operating_limits;
     }
 }
 
@@ -110,7 +113,25 @@ public static bool spot_matches_filter (SpotFilterSnapshot spot, SpotFilterState
         }
     }
 
+    if (filter.operating_limits != null) {
+        try {
+            var frequency_khz = parse_spot_filter_frequency_khz (spot.frequency);
+            if (!filter.operating_limits.evaluate (frequency_khz, spot.mode).allowed)
+                return false;
+        } catch (FrequencyError err) {
+            return false;
+        }
+    }
+
     return true;
+}
+
+private static double parse_spot_filter_frequency_khz (string frequency) throws FrequencyError {
+    var frequency_khz = parse_frequency (frequency, FrequencyUnit.KHZ, FrequencyUnit.KHZ);
+    if (frequency_khz < 1000.0 && frequency.contains ("."))
+        return parse_frequency (frequency, FrequencyUnit.MHZ, FrequencyUnit.KHZ);
+
+    return frequency_khz;
 }
 
 private static string digits_only (string value) {

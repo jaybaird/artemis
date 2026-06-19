@@ -205,6 +205,36 @@
         <description>Hide parks you've hunted today</description>
         </key>
 
+        <key name="operating-limits-spot-filter-enabled" type="b">
+        <default>false</default>
+        <summary>Enable operating limit spot filtering</summary>
+        <description>Hide spots outside the active advisory operating limits.</description>
+        </key>
+
+        <key name="operating-limits-tune-warning-enabled" type="b">
+        <default>false</default>
+        <summary>Enable operating limit tune warnings</summary>
+        <description>Warn before tuning outside the active advisory operating limits.</description>
+        </key>
+
+        <key name="operating-limits-country-code" type="s">
+        <default>""</default>
+        <summary>Operating limits country</summary>
+        <description>Country code for the selected operating limits template.</description>
+        </key>
+
+        <key name="operating-limits-profile-id" type="s">
+        <default>""</default>
+        <summary>Operating limits profile</summary>
+        <description>Profile ID for the selected operating limits template.</description>
+        </key>
+
+        <key name="operating-limits-custom-rules-json" type="s">
+        <default>""</default>
+        <summary>Custom operating limits</summary>
+        <description>User-edited active operating limit ranges as JSON.</description>
+        </key>
+
         <key name="show-map-scale" type="b">
         <default>true</default>
         <summary>Show Map Scale</summary>

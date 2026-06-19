@@ -56,7 +56,7 @@ public sealed class SpotListRow : Gtk.Box {
         time_label.label = humanize_ago_compact (spot.spot_time);
         tune_button.clicked.connect (() => {
             Application.state.current_spot_hash = spot.hash;
-            Application.radio_control.tune_to_spot (spot);
+            tune_spot_with_operating_limit_warning (spot, this);
         });
         spot_button.clicked.connect (() => {
             Application.state.current_spot_hash = spot.hash;
@@ -127,8 +127,11 @@ public sealed class SpotListView : Gtk.Box {
     private Gtk.FilterListModel filtered;
     private Gtk.SortListModel sorted;
     private bool just_selected = false;
+    private bool syncing_selection = false;
+    private bool suppress_selection_changes = false;
     private bool row_actions_visible = false;
     private uint sync_selection_idle_id = 0;
+    private uint clear_selection_suppression_idle_id = 0;
     private Quark pending_selection_hash = BLANK_HASH;
     private Gee.ArrayList<Spot> watched_spots = new Gee.ArrayList<Spot> ();
     private Gee.ArrayList<ulong> watched_not_heard_handlers = new Gee.ArrayList<ulong> ();
@@ -184,6 +187,9 @@ public sealed class SpotListView : Gtk.Box {
         });
 
         spot_list.selected_rows_changed.connect (() => {
+            if (syncing_selection || suppress_selection_changes)
+                return;
+
             var row = spot_list.get_selected_row ();
             if (row == null)
                 return;
@@ -206,6 +212,12 @@ public sealed class SpotListView : Gtk.Box {
             reconnect_sort_watchers ();
             refresh_sorting ();
         });
+        Application.spot_repo.spots_replacing.connect ((spot_hash) => {
+            begin_model_selection_sync ();
+        });
+        Application.spot_repo.spots_replaced.connect ((spot_hash) => {
+            finish_model_selection_sync ();
+        });
 
         var settings = Application.settings;
         settings.changed["hide-qrt"].connect (bounce_filter);
@@ -223,11 +235,36 @@ public sealed class SpotListView : Gtk.Box {
     }
 
     public void bounce_filter () {
+        begin_model_selection_sync ();
         filter.changed (Gtk.FilterChange.DIFFERENT);
+        finish_model_selection_sync ();
     }
 
     private void refresh_sorting () {
+        begin_model_selection_sync ();
         sorter.changed (Gtk.SorterChange.DIFFERENT);
+        finish_model_selection_sync ();
+    }
+
+    private void begin_model_selection_sync () {
+        suppress_selection_changes = true;
+
+        if (clear_selection_suppression_idle_id != 0) {
+            Source.remove (clear_selection_suppression_idle_id);
+            clear_selection_suppression_idle_id = 0;
+        }
+    }
+
+    private void finish_model_selection_sync () {
+        set_current_spot (Application.state.current_spot_hash);
+
+        if (clear_selection_suppression_idle_id != 0)
+            Source.remove (clear_selection_suppression_idle_id);
+        clear_selection_suppression_idle_id = Idle.add (() => {
+            clear_selection_suppression_idle_id = 0;
+            suppress_selection_changes = false;
+            return Source.REMOVE;
+        });
     }
 
     private void reconnect_sort_watchers () {
@@ -299,15 +336,24 @@ public sealed class SpotListView : Gtk.Box {
                     continue;
 
                 if (list_row.spot.hash == current_hash) {
-                    spot_list.select_row (row);
+                    select_current_row (row);
                     scroll_to_row (row);
                     return Source.REMOVE;
                 }
             }
 
-            spot_list.unselect_all ();
+            select_current_row (null);
             return Source.REMOVE;
         });
+    }
+
+    private void select_current_row (Gtk.ListBoxRow? row) {
+        syncing_selection = true;
+        if (row != null)
+            spot_list.select_row (row);
+        else
+            spot_list.unselect_all ();
+        syncing_selection = false;
     }
 
     private void scroll_to_row (Gtk.Widget row) {
@@ -326,6 +372,14 @@ public sealed class SpotListView : Gtk.Box {
     }
 
     ~SpotListView () {
+        if (sync_selection_idle_id != 0) {
+            Source.remove (sync_selection_idle_id);
+            sync_selection_idle_id = 0;
+        }
+        if (clear_selection_suppression_idle_id != 0) {
+            Source.remove (clear_selection_suppression_idle_id);
+            clear_selection_suppression_idle_id = 0;
+        }
         disconnect_sort_watchers ();
     }
 }

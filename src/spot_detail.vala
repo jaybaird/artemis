@@ -798,7 +798,7 @@ public sealed class SpotDetail : Gtk.Box {
     private void on_tune_clicked () {
         if (current_spot == null)
             return;
-        Application.radio_control.tune_to_spot (current_spot);
+        tune_spot_with_operating_limit_warning (current_spot, this);
     }
 
     private void on_spot_clicked () {
