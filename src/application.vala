@@ -91,6 +91,7 @@ public sealed class Application : Adw.Application {
         { "refresh", refresh_activated },
         { "not-heard", mark_current_spot_not_heard },
         { "tune", tune_current_spot },
+        { "toggle-inspector-auto-open", toggle_inspector_auto_open },
         { "quit", quit_activated }
     };
 
@@ -110,6 +111,7 @@ public sealed class Application : Adw.Application {
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
         set_accels_for_action ("app.not-heard", { "<primary>m" });
         set_accels_for_action ("app.tune", { "<primary>t" });
+        set_accels_for_action ("app.toggle-inspector-auto-open", { "<primary>i" });
         set_accels_for_action ("app.quit", { "<primary>q" });
         set_accels_for_action ("win.search", { "<Ctrl>F" });
         set_accels_for_action ("win.toggle-sidebar", { "F9" });
@@ -462,6 +464,7 @@ public sealed class Application : Adw.Application {
         if (settings.get_boolean ("show-logbook"))
             general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
         general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Toggle Inspector Auto-open"), "app.toggle-inspector-auto-open"));
         dialog.add (general);
 
         var application = new Adw.ShortcutsSection (_("Application"));
@@ -485,6 +488,10 @@ public sealed class Application : Adw.Application {
         if (spot != null) {
             tune_spot_with_operating_limit_warning (spot, win);
         }
+    }
+
+    private void toggle_inspector_auto_open () {
+        settings.set_boolean ("auto-open-inspector", !settings.get_boolean ("auto-open-inspector"));
     }
 
     private void mark_current_spot_not_heard () {

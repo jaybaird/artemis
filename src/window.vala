@@ -279,7 +279,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
 
         Application.state.current_spot_changed.connect ((spot_hash) => {
-            sync_selected_spot (spot_hash, true);
+            sync_selected_spot (spot_hash, Application.settings.get_boolean ("auto-open-inspector"));
         });
 
         Application.state.filters_changed.connect (on_filters_changed);

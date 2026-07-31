@@ -205,6 +205,12 @@
         <description>Hide parks you have hunted today.</description>
         </key>
 
+        <key name="auto-open-inspector" type="b">
+        <default>true</default>
+        <summary>Auto-open Inspector</summary>
+        <description>Automatically open the Inspector panel when a spot is selected.</description>
+        </key>
+
         <key name="operating-limits-spot-filter-enabled" type="b">
         <default>false</default>
         <summary>Enable operating limit spot filtering</summary>
