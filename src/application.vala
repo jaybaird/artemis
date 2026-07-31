@@ -47,7 +47,6 @@ public sealed class Application : Adw.Application {
     public static ParkDetailsCache park_details_cache { get; private set; }
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
-    public static SpaceWeatherService space_weather_service { get; private set; }
     public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
     private static ZoneDetect.Database? _tz_db = null;
     public static unowned ZoneDetect.Database? tz_db {
@@ -59,6 +58,7 @@ public sealed class Application : Adw.Application {
     private LogbookWindow? logbook_window = null;
     private bool setup_dialog_active = false;
     private GLib.ListStore notification_history_store;
+    private RadioDbusService? radio_dbus_service = null;
     private const uint MAX_NOTIFICATION_HISTORY = 25;
 
     public static RadioControl? radio_control { get; private set; default = null; }
@@ -145,18 +145,19 @@ public sealed class Application : Adw.Application {
         });
         logbook_import_service = new LogbookImportService (spot_database);
         weather_cache = new WeatherCache (new SettingsWeatherUnitsProvider (settings));
-        space_weather_service = new SpaceWeatherService ();
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
-        radio_control = new RadioControl ();
-        radio_control.radio_connected.connect (() => {
+        var radio = new RadioControl ();
+        radio_control = radio;
+        radio_dbus_service = new RadioDbusService (radio);
+        radio.radio_connected.connect (() => {
             is_radio_connected = true;
             radio_connection_state_changed ();
         });
-        radio_control.radio_disconnected.connect (() => {
+        radio.radio_disconnected.connect (() => {
             is_radio_connected = false;
             radio_connection_state_changed ();
         });
-        radio_control.radio_error.connect ((err) => {
+        radio.radio_error.connect ((err) => {
             is_radio_connected = false;
             radio_connection_state_changed ();
         });
@@ -253,7 +254,6 @@ public sealed class Application : Adw.Application {
         );
 
         win = this.active_window ?? new AppWindow (this);
-        space_weather_service.start ();
         win.close_request.connect (() => {
             return false;
         });
@@ -261,8 +261,34 @@ public sealed class Application : Adw.Application {
         maybe_show_first_run_setup ();
     }
 
+    public override bool dbus_register (
+        DBusConnection connection,
+        string object_path
+    ) throws Error {
+        if (!base.dbus_register (connection, object_path))
+            return false;
+
+        try {
+            if (radio_dbus_service != null)
+                radio_dbus_service.export (connection);
+        } catch (Error err) {
+            warning ("Unable to export radio D-Bus interface: %s", err.message);
+        }
+
+        return true;
+    }
+
+    public override void dbus_unregister (
+        DBusConnection connection,
+        string object_path
+    ) {
+        if (radio_dbus_service != null)
+            radio_dbus_service.unexport ();
+        base.dbus_unregister (connection, object_path);
+    }
+
     public void send_spot_alert (Spot spot) {
-        var title = _("Spot alert: %s").printf (spot.callsign);
+        var title = _("Spot alert: %s").printf (display_callsign (spot.callsign));
         var body = _("%s on %s %s").printf (spot.park_ref, spot.band, spot.mode);
         var notification = new GLib.Notification (title);
         notification.set_body (body);

@@ -377,6 +377,9 @@ public sealed class Spot : Object, WeatherSpotDetails {
         bool is_new_park,
         bool is_new_band
     ) {
+        if (was_hunted_today)
+            is_new_park = false;
+
         if (this.was_hunted_today != was_hunted_today) {
             this.was_hunted_today = was_hunted_today;
             notify_property ("was-hunted-today");

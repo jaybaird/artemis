@@ -38,7 +38,7 @@ public sealed class AvatarDetailDialog : Adw.Dialog {
     }
 
     construct {
-      title_widget.title = callsign;
+      title_widget.title = display_callsign (callsign);
     }
 
     public override void dispose () {

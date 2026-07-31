@@ -26,6 +26,10 @@ public static string normalize_callsign_key (string callsign) {
     return normalize_callsign (callsign).ascii_down ();
 }
 
+public static string display_callsign (string callsign) {
+    return normalize_callsign (callsign).replace ("0", "Ø");
+}
+
 public static string pota_profile_callsign (string callsign) {
     var stripped_callsign = callsign.strip ();
     var profile_callsign = "";

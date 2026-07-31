@@ -495,7 +495,10 @@ public class MapView : Gtk.Box {
             halign = Gtk.Align.CENTER,
             valign = Gtk.Align.CENTER,
             tooltip_markup = "<b>%s</b>\n<small>%s</small>".printf (
-                Markup.escape_text ("%s @ %s".printf (spot.callsign, spot.park_ref)),
+                Markup.escape_text ("%s @ %s".printf (
+                    display_callsign (spot.callsign),
+                    spot.park_ref
+                )),
                 Markup.escape_text (spot.park_name)
             )
         };

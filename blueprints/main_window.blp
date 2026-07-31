@@ -119,22 +119,28 @@ template $AppWindow : Adw.ApplicationWindow {
                 transition-duration: 250;
                 visible-child-name: "refresh_spinner";
                 
-                Adw.Spinner refresh_spinner {
-                  width-request: 24;
-                  height-request: 24;
+                StackPage {
+                  name: "refresh_spinner";
+                  child: Adw.Spinner refresh_spinner {
+                    width-request: 24;
+                    height-request: 24;
 
-                  accessibility {
-                    label: _("Loading");
-                  }
+                    accessibility {
+                      label: _("Loading");
+                    }
+                  };
                 }
               
-                ToggleButton refresh_toggle {
-                  icon-name: "media-playback-pause-symbolic";
-                  tooltip-text: _("Pause");
-                  accessibility {
-                    label: _("Pause Updates");
-                    role-description: _("toggle button");
-                  }
+                StackPage {
+                  name: "refresh_toggle";
+                  child: ToggleButton refresh_toggle {
+                    icon-name: "media-playback-pause-symbolic";
+                    tooltip-text: _("Pause");
+                    accessibility {
+                      label: _("Pause Updates");
+                      role-description: _("toggle button");
+                    }
+                  };
                 }
               }
             }
@@ -150,18 +156,6 @@ template $AppWindow : Adw.ApplicationWindow {
                 accessibility {
                   label: _("Search");
                   role-description: _("toggle button");
-                }
-              }
-
-              MenuButton space_weather_menu_button {
-                tooltip-text: _("Solar Conditions");
-                styles ["image-button", "flat"]
-
-                child: $SpaceWeatherButton space_weather_button {};
-
-                accessibility {
-                  label: _("Solar Conditions");
-                  role-description: _("menu button");
                 }
               }
 

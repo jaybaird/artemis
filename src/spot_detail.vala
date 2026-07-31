@@ -431,8 +431,9 @@ public sealed class SpotDetail : Gtk.Box {
 
     private void populate (Spot spot) {
         weather_request_serial++;
-        detail_avatar.text = spot.callsign;
-        detail_callsign.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
+        var display_name = display_callsign (spot.callsign);
+        detail_avatar.text = display_name;
+        detail_callsign.label = "%s @ %s".printf (display_name, spot.park_ref);
         var cached_activator = Application.callsign_cache.peek_callsign (spot.callsign);
         update_activator_profile (cached_activator);
         detail_park_name.label = spot.park_name;
@@ -509,7 +510,7 @@ public sealed class SpotDetail : Gtk.Box {
                 bearing_to_compass (spot.bearing));
         }
 
-        detail_spotter_row.value = spot.spotter;
+        detail_spotter_row.value = display_callsign (spot.spotter);
         detail_spot_time_row.value = humanize_ago (spot.spot_time);
 
         var has_spotter_comment = (spot.spotter_comment ?? "").strip () != "";
@@ -815,8 +816,6 @@ public sealed class SpotDetail : Gtk.Box {
 
     private void refresh_visual_state () {
         remove_css_class ("spot-deprioritized");
-        if ((current_spot != null) && spot_is_greyed_out (current_spot))
-            add_css_class ("spot-deprioritized");
     }
 
     private void on_history_clicked () {

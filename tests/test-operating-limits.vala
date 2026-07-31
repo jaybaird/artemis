@@ -83,8 +83,10 @@ private void test_operating_limits_frequency_boundaries () {
         var evaluator = new OperatingLimitEvaluator (ruleset.resolve_profile ("TS", "FULL"));
         assert (evaluator.evaluate (14000.0, "FT8").allowed);
         assert (evaluator.evaluate (14100.0, "FT8").allowed);
-        assert (evaluator.evaluate (14350.0, "SSB").allowed);
-        assert (!evaluator.evaluate (14350.1, "SSB").allowed);
+        assert (evaluator.evaluate (14347.0, "SSB").allowed);
+        assert (!evaluator.evaluate (14350.0, "SSB").allowed);
+        assert (evaluator.evaluate (14350.0, "CW").allowed);
+        assert (!evaluator.evaluate (14350.1, "CW").allowed);
     } catch (Error err) {
         assert_not_reached ();
     }
@@ -163,6 +165,13 @@ private void test_operating_limits_bundled_ruleset_exposes_us_and_ca () {
         );
         assert (us_general.evaluate (14074.0, "FT8").allowed);
         assert (!us_general.evaluate (14175.0, "SSB").allowed);
+        assert (us_general.evaluate (14295.0, "SSB").allowed);
+        assert (us_general.evaluate (14295.0, "USB").allowed);
+        assert (us_general.evaluate (14295.0, "LSB").allowed);
+        assert (us_general.evaluate (14347.0, "USB").allowed);
+        assert (!us_general.evaluate (14350.0, "USB").allowed);
+        assert (us_general.evaluate (14228.0, "LSB").allowed);
+        assert (!us_general.evaluate (14225.0, "LSB").allowed);
     } catch (Error err) {
         error ("Unable to validate bundled operating limits: %s", err.message);
     }

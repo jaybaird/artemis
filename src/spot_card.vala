@@ -39,7 +39,7 @@ public sealed class SpotCard : Gtk.Box {
     private unowned Gtk.Label grid_square;
 
     [GtkChild]
-    private unowned Gtk.Image band_dot;
+    private unowned Gtk.Box band_marker;
 
     [GtkChild]
     private unowned Gtk.Label frequency;
@@ -128,14 +128,17 @@ public sealed class SpotCard : Gtk.Box {
     public SpotCard.from_spot (Spot spot) {
         Object (spot: spot);
 
-        title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
+        title.label = "%s @ %s".printf (
+            display_callsign (spot.callsign),
+            spot.park_ref
+        );
         park_label.label = spot.park_name;
         location_desc.label = spot.location_desc;
         var grid = spot.grid ();
         grid_square.label = grid;
         grid_square.visible = grid != "";
 
-        sync_band_dot_css (spot.band);
+        sync_band_marker_css (spot.band);
         frequency.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));
         mode.label = spot.mode;
         time.label = humanize_ago (spot.spot_time);
@@ -176,12 +179,12 @@ public sealed class SpotCard : Gtk.Box {
         tune_button.sensitive = Application.radio_control.is_rig_connected;
     }
 
-    private void sync_band_dot_css (string band) {
+    private void sync_band_marker_css (string band) {
         foreach (var known_band in RadioConstants.BANDS) {
-            band_dot.remove_css_class ("band-dot-%s".printf (known_band.down ()));
+            band_marker.remove_css_class ("band-strip-%s".printf (known_band.down ()));
         }
 
-        band_dot.add_css_class ("band-dot-%s".printf (band.down ()));
+        band_marker.add_css_class ("band-strip-%s".printf (band.down ()));
     }
 
     private void on_tune_clicked () {

@@ -34,7 +34,6 @@
     <file preprocess="xml-stripblanks">ui/logbook_window.ui</file>
     <file preprocess="xml-stripblanks">ui/qso_dialog.ui</file>
     <file preprocess="xml-stripblanks">ui/spot_detail.ui</file>
-    <file preprocess="xml-stripblanks">ui/space_weather_popover.ui</file>
     <file preprocess="xml-stripblanks">ui/detail_field_row.ui</file>
     <file preprocess="xml-stripblanks">ui/detail_link_row.ui</file>
     <file preprocess="xml-stripblanks">ui/detail_time_pair_row.ui</file>
@@ -82,7 +81,6 @@
     <file compressed="true">icons/hicolor/symbolic/actions/radio-console-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/verified-checkmark-symbolic.svg</file>
     <file compressed="true">icons/hicolor/symbolic/actions/cloud-disabled-symbolic.svg</file>
-    <file compressed="true">icons/hicolor/symbolic/actions/sun-with-moon-symbolic.svg</file>
     <file compressed="true">icons/hicolor/scalable/status/band-All.svg</file>
     <file compressed="true">icons/hicolor/scalable/status/band-160m.svg</file>
     <file compressed="true">icons/hicolor/scalable/status/band-80m.svg</file>

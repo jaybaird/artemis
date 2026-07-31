@@ -42,14 +42,14 @@ private sealed class ParkLogQsoRow : Gtk.ListBoxRow {
         Object ();
 
         title_label.label = "%s  %s  %s kHz".printf (
-            qso.callsign ?? _("Unknown"),
+            qso.callsign != null ? display_callsign (qso.callsign) : _("Unknown"),
             qso.mode ?? "",
             format_frequency_khz (qso.frequency_khz)
         );
 
         detail_label.label = "%s  %s".printf (
             qso.created_utc ?? "",
-            qso.spotter ?? ""
+            display_callsign (qso.spotter ?? "")
         );
 
         comment_label.visible = (qso.spotter_comment ?? "").strip () != "";

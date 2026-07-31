@@ -16,6 +16,14 @@ private const string[] OPERATING_LIMIT_KNOWN_MODES = {
     "SSB", "CW", "FT8", "FT4", "FM", "AM", "RTTY", "JT65"
 };
 
+private const double OPERATING_LIMIT_SSB_BANDWIDTH_KHZ = 3.0;
+
+private enum OperatingLimitSideband {
+    NONE,
+    LOWER,
+    UPPER
+}
+
 public errordomain OperatingLimitError {
     INVALID_SCHEMA,
     INVALID_RULESET,
@@ -48,6 +56,10 @@ public sealed class OperatingLimitRule : Object {
 
     public bool contains_frequency (double frequency_khz) {
         return frequency_khz + 0.0001 >= min_khz && frequency_khz - 0.0001 <= max_khz;
+    }
+
+    public bool contains_frequency_range (double min_frequency_khz, double max_frequency_khz) {
+        return contains_frequency (min_frequency_khz) && contains_frequency (max_frequency_khz);
     }
 
     public bool allows_mode (string mode) {
@@ -494,6 +506,14 @@ public sealed class OperatingLimitEvaluator : Object {
     public OperatingLimitMatchResult evaluate (double frequency_khz, string mode) {
         var normalized_mode = normalize_mode (mode);
         var label = profile.label ();
+        double occupied_min_khz;
+        double occupied_max_khz;
+        occupied_frequency_range_khz (
+            frequency_khz,
+            mode,
+            out occupied_min_khz,
+            out occupied_max_khz
+        );
 
         if (!known_mode (normalized_mode)) {
             return new OperatingLimitMatchResult (
@@ -504,12 +524,17 @@ public sealed class OperatingLimitEvaluator : Object {
         }
 
         bool frequency_seen = false;
+        bool mode_seen = false;
         foreach (var rule in profile.rules) {
             if (!rule.contains_frequency (frequency_khz))
                 continue;
 
             frequency_seen = true;
-            if (rule.allows_mode (normalized_mode)) {
+            if (!rule.allows_mode (normalized_mode))
+                continue;
+
+            mode_seen = true;
+            if (rule.contains_frequency_range (occupied_min_khz, occupied_max_khz)) {
                 return new OperatingLimitMatchResult (
                     true,
                     _("Allowed by %s for %s").printf (rule.range_label (), rule.modes_label ()),
@@ -520,6 +545,17 @@ public sealed class OperatingLimitEvaluator : Object {
         }
 
         var frequency_label = "%s MHz".printf (format_frequency_mhz_from_khz (frequency_khz));
+        if (mode_seen) {
+            return new OperatingLimitMatchResult (
+                false,
+                _("%s %s signal extends outside the active operating range").printf (
+                    frequency_label,
+                    normalized_mode
+                ),
+                label
+            );
+        }
+
         if (frequency_seen) {
             return new OperatingLimitMatchResult (
                 false,
@@ -536,6 +572,46 @@ public sealed class OperatingLimitEvaluator : Object {
             _("%s is outside the active operating ranges").printf (frequency_label),
             label
         );
+    }
+}
+
+private static void occupied_frequency_range_khz (
+    double frequency_khz,
+    string mode,
+    out double min_khz,
+    out double max_khz
+) {
+    min_khz = frequency_khz;
+    max_khz = frequency_khz;
+
+    switch (sideband_for_mode (mode, frequency_khz)) {
+        case OperatingLimitSideband.LOWER:
+            min_khz = frequency_khz - OPERATING_LIMIT_SSB_BANDWIDTH_KHZ;
+            break;
+        case OperatingLimitSideband.UPPER:
+            max_khz = frequency_khz + OPERATING_LIMIT_SSB_BANDWIDTH_KHZ;
+            break;
+        default:
+            break;
+    }
+}
+
+private static OperatingLimitSideband sideband_for_mode (
+    string mode,
+    double frequency_khz
+) {
+    var normalized = mode.strip ().up ();
+    switch (normalized) {
+        case "USB":
+            return OperatingLimitSideband.UPPER;
+        case "LSB":
+            return OperatingLimitSideband.LOWER;
+        case "SSB":
+            return frequency_khz >= 10000.0 ?
+                OperatingLimitSideband.UPPER :
+                OperatingLimitSideband.LOWER;
+        default:
+            return OperatingLimitSideband.NONE;
     }
 }
 
@@ -606,7 +682,14 @@ public static OperatingLimitEvaluator? operating_limit_tune_warning_evaluator_fr
 }
 
 public static string normalize_mode (string mode) {
-    return mode.strip ().up ();
+    var normalized = mode.strip ().up ();
+    switch (normalized) {
+        case "USB":
+        case "LSB":
+            return "SSB";
+        default:
+            return normalized;
+    }
 }
 
 public static bool known_mode (string mode) {

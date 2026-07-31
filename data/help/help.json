@@ -56,8 +56,7 @@
           "paragraphs": [
             "Open Preferences to choose your default band, default mode, refresh interval, stale-spot limit, units, map scale, and whether Trailwave highlights unhunted parks. Those settings shape the main window when Trailwave opens.",
             "During a session, use the sidebar to filter by band, mode, and POTA program. Use Search to match callsigns, park references, or park names, and switch between Cards, List, and Map depending on whether you want scanning density or geographic context.",
-            "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload.",
-            "Use the space weather button in the main toolbar to open a compact space-weather popover. It shows the current Kp reading, geomagnetic condition label, recent Kp trend, and supporting solar values such as solar flux, sunspots, A-index, X-ray flux, and solar wind when those sources provide them."
+            "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload."
           ],
           "keywords": [
             "customize",
@@ -68,10 +67,7 @@
             "search",
             "cards",
             "list",
-            "map",
-            "space weather",
-            "solar",
-            "kp"
+            "map"
           ]
         },
         {
@@ -191,8 +187,7 @@
           "paragraphs": [
             "Trailwave refreshes the live feed at the interval set in Preferences. The status bar shows the current UTC time, the next refresh timing, and how many spots are hidden by filters.",
             "Use Pause when you want the current feed to stop changing while you review, tune, or log a contact. Resume updates when you are ready to return to the live feed.",
-            "If a refresh fails, Trailwave shows an error dialog with a Retry option. If no spots are available or no spots match your filters, the spot views show an empty-state message instead of a blank screen.",
-            "Space weather updates separately from the spot feed. Trailwave fetches NOAA SWPC and SILSO conditions after startup and then refreshes them about every 30 minutes without blocking spot loading."
+            "If a refresh fails, Trailwave shows an error dialog with a Retry option. If no spots are available or no spots match your filters, the spot views show an empty-state message instead of a blank screen."
           ],
           "keywords": [
             "refresh",
@@ -200,9 +195,7 @@
             "resume",
             "empty",
             "error",
-            "status bar",
-            "space weather",
-            "solar"
+            "status bar"
           ]
         }
       ]
@@ -483,21 +476,17 @@
         {
           "id": "external-data",
           "title": "What outside data does Trailwave use?",
-          "summary": "Trailwave uses POTA spots and park data, NOAA space weather, optional QRZ data, weather, map tiles, and optional signal report data.",
+          "summary": "Trailwave uses POTA spots and park data, optional QRZ data, weather, map tiles, and optional signal report data.",
           "icon": null,
           "badge": null,
           "paragraphs": [
             "The live spot feed, park details, spot history, and location names come from POTA services. Trailwave also caches some location data so labels can be more readable.",
             "Activator profile details and avatars come from the callsign lookup path used by the app. QRZ upload only runs when external logging is enabled and an API key is configured.",
-            "Weather appears when it can be loaded for the selected park. The space weather popover uses NOAA SWPC data for Kp, solar flux, A-index, X-ray flux, solar wind, and the recent Kp trend, plus SILSO data for sunspot number, when those products are available. Map tiles and the optional PSKReporter signal report overlay require network access. PSKReporter signal reports can also contribute to the Two-way copy spot badge when WSJT-X has recently decoded the activator."
+            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access. PSKReporter signal reports can also contribute to the Two-way copy spot badge when WSJT-X has recently decoded the activator."
           ],
           "keywords": [
             "data",
             "pota",
-            "noaa",
-            "swpc",
-            "space weather",
-            "solar",
             "qrz",
             "weather",
             "map",

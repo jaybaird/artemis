@@ -35,7 +35,10 @@ public sealed class SpotListRow : Gtk.Box {
 
     construct {
         band_marker.band = spot.band;
-        callsign_label.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
+        callsign_label.label = "%s @ %s".printf (
+            display_callsign (spot.callsign),
+            spot.park_ref
+        );
         park_label.label = spot.park_name;
         location_label.label = spot.location_desc;
         frequency_label.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));

@@ -23,6 +23,7 @@ public sealed class LogbookQsoItem : Object {
     public string date { get; construct; }
     public string raw_date { get; construct; }
     public string activator { get; construct; }
+    public string raw_activator { get; construct; }
     public string reference { get; construct; }
     public string park_name { get; construct; }
     public string band { get; construct; }
@@ -45,7 +46,8 @@ public sealed class LogbookQsoItem : Object {
             qso: qso,
             date: display_date,
             raw_date: qso.created_utc ?? "",
-            activator: qso.callsign ?? "",
+            activator: display_callsign (qso.callsign ?? ""),
+            raw_activator: qso.callsign ?? "",
             reference: qso.park_ref ?? "",
             park_name: qso.park_name ?? "",
             band: qso_band,
@@ -243,7 +245,7 @@ public sealed class LogbookWindow : Adw.Window {
             qso_column_view,
             _("Activator"),
             (item) => ((LogbookQsoItem)item).activator,
-            (a, b) => compare_strings (((LogbookQsoItem)a).activator, ((LogbookQsoItem)b).activator),
+            (a, b) => compare_strings (((LogbookQsoItem)a).raw_activator, ((LogbookQsoItem)b).raw_activator),
             true
         );
         qso_reference_column = append_text_column (

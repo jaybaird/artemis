@@ -28,6 +28,7 @@ template $SpotCard : Box {
 
   Overlay {
     Box card_view {
+      height-request: 220;
       halign: fill;
       hexpand: true;
       orientation: vertical;
@@ -171,14 +172,13 @@ template $SpotCard : Box {
               row: 0;
             }
 
-            Image band_dot {
+            Box band_marker {
               halign: center;
               valign: center;
-              icon-name: "bigger-dot-symbolic";
-              styles ["spot-card-icon", "band-dot-20m"]
+              styles ["spot-card-band-marker", "band-strip-20m"]
               accessibility {
                 label: _("Band");
-                role-description: _("icon");
+                role-description: _("status indicator");
               }
             }
           }

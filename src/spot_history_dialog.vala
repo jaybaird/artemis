@@ -43,7 +43,7 @@ private sealed class SpotHistoryRow : Gtk.ListBoxRow {
 
         comment_label.visible = comments.strip () != "";
         comment_label.label = comments;
-        spotter_label.label = spotter;
+        spotter_label.label = display_callsign (spotter);
         frequency_label.label = @"$frequency kHz $mode";
         time_label.label = spot_dt;
     }
@@ -64,7 +64,7 @@ public class SpotHistoryDialog : Adw.Dialog {
 
     public SpotHistoryDialog (string callsign, string park_ref) {
         Object ();
-        title_widget.title = @"$callsign @ $park_ref";
+        title_widget.title = "%s @ %s".printf (display_callsign (callsign), park_ref);
     }
 
     public void show_loading (bool loading) {

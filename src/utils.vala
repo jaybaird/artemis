@@ -88,7 +88,9 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (
         ));
     }
 
-    if (spot.is_new_park && Application.settings.get_boolean ("highlight-unhunted-parks")) {
+    if (spot.is_new_park &&
+        !spot.was_hunted_today &&
+        Application.settings.get_boolean ("highlight-unhunted-parks")) {
         badges.add (new SpotBadgeInfo (
             "starred-symbolic",
             _("New park"),
@@ -352,11 +354,9 @@ public static void tune_spot_with_operating_limit_warning (
 
     var alert = new Adw.AlertDialog (_("Tune Outside Operating Limits?"), null);
     alert.format_body (
-        _("%s MHz %s is outside %s.\n\n%s"),
+        _("%s MHz is outside your selected limits for %s"),
         format_frequency_mhz_from_khz (spot.frequency_khz),
-        spot.mode,
-        result.profile_label,
-        result.reason
+        result.profile_label
     );
     alert.add_response ("cancel", _("Cancel"));
     alert.add_response ("tune", _("Tune Anyway"));
