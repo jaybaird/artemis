@@ -149,6 +149,7 @@ public sealed class BandView : Gtk.Box {
         settings.changed["hide-older-than"].connect (bounce_filter);
         settings.changed["use-metric"].connect (_refresh_cards);
         settings.changed["highlight-unhunted-parks"].connect (_refresh_cards);
+        settings.changed["spot-sort-order"].connect (refresh_sorting);
     }
 
     public void set_current_spot (Quark spot_hash) {

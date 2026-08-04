@@ -135,6 +135,24 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
         add_action (toggle_sidebar_action);
 
+        var sort_action = new SimpleAction.stateful (
+            "sort-by",
+            GLib.VariantType.STRING,
+            new Variant.string (Application.settings.get_string ("spot-sort-order"))
+        );
+        sort_action.activate.connect ((param) => {
+            if (param == null)
+                return;
+            Application.settings.set_string ("spot-sort-order", param.get_string ());
+            sort_action.set_state (param);
+        });
+        Application.settings.changed["spot-sort-order"].connect (() => {
+            sort_action.set_state (
+                new Variant.string (Application.settings.get_string ("spot-sort-order"))
+            );
+        });
+        add_action (sort_action);
+
         var search_action = new SimpleAction ("search", null);
         search_action.activate.connect (() => {
             search_bar.search_mode_enabled = true;

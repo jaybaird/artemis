@@ -306,6 +306,28 @@ menu menu_app {
         action: "app.add-spot";
       }
 
+    submenu {
+      label: _("Sort By");
+
+      item {
+        label: _("Time");
+        action: "win.sort-by";
+        target: "time";
+      }
+
+      item {
+        label: _("Activator Callsign");
+        action: "win.sort-by";
+        target: "callsign";
+      }
+
+      item {
+        label: _("Frequency");
+        action: "win.sort-by";
+        target: "frequency";
+      }
+    }
+
     item {
       label: _("Refresh");
       action: "app.refresh";

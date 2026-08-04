@@ -8,10 +8,10 @@ using Adw 1;
 
 template $OperatingLimitsPreferencesPage : Adw.PreferencesPage {
   title: _("Operating Limits");
-  icon-name: "radio-console-symbolic";
+  icon-name: "object-layout-symbolic";
 
   Adw.PreferencesGroup {
-    title: _("Profile");
+    title: _("Behavior");
 
     Adw.SwitchRow row_spot_filter_enabled {
       title: _("Filter Spots");
@@ -30,6 +30,10 @@ template $OperatingLimitsPreferencesPage : Adw.PreferencesPage {
         role-description: _("switch");
       }
     }
+  }
+
+  Adw.PreferencesGroup {
+    title: _("Template");
 
     Adw.ComboRow row_country {
       title: _("Country");
@@ -56,7 +60,7 @@ template $OperatingLimitsPreferencesPage : Adw.PreferencesPage {
     Adw.ButtonRow apply_template_button {
       title: _("Apply Template");
       tooltip-text: _("Replace the active editable ranges with the selected template");
-      end-icon-name: "document-revert-symbolic";
+      styles ["suggested-action"]
       accessibility {
         label: _("Apply Template");
         role-description: _("button");
@@ -65,7 +69,7 @@ template $OperatingLimitsPreferencesPage : Adw.PreferencesPage {
   }
 
   Adw.PreferencesGroup ranges_group {
-    title: _("Active Ranges");
+    title: _("Band Edges");
 
     Adw.ButtonRow add_rule_button {
       title: _("Add Range");

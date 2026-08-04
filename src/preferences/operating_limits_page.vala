@@ -8,24 +8,14 @@ using Gee;
 private const string OPERATING_LIMIT_CUSTOM_COUNTRY_CODE = "CUSTOM";
 private const string OPERATING_LIMIT_CUSTOM_PROFILE_ID = "custom";
 
-private enum OperatingLimitModeSelection {
-    ALL,
-    CW,
-    DATA,
-    PHONE,
-    CUSTOM
-}
-
 public sealed class OperatingLimitRuleEditForm : Gtk.Box {
     public signal void changed ();
 
     private Gtk.StringList band_model;
-    private Gtk.StringList mode_group_model;
     private Adw.ComboRow band_row;
     private Adw.EntryRow min_row;
     private Adw.EntryRow max_row;
-    private Adw.ComboRow mode_group_row;
-    private Adw.EntryRow modes_row;
+    private Gee.HashMap<string, Adw.SwitchRow> mode_rows;
     private Gtk.Label validation_label;
     private bool syncing = false;
 
@@ -81,8 +71,8 @@ public sealed class OperatingLimitRuleEditForm : Gtk.Box {
     }
 
     private void build_rows () {
-        var group = new Adw.PreferencesGroup ();
-        append (group);
+        var range_group = new Adw.PreferencesGroup ();
+        append (range_group);
 
         band_model = new Gtk.StringList ({});
         foreach (var band in RadioConstants.BANDS) {
@@ -90,35 +80,30 @@ public sealed class OperatingLimitRuleEditForm : Gtk.Box {
                 band_model.append (band);
         }
 
-        mode_group_model = new Gtk.StringList ({
-            _("All"),
-            _("CW"),
-            _("Data"),
-            _("Phone"),
-            _("Custom")
-        });
-
         band_row = new Adw.ComboRow ();
         band_row.title = _("Band");
         band_row.model = band_model;
-        group.add (band_row);
+        range_group.add (band_row);
 
         min_row = new Adw.EntryRow ();
         min_row.title = _("Minimum kHz");
-        group.add (min_row);
+        range_group.add (min_row);
 
         max_row = new Adw.EntryRow ();
         max_row.title = _("Maximum kHz");
-        group.add (max_row);
+        range_group.add (max_row);
 
-        mode_group_row = new Adw.ComboRow ();
-        mode_group_row.title = _("Modes");
-        mode_group_row.model = mode_group_model;
-        group.add (mode_group_row);
+        var modes_group = new Adw.PreferencesGroup ();
+        modes_group.title = _("Modes");
+        append (modes_group);
 
-        modes_row = new Adw.EntryRow ();
-        modes_row.title = _("Custom Modes");
-        group.add (modes_row);
+        mode_rows = new Gee.HashMap<string, Adw.SwitchRow> ();
+        foreach (var mode in OPERATING_LIMIT_KNOWN_MODES) {
+            var row = new Adw.SwitchRow ();
+            row.title = mode;
+            modes_group.add (row);
+            mode_rows[mode] = row;
+        }
 
         validation_label = new Gtk.Label ("");
         validation_label.halign = Gtk.Align.START;
@@ -133,9 +118,7 @@ public sealed class OperatingLimitRuleEditForm : Gtk.Box {
         select_band (rule.band);
         min_row.text = format_frequency_khz (rule.min_khz);
         max_row.text = format_frequency_khz (rule.max_khz);
-        select_mode_group (rule.modes);
-        modes_row.text = rule.modes_label ();
-        modes_row.visible = mode_group_row.selected == OperatingLimitModeSelection.CUSTOM;
+        select_modes (rule.modes);
         syncing = false;
     }
 
@@ -143,11 +126,8 @@ public sealed class OperatingLimitRuleEditForm : Gtk.Box {
         band_row.notify["selected"].connect (on_changed);
         min_row.notify["text"].connect (on_changed);
         max_row.notify["text"].connect (on_changed);
-        mode_group_row.notify["selected"].connect (() => {
-            modes_row.visible = mode_group_row.selected == OperatingLimitModeSelection.CUSTOM;
-            on_changed ();
-        });
-        modes_row.notify["text"].connect (on_changed);
+        foreach (var entry in mode_rows.entries)
+            entry.value.notify["active"].connect (on_changed);
     }
 
     private void on_changed () {
@@ -179,74 +159,20 @@ public sealed class OperatingLimitRuleEditForm : Gtk.Box {
         band_row.selected = 0;
     }
 
-    private void select_mode_group (ArrayList<string> modes) {
-        if (same_modes (modes, {"SSB", "CW", "FT8", "FT4", "FM", "AM", "RTTY", "JT65"})) {
-            mode_group_row.selected = OperatingLimitModeSelection.ALL;
-        } else if (same_modes (modes, {"CW"})) {
-            mode_group_row.selected = OperatingLimitModeSelection.CW;
-        } else if (same_modes (modes, {"FT8", "FT4", "RTTY", "JT65"})) {
-            mode_group_row.selected = OperatingLimitModeSelection.DATA;
-        } else if (same_modes (modes, {"SSB", "AM", "FM"})) {
-            mode_group_row.selected = OperatingLimitModeSelection.PHONE;
-        } else {
-            mode_group_row.selected = OperatingLimitModeSelection.CUSTOM;
-        }
+    private void select_modes (ArrayList<string> modes) {
+        foreach (var mode in OPERATING_LIMIT_KNOWN_MODES)
+            mode_rows[mode].active = modes.contains (mode);
     }
 
     private ArrayList<string> selected_modes () throws OperatingLimitError {
-        switch ((OperatingLimitModeSelection) mode_group_row.selected) {
-            case OperatingLimitModeSelection.ALL:
-                return modes_from_array ({"SSB", "CW", "FT8", "FT4", "FM", "AM", "RTTY", "JT65"});
-            case OperatingLimitModeSelection.CW:
-                return modes_from_array ({"CW"});
-            case OperatingLimitModeSelection.DATA:
-                return modes_from_array ({"FT8", "FT4", "RTTY", "JT65"});
-            case OperatingLimitModeSelection.PHONE:
-                return modes_from_array ({"SSB", "AM", "FM"});
-            case OperatingLimitModeSelection.CUSTOM:
-                return parse_custom_modes ();
-            default:
-                return parse_custom_modes ();
-        }
-    }
-
-    private ArrayList<string> parse_custom_modes () throws OperatingLimitError {
         var modes = new ArrayList<string> ();
-        foreach (var piece in modes_row.text.split (",")) {
-            var mode = normalize_mode (piece);
-            if (mode == "")
-                continue;
-            if (!known_mode (mode)) {
-                throw new OperatingLimitError.INVALID_RULE (
-                    _("Unknown mode %s").printf (mode)
-                );
-            }
-            if (!modes.contains (mode))
+        foreach (var mode in OPERATING_LIMIT_KNOWN_MODES) {
+            if (mode_rows[mode].active)
                 modes.add (mode);
         }
-
-        if (modes.size == 0) {
-            throw new OperatingLimitError.INVALID_RULE (_("Enter at least one mode"));
-        }
+        if (modes.size == 0)
+            throw new OperatingLimitError.INVALID_RULE (_("Select at least one mode"));
         return modes;
-    }
-
-    private static ArrayList<string> modes_from_array (string[] values) {
-        var modes = new ArrayList<string> ();
-        foreach (var value in values)
-            modes.add (value);
-        return modes;
-    }
-
-    private static bool same_modes (ArrayList<string> modes, string[] expected) {
-        if (modes.size != expected.length)
-            return false;
-
-        foreach (var value in expected) {
-            if (!modes.contains (value))
-                return false;
-        }
-        return true;
     }
 }
 
@@ -265,6 +191,10 @@ public sealed class OperatingLimitRuleSummaryRow : Adw.ActionRow {
         activatable = true;
         selectable = false;
 
+        var band_strip = new BandStrip (rule.band);
+        band_strip.valign = Gtk.Align.CENTER;
+        add_prefix (band_strip);
+
         var edit_button = new Gtk.Button.from_icon_name ("document-edit-symbolic");
         edit_button.tooltip_text = _("Edit Range");
         edit_button.valign = Gtk.Align.CENTER;
@@ -276,11 +206,9 @@ public sealed class OperatingLimitRuleSummaryRow : Adw.ActionRow {
         remove_button.tooltip_text = _("Remove Range");
         remove_button.valign = Gtk.Align.CENTER;
         remove_button.add_css_class ("flat");
+        remove_button.add_css_class ("destructive-action");
         add_suffix (remove_button);
 
-        activated.connect (() => {
-            edit_requested (this);
-        });
         edit_button.clicked.connect (() => {
             edit_requested (this);
         });

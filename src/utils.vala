@@ -291,10 +291,27 @@ public static Gtk.Ordering compare_spots_for_display (Spot? spot_a, Spot? spot_b
     if (deprioritized_a != deprioritized_b)
         return deprioritized_a ? Gtk.Ordering.LARGER : Gtk.Ordering.SMALLER;
 
-    var cmp = spot_a.spot_time.compare (spot_b.spot_time);
-    if (cmp > 0)
+    var sort_order = Application.settings.get_string ("spot-sort-order");
+    switch (sort_order) {
+        case "callsign":
+            var cmp = strcmp (spot_a.callsign ?? "", spot_b.callsign ?? "");
+            if (cmp != 0)
+                return cmp < 0 ? Gtk.Ordering.SMALLER : Gtk.Ordering.LARGER;
+            break;
+        case "frequency":
+            if (spot_a.frequency_khz < spot_b.frequency_khz)
+                return Gtk.Ordering.SMALLER;
+            if (spot_a.frequency_khz > spot_b.frequency_khz)
+                return Gtk.Ordering.LARGER;
+            break;
+        default:
+            break;
+    }
+
+    var time_cmp = spot_a.spot_time.compare (spot_b.spot_time);
+    if (time_cmp > 0)
         return Gtk.Ordering.SMALLER;
-    if (cmp < 0)
+    if (time_cmp < 0)
         return Gtk.Ordering.LARGER;
     return Gtk.Ordering.EQUAL;
 }

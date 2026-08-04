@@ -77,12 +77,9 @@ public sealed class OperatingLimitRule : Object {
 
     public string range_label () {
         if (Math.fabs (min_khz - max_khz) < 0.0001)
-            return "%s MHz".printf (format_frequency_mhz_from_khz (min_khz));
+            return "%.0f kHz".printf (min_khz);
 
-        return "%s-%s MHz".printf (
-            format_frequency_mhz_from_khz (min_khz),
-            format_frequency_mhz_from_khz (max_khz)
-        );
+        return "%.0f–%.0f kHz".printf (min_khz, max_khz);
     }
 
     public void write_json (Json.Builder builder) {

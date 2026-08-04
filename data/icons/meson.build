@@ -57,7 +57,8 @@ install_data(
 	    'hicolor/symbolic/actions/moonrise-symbolic.svg',
 	    'hicolor/symbolic/actions/moonset-symbolic.svg',
 	    'hicolor/symbolic/actions/logs-symbolic.svg',
-	    'hicolor/symbolic/actions/cloud-disabled-symbolic.svg'
+	    'hicolor/symbolic/actions/cloud-disabled-symbolic.svg',
+    'hicolor/symbolic/actions/object-layout-symbolic.svg'
   ],
   install_dir: get_option('datadir') / application_id / 'icons/hicolor/scalable/actions'
 )

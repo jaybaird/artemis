@@ -224,6 +224,7 @@ public sealed class SpotListView : Gtk.Box {
         settings.changed["hide-qrt"].connect (bounce_filter);
         settings.changed["hide-hunted"].connect (bounce_filter);
         settings.changed["hide-older-than"].connect (bounce_filter);
+        settings.changed["spot-sort-order"].connect (refresh_sorting);
 
         update_visible_state ();
         reconnect_sort_watchers ();

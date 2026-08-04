@@ -205,6 +205,12 @@
         <description>Hide parks you have hunted today.</description>
         </key>
 
+        <key name="spot-sort-order" type="s">
+        <default>"time"</default>
+        <summary>Spot sort order</summary>
+        <description>Sort order for spots: "time", "callsign", or "frequency".</description>
+        </key>
+
         <key name="auto-open-inspector" type="b">
         <default>true</default>
         <summary>Auto-open Inspector</summary>
