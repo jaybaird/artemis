@@ -57,8 +57,6 @@ public sealed class AddSpot : Adw.Dialog {
         set_park_details (spot.park_name);
         frequency.text = format_frequency_khz (spot.frequency_khz);
         select_mode (spot.mode);
-        if ((spot.spotter_comment ?? "").strip () != "")
-            spotter_comments.text = spot.spotter_comment;
     }
 
     public AddSpot.with_frequency (double frequency_khz) {
