@@ -9,8 +9,6 @@ project(
   ],
 )
 
-is_windows = host_machine.system() == 'windows'
-
 i18n = import('i18n')
 gnome = import('gnome')
 valac = meson.get_compiler('vala')
@@ -82,18 +80,6 @@ subdir('src')
 subdir('po')
 subdir('tests')
 
-win_sources = []
-windows_exe_link_args = []
-if is_windows
-  windows = import('windows')
-  app_icon_res = windows.compile_resources(
-    'data/icons/windows/app.rc',
-    depend_files: ['data/icons/windows/com.k0vcz.Artemis.ico'],
-  )
-  win_sources += app_icon_res
-  windows_exe_link_args = ['-mwindows']
-endif
-
 link_deps = [
   libradiocontrol,
   libartemismqtt,
@@ -101,69 +87,59 @@ link_deps = [
   libheatmap
 ]
 
-if is_windows
-  # Windows serial enumeration is compiled into libradiocontrol.
-endif
-
 if devel
   vala_args = ['-g', '--save-temps', '--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--pkg=ZoneDetect', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map', '--vapidir='+srcdir / 'tz']
 else
   vala_args = ['--pkg=RadioControl', '--pkg=Mqtt', '--pkg=heatmap', '--pkg=ZoneDetect', '--vapidir='+srcdir, '--vapidir='+srcdir / 'radio', '--vapidir='+srcdir / 'mqtt', '--vapidir='+srcdir / 'map', '--vapidir='+srcdir / 'tz']
 endif
 
-artemis_exe = executable(meson.project_name(), artemis_vala_sources + [compiled_resources] + win_sources,
+artemis_exe = executable(meson.project_name(), artemis_vala_sources + [compiled_resources],
   dependencies: artemis_vala_deps,
   vala_args: vala_args,
   include_directories: src_inc,
   link_with: link_deps,
-  link_args: windows_exe_link_args,
-  win_subsystem: is_windows ? 'windows' : 'console',
   install: true,
 )
 
-if not is_windows
-  valgrind = find_program('valgrind', required: false)
-  if valgrind.found()
-    valgrind_env = environment()
-    valgrind_env.set('G_DEBUG', 'gc-friendly')
-    valgrind_env.set('G_SLICE', 'always-malloc')
-    valgrind_env.set('GSETTINGS_SCHEMA_DIR', meson.project_build_root() / 'data')
+valgrind = find_program('valgrind', required: false)
+if valgrind.found()
+  valgrind_env = environment()
+  valgrind_env.set('G_DEBUG', 'gc-friendly')
+  valgrind_env.set('G_SLICE', 'always-malloc')
+  valgrind_env.set('GSETTINGS_SCHEMA_DIR', meson.project_build_root() / 'data')
 
-    run_target(
-      'valgrind-memcheck',
-      command: [
-        valgrind,
-        '--tool=memcheck',
-        '--leak-check=full',
-        '--show-leak-kinds=definite,indirect,possible',
-        '--track-origins=yes',
-        '--num-callers=40',
-        '--log-file=' + meson.project_build_root() / 'valgrind-artemis-%p.log',
-        artemis_exe,
-      ],
-      env: valgrind_env,
-    )
+  run_target(
+    'valgrind-memcheck',
+    command: [
+      valgrind,
+      '--tool=memcheck',
+      '--leak-check=full',
+      '--show-leak-kinds=definite,indirect,possible',
+      '--track-origins=yes',
+      '--num-callers=40',
+      '--log-file=' + meson.project_build_root() / 'valgrind-artemis-%p.log',
+      artemis_exe,
+    ],
+    env: valgrind_env,
+  )
 
-    run_target(
-      'valgrind-massif',
-      command: [
-        valgrind,
-        '--tool=massif',
-        '--time-unit=ms',
-        '--detailed-freq=100',
-        '--max-snapshots=200',
-        '--massif-out-file=' + meson.project_build_root() / 'massif-artemis-%p.out',
-        artemis_exe,
-      ],
-      env: valgrind_env,
-    )
-  endif
-endif
-
-if not is_windows
-  gnome.post_install(
-      glib_compile_schemas: true,
-      gtk_update_icon_cache: true,
-    update_desktop_database: true,
+  run_target(
+    'valgrind-massif',
+    command: [
+      valgrind,
+      '--tool=massif',
+      '--time-unit=ms',
+      '--detailed-freq=100',
+      '--max-snapshots=200',
+      '--massif-out-file=' + meson.project_build_root() / 'massif-artemis-%p.out',
+      artemis_exe,
+    ],
+    env: valgrind_env,
   )
 endif
+
+gnome.post_install(
+    glib_compile_schemas: true,
+    gtk_update_icon_cache: true,
+  update_desktop_database: true,
+)

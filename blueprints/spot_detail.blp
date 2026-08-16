@@ -242,17 +242,6 @@ template $SpotDetail : Box {
                 orientation: horizontal;
                 spacing: 8;
 
-                Button detail_not_heard_button {
-                  tooltip-text: _("Mark this spot as not heard for 10 minutes");
-                  styles ["circular", "spot-detail-icon-button"]
-                  icon-name: "headphones-muted-symbolic";
-
-                  accessibility {
-                    label: _("Not Heard");
-                    role-description: _("button");
-                  }
-                }
-
                 Box {
                   hexpand: true;
                   styles ["linked"]
@@ -278,6 +267,17 @@ template $SpotDetail : Box {
                       label: _("Spot");
                       role-description: _("button");
                     }
+                  }
+                }
+
+                Button detail_not_heard_button {
+                  tooltip-text: _("Mark this spot as not heard for 10 minutes");
+                  styles ["circular", "spot-detail-icon-button"]
+                  icon-name: "headphones-muted-symbolic";
+
+                  accessibility {
+                    label: _("Not Heard");
+                    role-description: _("button");
                   }
                 }
 

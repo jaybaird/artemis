@@ -493,7 +493,6 @@ public sealed class RadioPreferencesPage : Adw.PreferencesPage {
         return Application.settings.get_int ("radio-network-port");
     }
 
-#if ARTEMIS_WINDOWS
     private Gtk.StringList get_serial_devices () {
         var model = new Gtk.StringList ({});
         var devices = RadioControl.get_serial_devices ();
@@ -502,14 +501,4 @@ public sealed class RadioPreferencesPage : Adw.PreferencesPage {
 
         return model;
     }
-#else
-    private Gtk.StringList get_serial_devices () {
-        var model = new Gtk.StringList ({});
-        var devices = RadioControl.get_serial_devices ();
-        foreach (var device in devices)
-            model.append (device);
-
-        return model;
-    }
-#endif
 }

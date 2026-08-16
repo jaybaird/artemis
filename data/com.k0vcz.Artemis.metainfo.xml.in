@@ -100,11 +100,14 @@
     <release version="2.2" date="2026-06-19">
       <url type="details">https://github.com/jaybaird/artemis-vala/releases/tag/v2.2</url>
       <description>
-        <p>Trailwave 2.2 adds operating-limit awareness and improves the release experience.</p>
+        <p>Trailwave 2.2 adds operating-limit awareness, more WSJT-X integration, and improved activity handling.</p>
         <ul>
           <li>Added advisory operating limit profiles with spot filtering and tune warnings.</li>
-          <li>Improved spot selection stability while live spots refresh.</li>
-          <li>Refined map overlays, signal report controls, and release metadata.</li>
+          <li>More sorting options; you can now sort by time, activator callsign, and frequency.</li>
+          <li>Added WSJT-X decode matching, reciprocal-hearing indicators, and local-time context.</li>
+          <li>Improved spot selection stability, map overlays, signal report controls, and radio status.</li>
+          <li>Added activator details, awards, QRZ links, spot alerts, and refreshed help and preferences.</li>
+          <li>Fixed QSO import, WSJT-X logging, and re-spot comments carrying over from the previous spot.</li>
         </ul>
       </description>
     </release>
@@ -171,7 +174,6 @@
       <description>
         <p>Added much better hamlib support for radios and features</p>
         <p>Fixed a map bug where unconfigured QTH grid square would cause map to just not work</p>
-        <p>Added support for Windows</p>
         <p>Lots of other small bug fixes across the app</p>
       </description>
     </release>

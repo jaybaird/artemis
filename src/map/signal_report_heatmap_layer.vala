@@ -37,6 +37,9 @@ public class SignalReportHeatmapLayer : Layer {
     private const uint AGE_REFRESH_INTERVAL_SECONDS = 60;
     private const uint RENDER_SCALE = 2;
     private const double HEATMAP_ALPHA_SCALE = 0.62;
+    // Point weights are capped at 1.0; this leaves room for overlapping reports
+    // before the heatmap reaches the hottest color.
+    private const float HEATMAP_SATURATION = 2.0f;
 
     private HeatmapModel model;
     private HeatmapStamp stamp;
@@ -189,7 +192,11 @@ public class SignalReportHeatmapLayer : Layer {
         }
 
         uint8[] rgba = new uint8[render_width * render_height * 4];
-        heatmap.render_default_to ((uchar*) rgba);
+        heatmap.render_saturated_to (
+            default_color_scheme,
+            HEATMAP_SATURATION,
+            (uchar*) rgba
+        );
         apply_alpha_scale (rgba);
 
         var bytes = new Bytes.take ((owned) rgba);

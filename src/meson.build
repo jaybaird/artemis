@@ -90,17 +90,10 @@ artemis_vala_sources = [
   'src/wsjtx/wsjtx_session.vala'
 ]
 
-if is_windows
-  add_project_arguments(
-    ['--define=ARTEMIS_WINDOWS'],
-    language: 'vala')
-  add_project_arguments('-DARTEMIS_WINDOWS', language: 'c')
-else
-  add_project_arguments(
-    ['--define=ARTEMIS_UNIX'],
-    language: 'vala')
-  add_project_arguments('-DARTEMIS_UNIX', language: 'c')
-endif
+add_project_arguments(
+  ['--define=ARTEMIS_UNIX'],
+  language: 'vala')
+add_project_arguments('-DARTEMIS_UNIX', language: 'c')
 
 if devel
   add_project_arguments('-DARTEMIS_DEBUG', language: 'c')
@@ -137,11 +130,7 @@ cc = meson.get_compiler('c')
 radio_control_sources = ['radio/radio_control.c']
 radio_control_deps = [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
 
-if is_windows
-  radio_control_deps += cc.find_library('setupapi', required: true)
-else
-  radio_control_deps += dependency('gudev-1.0')
-endif
+radio_control_deps += dependency('gudev-1.0')
 
 libradiocontrol = static_library(
   'radiocontrol',
@@ -196,12 +185,10 @@ artemis_vala_deps = [
   mathlib
 ]
 
-if not is_windows
-  artemis_vala_deps += [
-    dependency('glycin-2'),
-    dependency('glycin-gtk4-2')
-  ]
-endif
+artemis_vala_deps += [
+  dependency('glycin-2'),
+  dependency('glycin-gtk4-2')
+]
 
 artemis_vala_sources += configure_file(
   input: 'build.vala.in',

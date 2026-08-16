@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": 5,
+  "contentVersion": 7,
   "sections": [
     {
       "id": "getting-started",
@@ -56,6 +56,7 @@
           "paragraphs": [
             "Open Preferences to choose your default band, default mode, refresh interval, stale-spot limit, units, map scale, and whether Trailwave highlights unhunted parks. Those settings shape the main window when Trailwave opens.",
             "During a session, use the sidebar to filter by band, mode, and POTA program. Use Search to match callsigns, park references, or park names, and switch between Cards, List, and Map depending on whether you want scanning density or geographic context.",
+            "Use the Sort By menu to order spots by time, activator callsign, or frequency. The selected order applies to the Cards and List views; Map remains spatially arranged.",
             "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload."
           ],
           "keywords": [
@@ -147,6 +148,29 @@
           ]
         },
         {
+          "id": "band-limits",
+          "title": "How do band limits work?",
+          "summary": "Set advisory frequency ranges by band and mode to filter spots and check tuning decisions.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Preferences and choose Operating Limits. Enable Filter Spots to hide spots outside the active ranges, or enable Warn Before Tuning to ask for confirmation before tuning outside them. These controls work independently.",
+            "Choose your country and license template, then select Apply Template to load its editable ranges. Each range has a band, minimum and maximum frequency in kHz, and one or more modes. Add, edit, or remove ranges as needed, then save your changes.",
+            "If your country or license is not listed, choose Custom and enter your own ranges. The limits are advisory operating guidance; verify them against the regulations and band plan that apply to your station before transmitting."
+          ],
+          "keywords": [
+            "band limits",
+            "operating limits",
+            "frequency",
+            "ranges",
+            "bands",
+            "modes",
+            "license",
+            "filter spots",
+            "tune warning"
+          ]
+        },
+        {
           "id": "spot-badges",
           "title": "What do the spot badges mean?",
           "summary": "Badges summarize local hunting history, shift windows, and recent digital-mode activity.",
@@ -213,7 +237,8 @@
           "paragraphs": [
             "Select a spot to open the Park Detail View. The top section identifies the activator and park, then shows weather when it can be loaded for the park.",
             "Operating Details includes frequency, mode, spot count, and activator comments when present. It also includes quick actions for Not Heard, Tune, and Spot.",
-            "Location includes the park location, coordinates, distance, direction, sun times, moon times, and a link to park details when data is available.",
+            "Enable Auto-open Inspector in General preferences if you want the Park Detail View to appear automatically when you select a spot. Turn it off when you prefer to keep the main view full width.",
+            "Location includes the park location, coordinates, distance, direction, local time, sun times, moon times, and a link to park details when data is available. Shift badges can indicate whether an activation is in an early or late operating window.",
             "Last Spot shows the spotter, age, spotter comment, and a Spot History link. The activator section can show profile details and a link to the activator profile when Trailwave can retrieve them."
           ],
           "keywords": [

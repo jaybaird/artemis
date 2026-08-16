@@ -11,7 +11,7 @@
 
 **Trailwave** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track hunted parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
 
-Trailwave is designed to be cross-platform, lightweight, and easy to use.
+Trailwave is designed to be lightweight and easy to use on Linux.
 
 ## Screenshots
 
@@ -60,9 +60,6 @@ Trailwave is designed to be cross-platform, lightweight, and easy to use.
 flatpak install flathub com.k0vcz.Artemis
 flatpak run com.k0vcz.Artemis
 ```
-
-### Windows
-Run `Artemis-Setup-<version>.msi`
 
 ## Usage
 
@@ -114,14 +111,6 @@ bash scripts/release-flatpak.sh
 
 Artifact output:
 - `dist/flatpak/com.k0vcz.Artemis.flatpak`
-
-### Windows
-Requires the Msys32 UCRT64 toolchain to be installed in your Windows environment with the above dependencies. To build the installer you will need to have the Wix v6 tool chain installed as well.
-
-```bash
-bash scripts/build-windows-bundle.sh
-base scripts/build-windows-installer.sh
-```
 
 ## License
 
