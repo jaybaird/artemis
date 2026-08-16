@@ -70,29 +70,7 @@ public sealed class CallsignCache : Object {
         profile_fetch_inflight = new HashSet<string> ();
         profile_miss_expires_at = new HashMap<string, int64?> ();
 
-        var cache_dir = Path.build_filename (Environment.get_user_cache_dir (),
-            "artemis");
-        var cache = new Soup.Cache (cache_dir, Soup.CacheType.SINGLE_USER);
-        cache.set_max_size (50 * 1024 * 1024);
-
-        avatar_session = new Soup.Session () {
-            timeout = 30,
-            user_agent = Build.USER_AGENT
-        };
-        avatar_session.add_feature (cache);
-    }
-
-    private static string profile_callsign (string callsign) {
-        var stripped_callsign = callsign.strip ();
-        var profile = "";
-
-        foreach (var part in stripped_callsign.split ("/")) {
-            var candidate = part.strip ();
-            if (candidate.length > profile.length)
-                profile = candidate;
-        }
-
-        return (profile != "") ? profile : stripped_callsign;
+        avatar_session = HttpSessionFactory.create_cached_session (30);
     }
 
     private async Gdk.Texture load_avatar_texture (GLib.Bytes bytes) throws Error {
@@ -146,7 +124,7 @@ public sealed class CallsignCache : Object {
     }
 
     private string remember_profile_alias (string callsign) {
-        var profile = profile_callsign (callsign);
+        var profile = pota_profile_callsign (callsign);
         var aliases = profile_aliases.get (profile);
         if (aliases == null) {
             aliases = new HashSet<string> ();
@@ -182,7 +160,7 @@ public sealed class CallsignCache : Object {
         prune_expired_entries ();
         var entry = ham_cache.get (callsign);
         if ((entry == null) || is_entry_expired (entry)) {
-            var profile = profile_callsign (callsign);
+            var profile = pota_profile_callsign (callsign);
             entry = ham_cache.get (profile);
         }
         if (is_entry_expired (entry) || (entry == null))
@@ -217,7 +195,7 @@ public sealed class CallsignCache : Object {
         try {
             var gravatar_hash = entry.gravatar_hash;
             if ((gravatar_hash != null) && (gravatar_hash.strip () != "")) {
-                var url = "https://www.gravatar.com/avatar/%s?s=128&d=identicon"
+                var url = "https://www.gravatar.com/avatar/%s?s=256&d=identicon"
                     .printf (gravatar_hash);
 
                 var message = new Soup.Message ("GET", url);

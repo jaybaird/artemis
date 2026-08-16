@@ -9,6 +9,7 @@ public class SpotFilterSnapshot {
     public string park_ref;
     public string park_name;
     public string activator_comment;
+    public string frequency;
     public string band;
     public string mode;
     public DateTime spot_time;
@@ -19,6 +20,7 @@ public class SpotFilterSnapshot {
         string park_ref,
         string park_name,
         string activator_comment,
+        string frequency,
         string band,
         string mode,
         DateTime spot_time,
@@ -28,6 +30,7 @@ public class SpotFilterSnapshot {
         this.park_ref = park_ref;
         this.park_name = park_name;
         this.activator_comment = activator_comment;
+        this.frequency = frequency;
         this.band = band;
         this.mode = mode;
         this.spot_time = spot_time;
@@ -46,6 +49,7 @@ public class SpotFilterState {
     public bool hide_hunted;
     public int hide_older_than_minutes;
     public DateTime now_utc;
+    public OperatingLimitEvaluator? operating_limits;
 
     public SpotFilterState (
         string band,
@@ -55,7 +59,8 @@ public class SpotFilterState {
         bool hide_qrt,
         bool hide_hunted,
         int hide_older_than_minutes,
-        DateTime? now_utc = null
+        DateTime? now_utc = null,
+        OperatingLimitEvaluator? operating_limits = null
     ) {
         this.band = band;
         this.mode = mode;
@@ -65,6 +70,7 @@ public class SpotFilterState {
         this.hide_hunted = hide_hunted;
         this.hide_older_than_minutes = hide_older_than_minutes;
         this.now_utc = now_utc ?? new DateTime.now_utc ();
+        this.operating_limits = operating_limits;
     }
 }
 
@@ -97,12 +103,43 @@ public static bool spot_matches_filter (SpotFilterSnapshot spot, SpotFilterState
 
     if (filter.search_text != null) {
         var needle = filter.search_text.down ();
+        var normalized_needle = digits_only (needle);
+        var normalized_frequency = digits_only (spot.frequency);
         if (!(spot.callsign.down ().contains (needle) ||
               spot.park_ref.down ().contains (needle) ||
-              spot.park_name.down ().contains (needle))) {
+              spot.park_name.down ().contains (needle) ||
+              (normalized_needle != "" && normalized_frequency.contains (normalized_needle)))) {
+            return false;
+        }
+    }
+
+    if (filter.operating_limits != null) {
+        try {
+            var frequency_khz = parse_spot_filter_frequency_khz (spot.frequency);
+            if (!filter.operating_limits.evaluate (frequency_khz, spot.mode).allowed)
+                return false;
+        } catch (FrequencyError err) {
             return false;
         }
     }
 
     return true;
+}
+
+private static double parse_spot_filter_frequency_khz (string frequency) throws FrequencyError {
+    var frequency_khz = parse_frequency (frequency, FrequencyUnit.KHZ, FrequencyUnit.KHZ);
+    if (frequency_khz < 1000.0 && frequency.contains ("."))
+        return parse_frequency (frequency, FrequencyUnit.MHZ, FrequencyUnit.KHZ);
+
+    return frequency_khz;
+}
+
+private static string digits_only (string value) {
+    var builder = new StringBuilder ();
+    for (var index = 0; index < value.length; index++) {
+        char ch = value[index];
+        if (ch >= '0' && ch <= '9')
+            builder.append_c (ch);
+    }
+    return builder.str;
 }

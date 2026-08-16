@@ -1,0 +1,45 @@
+using Gtk 4.0;
+
+template $SpotHistoryRow : ListBoxRow {
+  margin-top: 6;
+  margin-bottom: 6;
+  margin-start: 6;
+  margin-end: 6;
+  styles ["card"]
+
+  child: Box {
+    orientation: vertical;
+    spacing: 8;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Label comment_label {
+      xalign: 0.0;
+      wrap: true;
+      wrap-mode: word_char;
+      margin-top: 4;
+      visible: false;
+      styles ["title-4"]
+    }
+
+    Box {
+      orientation: horizontal;
+      spacing: 12;
+
+      Label spotter_label {
+        xalign: 0.0;
+      }
+
+      Label frequency_label {
+        xalign: 0.0;
+        hexpand: true;
+      }
+
+      Label time_label {
+        xalign: 1.0;
+      }
+    }
+  };
+}

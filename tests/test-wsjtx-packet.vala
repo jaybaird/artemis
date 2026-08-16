@@ -143,6 +143,53 @@ private void test_status_parse () {
     assert (status.configuration_name == "Default");
 }
 
+private void test_qso_logged_parse () {
+    var writer = new PacketWriter ();
+    writer.write_header (MessageType.QSO_LOGGED, "WSJT-X");
+
+    WsjtxDateTime time_off = {};
+    time_off.julian_day = 2461180;
+    time_off.msecs_since_midnight = 55860000;
+    time_off.time_spec = 1;
+    writer.write_qdatetime (time_off);
+    writer.write_utf8 ("K1ABC");
+    writer.write_utf8 ("FN31");
+    writer.write_u64 (14074000);
+    writer.write_utf8 ("FT8");
+    writer.write_utf8 ("+04");
+    writer.write_utf8 ("-10");
+    writer.write_utf8 ("100");
+    writer.write_utf8 ("POTA contact");
+    writer.write_utf8 ("Test Op");
+
+    WsjtxDateTime time_on = {};
+    time_on.julian_day = 2461180;
+    time_on.msecs_since_midnight = 55800000;
+    time_on.time_spec = 1;
+    writer.write_qdatetime (time_on);
+    writer.write_utf8 ("K0VCZ");
+    writer.write_utf8 ("K0VCZ");
+    writer.write_utf8 ("DM14");
+    writer.write_utf8 ("");
+    writer.write_utf8 ("");
+
+    var parser = new PacketParser ();
+    var packet = parser.parse (writer.finish ());
+
+    assert (packet.type == MessageType.QSO_LOGGED);
+    var qso = packet.get_qso_logged ();
+    assert (qso.dx_call == "K1ABC");
+    assert (qso.dx_grid == "FN31");
+    assert (qso.tx_frequency_hz == 14074000);
+    assert (qso.mode == "FT8");
+    assert (qso.report_sent == "+04");
+    assert (qso.report_received == "-10");
+    assert (qso.comments == "POTA contact");
+    assert (qso.operator_call == "K0VCZ");
+    assert (qso.my_grid == "DM14");
+    assert (qso.time_on.julian_day == 2461180);
+}
+
 private void test_utf8_string_parsing () {
     var parser = new PacketParser ();
     var datagram = PacketWriter.build_heartbeat (
@@ -196,6 +243,7 @@ public static int main (string[] args) {
     Test.add_func ("/wsjtx/heartbeat", test_heartbeat_parse);
     Test.add_func ("/wsjtx/decode", test_decode_parse);
     Test.add_func ("/wsjtx/status", test_status_parse);
+    Test.add_func ("/wsjtx/qso-logged", test_qso_logged_parse);
     Test.add_func ("/wsjtx/utf8", test_utf8_string_parsing);
     Test.add_func ("/wsjtx/unknown", test_unknown_packet_does_not_crash);
     Test.add_func ("/wsjtx/trailing-bytes", test_trailing_bytes_tolerated);

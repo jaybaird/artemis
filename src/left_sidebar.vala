@@ -36,7 +36,7 @@ public sealed class BandButton : Gtk.Box {
 
         band_strip.band = band;
         band_name.label = band;
-        count_label.label = count.to_string ();
+        count_label.label = count.to_string ("%'d");
     }
 }
 

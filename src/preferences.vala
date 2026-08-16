@@ -30,6 +30,9 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
     private unowned RadioPreferencesPage radio_page;
 
     [GtkChild]
+    private unowned OperatingLimitsPreferencesPage operating_limits_page;
+
+    [GtkChild]
     private unowned LoggingPreferencesPage logging_page;
 
     [GtkChild]
@@ -43,6 +46,7 @@ public sealed class PreferencesDialog : Adw.PreferencesDialog {
         general_page.setup ();
         map_page.setup ();
         radio_page.setup ();
+        operating_limits_page.setup ();
         logging_page.setup ();
         wsjtx_page.setup ();
     }

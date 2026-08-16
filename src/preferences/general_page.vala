@@ -39,6 +39,9 @@ public sealed class GeneralPreferencesPage : Adw.PreferencesPage {
     private unowned Adw.ComboRow row_default_mode;
 
     [GtkChild]
+    private unowned Adw.SwitchRow row_auto_open_inspector;
+
+    [GtkChild]
     private unowned Adw.SwitchRow row_use_metric;
 
     [GtkChild]
@@ -70,6 +73,8 @@ public sealed class GeneralPreferencesPage : Adw.PreferencesPage {
         bind_combo_to_string_setting ("default-band", row_default_band);
         bind_combo_to_string_setting ("default-mode", row_default_mode);
 
+        Application.settings.bind ("auto-open-inspector", row_auto_open_inspector, "active",
+            SettingsBindFlags.DEFAULT);
         Application.settings.bind ("use-metric", row_use_metric, "active",
             SettingsBindFlags.DEFAULT);
         Application.settings.bind ("show-map-scale", row_show_scale, "active",

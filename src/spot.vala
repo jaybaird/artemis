@@ -18,10 +18,6 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Shumate;
-
-public const uint32 BLANK_HASH = uint32.MAX;
-
 public class RadioConstants {
     public const string UNKNOWN_MODE = "Unknown";
 
@@ -70,7 +66,10 @@ public string band_from_khz (double khz) {
 
 public sealed class Spot : Object, WeatherSpotDetails {
     public const uint HEARD_RECENTLY_TIMEOUT_SECONDS = 90;
+    public const uint NOT_HEARD_RECENTLY_TIMEOUT_SECONDS = 10 * 60;
     private uint heard_recently_timeout_id = 0;
+    private uint heard_reciprocally_timeout_id = 0;
+    private uint not_heard_recently_timeout_id = 0;
 
     public string callsign { get; construct; }
     public string park_ref { get; construct; }
@@ -88,7 +87,7 @@ public sealed class Spot : Object, WeatherSpotDetails {
     public string grid6 { get; construct; }
     public double distance { get; construct; }
     public double bearing { get; construct; }
-    public Coordinate coordinate { get; construct; }
+    public Coordinate? coordinate { get; construct; }
     public Quark hash { get; construct; default = BLANK_HASH; }
     public bool is_new_park { get; private set; default = false; }
     public bool was_hunted_today { get; private set; default = false; }
@@ -96,6 +95,8 @@ public sealed class Spot : Object, WeatherSpotDetails {
     public string? rst_sent { get; construct; }
     public string? rst_rcvd { get; construct; }
     public bool heard_recently { get; private set; default = false; }
+    public bool heard_reciprocally { get; private set; default = false; }
+    public bool not_heard_recently { get; private set; default = false; }
 
     public Spot (string callsign,
                  string park_ref,
@@ -132,12 +133,15 @@ public sealed class Spot : Object, WeatherSpotDetails {
         return park_ref;
     }
 
-    public string weather_grid4 () {
-        return grid4;
+    public string weather_grid () {
+        return grid ();
     }
 
-    public string weather_grid6 () {
-        return grid6;
+    public string grid () {
+        if (has_text (grid6))
+            return grid6.strip ();
+
+        return (grid4 ?? "").strip ();
     }
 
     public Spot.from_add_spot (
@@ -248,10 +252,10 @@ public sealed class Spot : Object, WeatherSpotDetails {
         distance = -1.0;
         bearing = -1.0;
 
-        var park_grid = ((grid6 ?? "") == "") ? (grid4 ?? "") : grid6;
+        var park_grid = grid ();
         if ((park_grid != null) && (park_grid.strip () != "")) {
             try {
-                coordinate = Distance.maidenhead_to_latlon (park_grid);
+                coordinate = Maidenhead.center (park_grid);
             } catch (Error error) {
                 warning (error.message);
                 coordinate = null;
@@ -261,8 +265,8 @@ public sealed class Spot : Object, WeatherSpotDetails {
         var grid = Application.settings.get_string ("location");
         if ((coordinate != null) && (grid != "")) {
             try {
-                var latlon = Distance.maidenhead_to_latlon (grid);
-                distance = Distance.haversine_distance_km (latlon, coordinate);
+                var latlon = Maidenhead.center (grid);
+                distance = latlon.distance_km (coordinate);
                 bearing = Distance.bearing (latlon, coordinate);
             } catch (Error error) {
                 warning (error.message);
@@ -328,11 +332,54 @@ public sealed class Spot : Object, WeatherSpotDetails {
         });
     }
 
+    public void mark_heard_reciprocally (uint timeout_seconds = HEARD_RECENTLY_TIMEOUT_SECONDS) {
+        heard_reciprocally = true;
+        notify_property ("heard-reciprocally");
+
+        if (heard_reciprocally_timeout_id != 0) {
+            Source.remove (heard_reciprocally_timeout_id);
+            heard_reciprocally_timeout_id = 0;
+        }
+
+        heard_reciprocally_timeout_id = Timeout.add_seconds (timeout_seconds, () => {
+            heard_reciprocally_timeout_id = 0;
+            if (heard_reciprocally) {
+                heard_reciprocally = false;
+                notify_property ("heard-reciprocally");
+            }
+            return Source.REMOVE;
+        });
+    }
+
+    public void mark_not_heard_recently (
+        uint timeout_seconds = NOT_HEARD_RECENTLY_TIMEOUT_SECONDS
+    ) {
+        not_heard_recently = true;
+        notify_property ("not-heard-recently");
+
+        if (not_heard_recently_timeout_id != 0) {
+            Source.remove (not_heard_recently_timeout_id);
+            not_heard_recently_timeout_id = 0;
+        }
+
+        not_heard_recently_timeout_id = Timeout.add_seconds (timeout_seconds, () => {
+            not_heard_recently_timeout_id = 0;
+            if (not_heard_recently) {
+                not_heard_recently = false;
+                notify_property ("not-heard-recently");
+            }
+            return Source.REMOVE;
+        });
+    }
+
     public void set_log_status (
         bool was_hunted_today,
         bool is_new_park,
         bool is_new_band
     ) {
+        if (was_hunted_today)
+            is_new_park = false;
+
         if (this.was_hunted_today != was_hunted_today) {
             this.was_hunted_today = was_hunted_today;
             notify_property ("was-hunted-today");
@@ -351,6 +398,14 @@ public sealed class Spot : Object, WeatherSpotDetails {
         if (heard_recently_timeout_id != 0) {
             Source.remove (heard_recently_timeout_id);
             heard_recently_timeout_id = 0;
+        }
+        if (heard_reciprocally_timeout_id != 0) {
+            Source.remove (heard_reciprocally_timeout_id);
+            heard_reciprocally_timeout_id = 0;
+        }
+        if (not_heard_recently_timeout_id != 0) {
+            Source.remove (not_heard_recently_timeout_id);
+            not_heard_recently_timeout_id = 0;
         }
     }
 } /* class Spot */

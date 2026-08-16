@@ -7,25 +7,23 @@ desktop_file = i18n.merge_file(
   install_dir: get_option('datadir') / 'applications'
 )
 
-if not is_windows
-  desktop_utils = find_program('desktop-file-validate', required: false)
-  if desktop_utils.found()
-    test('Validate desktop file', desktop_utils, args: [desktop_file])
-  endif
+desktop_utils = find_program('desktop-file-validate', required: false)
+if desktop_utils.found()
+  test('Validate desktop file', desktop_utils, args: [desktop_file])
+endif
 
-  appstream_file = i18n.merge_file(
-          input: 'com.k0vcz.Artemis.metainfo.xml.in',
-        output: 'com.k0vcz.Artemis.metainfo.xml',
-        po_dir: '../po',
-        install: true,
-    install_dir: get_option('datadir') / 'metainfo'
-  )
+appstream_file = i18n.merge_file(
+        input: 'com.k0vcz.Artemis.metainfo.xml.in',
+      output: 'com.k0vcz.Artemis.metainfo.xml',
+      po_dir: '../po',
+      install: true,
+  install_dir: get_option('datadir') / 'metainfo'
+)
 
-  appstreamcli = find_program('appstreamcli', required: false, disabler: true)
-  if appstreamcli.found()
-    test('Validate appstream file', appstreamcli,
-      args: ['validate', '--no-net', '--explain', appstream_file])
-  endif
+appstreamcli = find_program('appstreamcli', required: false, disabler: true)
+if appstreamcli.found()
+  test('Validate appstream file', appstreamcli,
+    args: ['validate', '--no-net', '--explain', appstream_file])
 endif
 
 schema_install_dir = get_option('datadir') / 'glib-2.0' / 'schemas'
@@ -44,12 +42,10 @@ if compile_schemas.found()
   test('Validate schema file',
      compile_schemas,
      args: ['--strict', '--dry-run', meson.current_source_dir()])
-  if not is_windows
-    meson.add_install_script(
-      compile_schemas,
-      schema_compile_dir
-    )
-  endif
+  meson.add_install_script(
+    compile_schemas,
+    schema_compile_dir
+  )
 endif
 
 service_conf = configuration_data()

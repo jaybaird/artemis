@@ -21,27 +21,33 @@
 public class HeatmapPoint : Object {
     public double latitude { get; construct; }
     public double longitude { get; construct; }
+    public string grid { get; construct; }
     public float weight { get; construct; }
     public uint count { get; construct; }
     public int strongest_snr { get; construct; }
+    public double average_snr { get; construct; }
     public int64 latest_timestamp_unix { get; construct; }
     public string? bucket_key { get; construct; }
 
     public HeatmapPoint (
         double latitude,
         double longitude,
+        string grid,
         float weight,
         uint count,
         int strongest_snr,
+        double average_snr,
         int64 latest_timestamp_unix,
         string? bucket_key = null
     ) {
         Object (
             latitude: latitude,
             longitude: longitude,
+            grid: grid,
             weight: weight,
             count: count,
             strongest_snr: strongest_snr,
+            average_snr: average_snr,
             latest_timestamp_unix: latest_timestamp_unix,
             bucket_key: bucket_key
         );

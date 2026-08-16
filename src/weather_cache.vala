@@ -1,6 +1,5 @@
 using Gee;
 using GLib;
-using Shumate;
 
 public errordomain WeatherError {
     INVALID_REQUEST,
@@ -51,8 +50,7 @@ public interface WeatherUnitsProvider : Object {
 
 public interface WeatherSpotDetails : Object {
     public abstract string weather_park_ref ();
-    public abstract string weather_grid4 ();
-    public abstract string weather_grid6 ();
+    public abstract string weather_grid ();
 }
 
 public sealed class SettingsWeatherUnitsProvider : Object, WeatherUnitsProvider {
@@ -77,10 +75,7 @@ public sealed class WeatherClient : Object, WeatherProvider {
     }
 
     construct {
-        session = new Soup.Session () {
-            timeout = 30,
-            user_agent = Build.USER_AGENT
-        };
+        session = HttpSessionFactory.create_cached_session (30);
     }
 
     private static string encode_query_value (string value) {
@@ -183,33 +178,28 @@ public sealed class WeatherCache : Object {
         );
     }
 
-    private static string normalize_grid4 (string grid) throws Error {
-        var normalized = grid.strip ().ascii_up ();
-        if (normalized.length < 4) {
-            throw new WeatherError.INVALID_REQUEST ("Grid locator %s is too short for weather lookups".printf (grid)
-            );
+    private static string grid4_for_spot (WeatherSpotDetails spot) throws Error {
+        try {
+            return weather_grid4 (spot.weather_grid ());
+        } catch (Error err) {
+            throw new WeatherError.INVALID_REQUEST ("Spot %s has no usable grid square for weather lookups".printf (
+                spot.weather_park_ref ()
+            ));
         }
-
-        return normalized.substring (0, 4);
     }
 
-    private static string grid4_for_spot (WeatherSpotDetails spot) throws Error {
-        var grid4 = (spot.weather_grid4 () ?? "").strip ();
-        if (grid4 != "")
-            return normalize_grid4 (grid4);
-
-        var grid6 = (spot.weather_grid6 () ?? "").strip ();
-        if (grid6.length >= 4)
-            return normalize_grid4 (grid6.substring (0, 4));
-
-        throw new WeatherError.INVALID_REQUEST ("Spot %s has no usable grid square for weather lookups".printf (
-                spot.weather_park_ref ()
-            )
-        );
+    private static string weather_grid4 (string grid) throws Error {
+        try {
+            return Maidenhead.grid4 (grid);
+        } catch (Error err) {
+            throw new WeatherError.INVALID_REQUEST (
+                "Grid locator %s is not usable for weather lookups".printf (grid)
+            );
+        }
     }
 
     private static string cache_key_for (string grid4, string units) throws Error {
-        return "%s:%s".printf (normalize_grid4 (grid4), units);
+        return "%s:%s".printf (weather_grid4 (grid4), units);
     }
 
     private static string cache_group_for_key (string cache_key) {
@@ -320,7 +310,7 @@ public sealed class WeatherCache : Object {
         if (cached_entry != null && !cached_entry.is_expired (now))
             return cached_entry.data;
 
-        var coord = Distance.maidenhead_to_latlon (normalize_grid4 (grid4));
+        var coord = Maidenhead.center (weather_grid4 (grid4));
         var data = yield client.fetch_weather (coord, units);
         var entry = new WeatherCacheEntry (data, now + CACHE_TTL_SECONDS);
         memory_cache.set (cache_key, entry);

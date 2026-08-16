@@ -8,8 +8,9 @@ namespace Artemis.Adif {
         var station_callsign = (spot.spotter ?? "").strip ();
         var contacted_callsign = (spot.callsign ?? "").strip ();
         var band = (spot.band ?? "").strip ();
-        var mode = (spot.mode ?? "").strip ().up ();
+        var mode = strip_up (spot.mode ?? "");
         var park_ref = (spot.park_ref ?? "").strip ();
+        var grid_square = spot.grid ();
 
         if (station_callsign == "")
             throw new Error.INVALID_VALUE ("Station callsign is required");
@@ -29,6 +30,8 @@ namespace Artemis.Adif {
         record.set ("TIME_ON", qso_time.format ("%H%M"));
         record.set ("BAND", band);
         record.set ("MODE", mode);
+        record.set ("GRIDSQUARE", grid_square);
+
 
         if (spot.frequency_khz > 0)
             record.set ("FREQ", format_frequency_mhz_from_khz (spot.frequency_khz));

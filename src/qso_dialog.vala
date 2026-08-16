@@ -172,9 +172,19 @@ public sealed class QsoDialog : Adw.Dialog {
             return;
         }
 
+        message (
+            "Manual QRZ retry requested for %s @ %s",
+            spot.callsign,
+            spot.park_ref
+        );
         Application.qrz_client.upload_spot_qso.begin (spot, (obj, res) => {
             try {
                 Application.qrz_client.upload_spot_qso.end (res);
+                message (
+                    "Manual retry QRZ upload completed for %s @ %s",
+                    spot.callsign,
+                    spot.park_ref
+                );
                 qrz_uploaded = true;
                 qrz_error = null;
                 update_delivery_status (spot);
@@ -271,7 +281,7 @@ public sealed class QsoDialog : Adw.Dialog {
         if (model == null)
             return;
 
-        var normalized_mode = mode_name.strip ().up ();
+        var normalized_mode = strip_up (mode_name);
         for (uint i = 0 ; i < model.get_n_items () ; i++) {
             if (model.get_string (i).up () == normalized_mode) {
                 mode.selected = i;

@@ -46,7 +46,7 @@ public sealed class PskReporterReportCache : Object {
     }
 
     public ArrayList<SignalReport>? get_reports (string callsign) {
-        var normalized_callsign = normalize_cache_key (callsign);
+        var normalized_callsign = normalize_callsign_key (callsign);
         if (normalized_callsign == "")
             return null;
 
@@ -87,7 +87,7 @@ public sealed class PskReporterReportCache : Object {
         string callsign,
         int64 cached_at
     ) {
-        var normalized_callsign = normalize_cache_key (callsign);
+        var normalized_callsign = normalize_callsign_key (callsign);
         if (normalized_callsign == "")
             return;
 
@@ -194,10 +194,6 @@ public sealed class PskReporterReportCache : Object {
         }
     }
 
-    private static string normalize_cache_key (string callsign) {
-        return callsign.strip ().ascii_down ();
-    }
-
     private static string cache_group (string callsign) {
         return "callsign:%s".printf (GLib.Uri.escape_string (callsign, null, false));
     }
@@ -224,7 +220,7 @@ public sealed class PskReporterClient : Object {
         string callsign,
         int flow_start_seconds = DEFAULT_FLOW_START_SECONDS
     ) throws Error {
-        var normalized_callsign = callsign.strip ().ascii_up ();
+        var normalized_callsign = normalize_callsign (callsign);
         if (normalized_callsign == "")
             throw new PskReporterClientError.INVALID_CALLSIGN ("Callsign is required");
 

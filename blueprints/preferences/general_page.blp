@@ -99,6 +99,15 @@ template $GeneralPreferencesPage : Adw.PreferencesPage {
   Adw.PreferencesGroup {
     title: _("Display Options");
 
+    Adw.SwitchRow row_auto_open_inspector {
+      title: _("Auto-open Inspector");
+      subtitle: _("Automatically show the Inspector panel when a spot is selected");
+      accessibility {
+        label: _("Auto-open Inspector");
+        role-description: _("switch");
+      }
+    }
+
     Adw.SwitchRow row_use_metric {
       title: _("Metric Units");
       subtitle: _("Use metric units for distance calculations and in the map window");

@@ -68,11 +68,6 @@ const gchar * const *
 radio_control_get_serial_devices_unix(gint *count);
 #endif
 
-#ifdef ARTEMIS_WINDOWS
-const gchar * const *
-radio_control_get_serial_devices_windows(gint *count);
-#endif
-
 void
 radio_configuration_destroy(RadioConfiguration *config);
 

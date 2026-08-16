@@ -19,30 +19,9 @@
  */
 
 using GLib;
-using Shumate;
-
-public static inline uint clampi (uint v, uint min, uint max) {
-    return (v < min) ? min : (max < v) ? max : v;
-}
 
 public static inline double clamp (double v, double min, double max) {
     return (v < min) ? min : (max < v) ? max : v;
-}
-
-public static T random_choice<T> (T[] array) {
-    if (array.length == 0)
-        critical ("Cannot choose from an empty array");
-    return array[Random.int_range (0, array.length)];
-}
-
-public static Gee.ArrayList<T> to_array<T> (Gee.Iterator<T> iter) {
-    var list = new Gee.ArrayList<T> ();
-
-    while (iter.next ()) {
-        list.add (iter.get ());
-    }
-
-    return list;
 }
 
 public static string format_vfo (double freq_khz) {
@@ -52,26 +31,6 @@ public static string format_vfo (double freq_khz) {
     uint64 hz = freq_hz % 1000;
 
     return "%lu.%03lu.%02lu".printf ((ulong)mhz, (ulong)khz, (ulong)(hz / 10));
-}
-
-public async Gdk.Texture load_texture_from_bytes (GLib.Bytes bytes) throws Error {
-    var loader = new Gly.Loader.for_bytes (bytes);
-    var image = yield loader.load_async (null);
-    var frame = yield image.next_frame_async (null);
-    return GlyGtk4.frame_get_texture (frame);
-}
-
-public static string pota_profile_callsign (string callsign) {
-    var stripped_callsign = callsign.strip ();
-    var profile_callsign = "";
-
-    foreach (var part in stripped_callsign.split ("/")) {
-        var candidate = part.strip ();
-        if (candidate.length > profile_callsign.length)
-            profile_callsign = candidate;
-    }
-
-    return (profile_callsign != "") ? profile_callsign : stripped_callsign;
 }
 
 public sealed class SpotBadgeInfo : Object {
@@ -107,7 +66,10 @@ public class SpotBadgeHelpInfo {
     }
 }
 
-public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
+public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (
+    Spot spot,
+    bool include_shift_badges = true
+) {
     var badges = new Gee.ArrayList<SpotBadgeInfo> ();
 
     if (spot.heard_recently) {
@@ -118,7 +80,17 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
         ));
     }
 
-    if (spot.is_new_park && Application.settings.get_boolean ("highlight-unhunted-parks")) {
+    if (spot.heard_recently && spot.heard_reciprocally) {
+        badges.add (new SpotBadgeInfo (
+            "horizontal-arrows-symbolic",
+            _("Two-way copy"),
+            "badge-heard-reciprocally"
+        ));
+    }
+
+    if (spot.is_new_park &&
+        !spot.was_hunted_today &&
+        Application.settings.get_boolean ("highlight-unhunted-parks")) {
         badges.add (new SpotBadgeInfo (
             "starred-symbolic",
             _("New park"),
@@ -146,6 +118,28 @@ public static Gee.ArrayList<SpotBadgeInfo> collect_spot_badges (Spot spot) {
             _("New band"),
             "badge-new-band"
         ));
+    }
+
+    if (include_shift_badges) {
+        Astronomy.Shift shift = spot_shift (spot);
+        switch (shift) {
+            case Astronomy.Shift.EARLY:
+                badges.add (new SpotBadgeInfo (
+                    "sunrise-outline-symbolic",
+                    _("Early Shift"),
+                    "badge-early-shift"
+                ));
+                break;
+            case Astronomy.Shift.LATE:
+                badges.add (new SpotBadgeInfo (
+                    "moon-outline-symbolic",
+                    _("Late Shift"),
+                    "badge-late-shift"
+                ));
+                break;
+            default:
+                break;
+        }
     }
 
     return badges;
@@ -184,19 +178,65 @@ public static Gee.ArrayList<SpotBadgeHelpInfo> spot_badge_help_items () {
         _("WSJT-X recently decoded text matching this activator."),
         "badge-heard-recently"
     ));
+    badges.add (new SpotBadgeHelpInfo (
+        "horizontal-arrows-symbolic",
+        _("Two-way copy"),
+        _("WSJT-X recently decoded this activator, and PSKReporter says they recently heard you."),
+        "badge-heard-reciprocally"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "sunrise-outline-symbolic",
+        _("Early Shift"),
+        _("This spot was posted during the park's Early Shift window."),
+        "badge-early-shift"
+    ));
+    badges.add (new SpotBadgeHelpInfo (
+        "moon-outline-symbolic",
+        _("Late Shift"),
+        _("This spot was posted during the park's Late Shift window."),
+        "badge-late-shift"
+    ));
 
     return badges;
 }
 
-public static Gtk.Image create_spot_badge_image (SpotBadgeInfo badge) {
+public static Gtk.Widget create_spot_badge_widget (SpotBadgeInfo badge) {
     var image = new Gtk.Image.from_icon_name (badge.icon_name);
+    image.halign = Gtk.Align.CENTER;
+    image.valign = Gtk.Align.CENTER;
     image.tooltip_text = badge.tooltip;
     image.add_css_class ("spot-badge");
     image.add_css_class (badge.css_class);
     return image;
 }
 
-public static void populate_spot_badges (Gtk.Box box, Spot spot) {
+public static void open_uri (Gtk.Widget origin, string uri, string failure_title) {
+    var launcher = new Gtk.UriLauncher (uri);
+    var parent = origin.get_root () as Gtk.Window;
+
+    launcher.launch.begin (parent, null, (obj, res) => {
+        try {
+            launcher.launch.end (res);
+        } catch (Error e) {
+            warning ("Unable to open URI %s: %s", uri, e.message);
+
+            if (parent == null) {
+                Application.show_toast ("%s: %s".printf (failure_title, e.message));
+                return;
+            }
+
+            var alert = new Adw.AlertDialog (failure_title, e.message);
+            alert.add_response ("ok", _("OK"));
+            alert.present (parent);
+        }
+    });
+}
+
+public static void populate_spot_badges (
+    Gtk.Box box,
+    Spot spot,
+    bool include_shift_badges = true
+) {
     var child = box.get_first_child ();
     while (child != null) {
         var next = child.get_next_sibling ();
@@ -204,8 +244,76 @@ public static void populate_spot_badges (Gtk.Box box, Spot spot) {
         child = next;
     }
 
-    foreach (var badge in collect_spot_badges (spot))
-        box.append (create_spot_badge_image (badge));
+    foreach (var badge in collect_spot_badges (spot, include_shift_badges)) {
+        if (box.get_first_child () != null) {
+            var separator = new Gtk.Separator (Gtk.Orientation.VERTICAL);
+            separator.add_css_class ("spot-badge-separator");
+            box.append (separator);
+        }
+        box.append (create_spot_badge_widget (badge));
+    }
+
+    box.visible = box.get_first_child () != null;
+}
+
+public static Astronomy.Shift spot_shift (Spot spot) {
+    var grid = spot.grid ();
+    if (grid == "")
+        return Astronomy.Shift.NORMAL;
+
+    try {
+        return Astronomy.shift_for_grid (grid, spot.spot_time);
+    } catch (Error err) {
+        warning ("Failed to calculate shift for %s @ %s using grid %s: %s",
+            spot.callsign, spot.park_ref, grid, err.message);
+        return Astronomy.Shift.NORMAL;
+    }
+}
+
+public static bool spot_is_qrt (Spot spot) {
+    return spot.activator_comment.down ().contains ("qrt");
+}
+
+public static bool spot_is_deprioritized (Spot spot) {
+    return spot.not_heard_recently || spot.was_hunted_today || spot_is_qrt (spot);
+}
+
+public static bool spot_is_greyed_out (Spot spot) {
+    return spot.not_heard_recently || spot.was_hunted_today;
+}
+
+public static Gtk.Ordering compare_spots_for_display (Spot? spot_a, Spot? spot_b) {
+    if ((spot_a == null) || (spot_b == null))
+        return Gtk.Ordering.EQUAL;
+
+    var deprioritized_a = spot_is_deprioritized (spot_a);
+    var deprioritized_b = spot_is_deprioritized (spot_b);
+    if (deprioritized_a != deprioritized_b)
+        return deprioritized_a ? Gtk.Ordering.LARGER : Gtk.Ordering.SMALLER;
+
+    var sort_order = Application.settings.get_string ("spot-sort-order");
+    switch (sort_order) {
+        case "callsign":
+            var cmp = strcmp (spot_a.callsign ?? "", spot_b.callsign ?? "");
+            if (cmp != 0)
+                return cmp < 0 ? Gtk.Ordering.SMALLER : Gtk.Ordering.LARGER;
+            break;
+        case "frequency":
+            if (spot_a.frequency_khz < spot_b.frequency_khz)
+                return Gtk.Ordering.SMALLER;
+            if (spot_a.frequency_khz > spot_b.frequency_khz)
+                return Gtk.Ordering.LARGER;
+            break;
+        default:
+            break;
+    }
+
+    var time_cmp = spot_a.spot_time.compare (spot_b.spot_time);
+    if (time_cmp > 0)
+        return Gtk.Ordering.SMALLER;
+    if (time_cmp < 0)
+        return Gtk.Ordering.LARGER;
+    return Gtk.Ordering.EQUAL;
 }
 
 public static bool spot_matches_current_filters (Spot spot, string band_filter) {
@@ -216,19 +324,66 @@ public static bool spot_matches_current_filters (Spot spot, string band_filter) 
         Application.state.current_search_text,
         Application.settings.get_boolean ("hide-qrt"),
         Application.settings.get_boolean ("hide-hunted"),
-        Application.settings.get_int ("hide-older-than")
+        Application.settings.get_int ("hide-older-than"),
+        null,
+        operating_limit_spot_filter_evaluator_from_settings (Application.settings)
     );
     var snapshot = new SpotFilterSnapshot (
         spot.callsign,
         spot.park_ref,
         spot.park_name,
         spot.activator_comment,
+        format_frequency_khz (spot.frequency_khz),
         spot.band,
         spot.mode,
         spot.spot_time,
         spot.was_hunted_today
     );
     return spot_matches_filter (snapshot, filter);
+}
+
+public static void tune_spot_with_operating_limit_warning (
+    Spot spot,
+    Gtk.Widget? origin = null
+) {
+    var evaluator = operating_limit_tune_warning_evaluator_from_settings (Application.settings);
+    if (evaluator == null) {
+        Application.radio_control.tune_to_spot (spot);
+        return;
+    }
+
+    var result = evaluator.evaluate (spot.frequency_khz, spot.mode);
+    if (result.allowed) {
+        Application.radio_control.tune_to_spot (spot);
+        return;
+    }
+
+    Gtk.Window? parent = null;
+    if (origin != null)
+        parent = origin.get_root () as Gtk.Window;
+    if (parent == null)
+        parent = Application.win;
+
+    if (parent == null) {
+        Application.show_toast (_("Tune blocked by operating limits"));
+        return;
+    }
+
+    var alert = new Adw.AlertDialog (_("Tune Outside Operating Limits?"), null);
+    alert.format_body (
+        _("%s MHz is outside your selected limits for %s"),
+        format_frequency_mhz_from_khz (spot.frequency_khz),
+        result.profile_label
+    );
+    alert.add_response ("cancel", _("Cancel"));
+    alert.add_response ("tune", _("Tune Anyway"));
+    alert.set_response_appearance ("tune", Adw.ResponseAppearance.DESTRUCTIVE);
+    alert.set_default_response ("cancel");
+    alert.set_close_response ("cancel");
+    alert.choose.begin (parent, null, (obj, res) => {
+        if (alert.choose.end (res) == "tune")
+            Application.radio_control.tune_to_spot (spot);
+    });
 }
 
 public static Gdk.RGBA rgba (double red, double green, double blue, double alpha) {

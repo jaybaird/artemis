@@ -1,0 +1,28 @@
+using Gtk 4.0;
+
+template $ParkLogQsoRow : ListBoxRow {
+  child: Box {
+    orientation: vertical;
+    spacing: 4;
+    margin-top: 10;
+    margin-bottom: 10;
+    margin-start: 12;
+    margin-end: 12;
+
+    Label title_label {
+      xalign: 0.0;
+      styles ["heading"]
+    }
+
+    Label detail_label {
+      xalign: 0.0;
+      styles ["caption", "dim-label"]
+    }
+
+    Label comment_label {
+      xalign: 0.0;
+      wrap: true;
+      visible: false;
+    }
+  };
+}

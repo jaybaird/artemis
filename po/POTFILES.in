@@ -17,6 +17,7 @@ data/ui/preferences.ui
 data/ui/preferences/general_page.ui
 data/ui/preferences/logging_page.ui
 data/ui/preferences/map_page.ui
+data/ui/preferences/operating_limits_page.ui
 data/ui/preferences/radio_page.ui
 data/ui/preferences/wsjtx_page.ui
 data/ui/qso_dialog.ui
@@ -43,6 +44,7 @@ src/preferences.vala
 src/preferences/general_page.vala
 src/preferences/logging_page.vala
 src/preferences/map_page.vala
+src/preferences/operating_limits_page.vala
 src/preferences/radio_page.vala
 src/preferences/wsjtx_page.vala
 src/qso_dialog.vala

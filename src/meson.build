@@ -1,13 +1,18 @@
 artemis_vala_sources = [
   'src/help/help_models.vala',
   'src/help/help_window.vala',
+  'src/http_session_factory.vala',
   'src/adif/adif_types.vala',
   'src/adif/adif_parser.vala',
   'src/adif/adif_generator.vala',
   'src/adif/adif_qso.vala',
   'src/add_spot.vala',
+  'src/avatar_detail_dialog.vala',
   'src/alerts_window.vala',
   'src/app_state.vala',
+  'src/spot_identity.vala',
+  'src/radio_status_model.vala',
+  'src/radio_dbus_service.vala',
   'src/application.vala',
   'src/callsign_cache.vala',
   'src/csv/csv_parser.vala',
@@ -21,6 +26,7 @@ artemis_vala_sources = [
   'src/logging_service.vala',
   'src/logbook_import_service.vala',
   'src/logbook_window.vala',
+  'src/operating_limits.vala',
   'src/park_log_dialog.vala',
   'src/models/heatmap_model.vala',
   'src/models/heatmap_point.vala',
@@ -31,6 +37,8 @@ artemis_vala_sources = [
   'src/psk_reporter_client.vala',
   'src/psk_reporter_decoder.vala',
   'src/spot_filter.vala',
+  'src/spot_alert_matcher.vala',
+  'src/selection_sync_guard.vala',
   'src/models/signal_report_mqtt_session.vala',
   'src/window.vala',
   'src/pota_client.vala',
@@ -40,6 +48,7 @@ artemis_vala_sources = [
   'src/preferences/general_page.vala',
   'src/preferences/map_page.vala',
   'src/preferences/radio_page.vala',
+  'src/preferences/operating_limits_page.vala',
   'src/preferences/logging_page.vala',
   'src/preferences/wsjtx_page.vala',
   'src/spot_card.vala',
@@ -53,40 +62,38 @@ artemis_vala_sources = [
   'src/utils.vala',
   'src/status_bar.vala',
   'src/string_utils.vala',
+  'src/utils/callsign_utils.vala',
   'src/utils/maidenhead.vala',
+  'src/utils/map.vala',
   'src/utils/spot_format.vala',
   'src/map/bounding_box.vala',
   'src/map/grayline_overlay.vala',
   'src/map/map_marker_dot.vala',
+  'src/map/map_marker_popover.vala',
   'src/map/signal_report_heatmap_layer.vala',
+  'src/map/wrapped_marker_layer.vala',
   'src/map/map_view.vala',
   'src/left_sidebar.vala',
   'src/astronomy.vala',
   'src/spot_detail.vala',
   'src/spot_list_view.vala',
+  'src/spot_lookup.vala',
   'src/weather_cache.vala',
-  'src/web_views.vala',
   'src/wsjtx/wsjtx_packet.vala',
   'src/wsjtx/wsjtx_packet_reader.vala',
   'src/wsjtx/wsjtx_packet_parser.vala',
   'src/wsjtx/wsjtx_packet_writer.vala',
+  'src/wsjtx/wsjtx_decode_matcher.vala',
   'src/wsjtx/wsjtx_listener.vala',
   'src/wsjtx/wsjtx_logged_adif_parser.vala',
   'src/wsjtx/wsjtx_logged_adif_handler.vala',
   'src/wsjtx/wsjtx_session.vala'
 ]
 
-if is_windows
-  add_project_arguments(
-    ['--define=ARTEMIS_WINDOWS'],
-    language: 'vala')
-  add_project_arguments('-DARTEMIS_WINDOWS', language: 'c')
-else
-  add_project_arguments(
-    ['--define=ARTEMIS_UNIX'],
-    language: 'vala')
-  add_project_arguments('-DARTEMIS_UNIX', language: 'c')
-endif
+add_project_arguments(
+  ['--define=ARTEMIS_UNIX'],
+  language: 'vala')
+add_project_arguments('-DARTEMIS_UNIX', language: 'c')
 
 if devel
   add_project_arguments('-DARTEMIS_DEBUG', language: 'c')
@@ -123,11 +130,7 @@ cc = meson.get_compiler('c')
 radio_control_sources = ['radio/radio_control.c']
 radio_control_deps = [glib_dep, gobject_dep, gio_dep, libdex_dep, hamlib_dep]
 
-if is_windows
-  radio_control_deps += cc.find_library('setupapi', required: true)
-else
-  radio_control_deps += dependency('gudev-1.0')
-endif
+radio_control_deps += dependency('gudev-1.0')
 
 libradiocontrol = static_library(
   'radiocontrol',
@@ -147,6 +150,16 @@ libartemismqtt = static_library(
 )
 
 mathlib = cc.find_library('m', required: true)
+
+zonedetect_sources = ['tz/zonedetect.c']
+zonedetect_deps = [mathlib]
+
+libzonedetect = static_library(
+  'zonedetect',
+  zonedetect_sources,
+  include_directories: src_inc,
+  dependencies: zonedetect_deps
+)
 
 heatmap_sources = ['map/heatmap.c']
 heatmap_deps = [mathlib]
@@ -172,13 +185,10 @@ artemis_vala_deps = [
   mathlib
 ]
 
-if not is_windows
-  artemis_vala_deps += [
-    dependency('webkitgtk-6.0'),
-    dependency('glycin-2'),
-    dependency('glycin-gtk4-2')
-  ]
-endif
+artemis_vala_deps += [
+  dependency('glycin-2'),
+  dependency('glycin-gtk4-2')
+]
 
 artemis_vala_sources += configure_file(
   input: 'build.vala.in',

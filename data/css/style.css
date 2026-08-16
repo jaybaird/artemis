@@ -14,6 +14,7 @@
     --band-2m-color: #4ade80;
     --band-70cm-color: #999900;
     --wsjtx-heard-color: #35c9f4;
+    --two-way-copy-color: #2dd4bf;
 }
 
 .map-marker-all {
@@ -138,8 +139,17 @@
     color: rgba(255, 255, 255, 0.98);
 }
 
+.map-marker-hunted-icon {
+    color: rgba(255, 255, 255, 0.98);
+}
+
 .map-marker-content.map-marker-heard-recently {
     background-color: alpha(var(--wsjtx-heard-color), 0.3);
+    border-radius: 9999px;
+}
+
+.map-marker-content.map-marker-hunted-today {
+    background-color: alpha(#4ADE80, 0.24);
     border-radius: 9999px;
 }
 
@@ -234,8 +244,28 @@
     min-height: 1.25em;
 }
 
+.spot-card-band-marker {
+    border-radius: 4px;
+    min-width: 1.1em;
+    min-height: 0.7em;
+}
+
 .spot-list-icon-button image {
     -gtk-icon-size: 1.15em;
+}
+
+.spot-card-floating-button {
+    min-width: 30px;
+    min-height: 30px;
+    padding: 0;
+}
+
+.spot-card-floating-button image {
+    -gtk-icon-size: 1.05em;
+}
+
+.spot-detail-icon-button image {
+    -gtk-icon-size: 1.05em;
 }
 
 .badge-new-park {
@@ -256,6 +286,35 @@
 
 .badge-heard-recently {
     color: var(--wsjtx-heard-color);
+}
+
+.badge-heard-reciprocally {
+    color: var(--two-way-copy-color);
+}
+
+.spot-badge-drawer {
+    background-color: var(--window-bg-color);
+    border: 1px solid var(--borders);
+    border-radius: 8px;
+    padding: 0.32em 0.56em;
+}
+
+.spot-badge-separator {
+    min-height: 1em;
+    margin: 0 0.12em;
+    opacity: 0.35;
+}
+
+.spot-deprioritized {
+    opacity: 0.55;
+}
+
+image.badge-early-shift {
+    color: var(--yellow-3);
+}
+
+image.badge-late-shift {
+    color: var(--purple-2);
 }
 
 .frequency-display {
@@ -323,6 +382,20 @@
     min-height: 1.25em;
 }
 
+.shift-badge {
+    background-color: var(--card-bg-color);
+    color: var(--window-fg-color);
+    border: 1px solid var(--borders);
+    border-radius: 9999px;
+    box-shadow: 0 1px 3px alpha(black, 0.35);
+    min-height: 1.6em;
+    padding: 0.1em 0.55em;
+}
+
+.shift-badge image {
+    -gtk-icon-size: 1em;
+}
+
 .marker {
   transition: transform 150ms cubic-bezier(0.2, 0.9, 0.2, 1);
   transform-origin: center center;
@@ -330,6 +403,10 @@
 
 .marker.marker-heard-recently {
   filter: drop-shadow(0 0 6px rgba(96, 165, 250, 0.9));
+}
+
+.marker.marker-hunted-today {
+  filter: drop-shadow(0 0 6px rgba(74, 222, 128, 0.9));
 }
 
 .marker.hovered {

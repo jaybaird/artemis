@@ -39,7 +39,7 @@ public sealed class SpotCard : Gtk.Box {
     private unowned Gtk.Label grid_square;
 
     [GtkChild]
-    private unowned Gtk.Image band_dot;
+    private unowned Gtk.Box band_marker;
 
     [GtkChild]
     private unowned Gtk.Label frequency;
@@ -58,6 +58,9 @@ public sealed class SpotCard : Gtk.Box {
 
     [GtkChild]
     private unowned Gtk.Button spot_button;
+
+    [GtkChild]
+    private unowned Gtk.Button not_heard_button;
 
     public Spot spot { get; construct; }
 
@@ -86,6 +89,9 @@ public sealed class SpotCard : Gtk.Box {
     private ulong callsign_cache_updated_handler = 0;
     private ulong radio_connection_state_handler = 0;
     private ulong heard_recently_notify_handler = 0;
+    private ulong heard_reciprocally_notify_handler = 0;
+    private ulong not_heard_recently_notify_handler = 0;
+    private ulong was_hunted_today_notify_handler = 0;
     private uint avatar_retry_id = 0;
     private uint avatar_fetch_attempt = 0;
     private bool disposed = false;
@@ -122,18 +128,21 @@ public sealed class SpotCard : Gtk.Box {
     public SpotCard.from_spot (Spot spot) {
         Object (spot: spot);
 
-        title.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
+        title.label = "%s @ %s".printf (
+            display_callsign (spot.callsign),
+            spot.park_ref
+        );
         park_label.label = spot.park_name;
         location_desc.label = spot.location_desc;
-        var grid = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
+        var grid = spot.grid ();
         grid_square.label = grid;
         grid_square.visible = grid != "";
 
-        sync_band_dot_css (spot.band);
+        sync_band_marker_css (spot.band);
         frequency.label = "%s kHz".printf (format_frequency_khz (spot.frequency_khz));
         mode.label = spot.mode;
         time.label = humanize_ago (spot.spot_time);
-        spot_count.label = spot.spot_count.to_string ();
+        spot_count.label = spot.spot_count.to_string ("%'d");
 
         callsign_cache_updated_handler = Application.callsign_cache.entry_updated.connect ((updated_callsign) => {
             update_avatars_from_cache (updated_callsign);
@@ -145,10 +154,20 @@ public sealed class SpotCard : Gtk.Box {
         heard_recently_notify_handler = spot.notify["heard-recently"].connect (() => {
             refresh_highlight ();
         });
+        heard_reciprocally_notify_handler = spot.notify["heard-reciprocally"].connect (() => {
+            refresh_highlight ();
+        });
+        not_heard_recently_notify_handler = spot.notify["not-heard-recently"].connect (() => {
+            refresh_highlight ();
+        });
+        was_hunted_today_notify_handler = spot.notify["was-hunted-today"].connect (() => {
+            refresh_highlight ();
+        });
 
         update_tune_button_state ();
         tune_button.clicked.connect (on_tune_clicked);
         spot_button.clicked.connect (on_spot_clicked);
+        not_heard_button.clicked.connect (on_not_heard_clicked);
 
         radio_connection_state_handler = Application.app.radio_connection_state_changed.connect (() => {
             update_tune_button_state ();
@@ -160,21 +179,25 @@ public sealed class SpotCard : Gtk.Box {
         tune_button.sensitive = Application.radio_control.is_rig_connected;
     }
 
-    private void sync_band_dot_css (string band) {
+    private void sync_band_marker_css (string band) {
         foreach (var known_band in RadioConstants.BANDS) {
-            band_dot.remove_css_class ("band-dot-%s".printf (known_band.down ()));
+            band_marker.remove_css_class ("band-strip-%s".printf (known_band.down ()));
         }
 
-        band_dot.add_css_class ("band-dot-%s".printf (band.down ()));
+        band_marker.add_css_class ("band-strip-%s".printf (band.down ()));
     }
 
     private void on_tune_clicked () {
-        Application.state.current_spot_hash = spot.hash;
-        Application.radio_control.tune_to_spot (spot);
+        Application.state.select_spot (spot.hash);
+        tune_spot_with_operating_limit_warning (spot, this);
     }
 
     private void on_spot_clicked () {
         new AddSpot.from_spot (spot).present (get_root ());
+    }
+
+    private void on_not_heard_clicked () {
+        Application.spot_repo.mark_spot_not_heard (spot);
     }
 
     private void start_avatar_fetch () {
@@ -254,15 +277,29 @@ public sealed class SpotCard : Gtk.Box {
                 SignalHandler.disconnect (spot, heard_recently_notify_handler);
             heard_recently_notify_handler = 0;
         }
+        if (heard_reciprocally_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, heard_reciprocally_notify_handler))
+                SignalHandler.disconnect (spot, heard_reciprocally_notify_handler);
+            heard_reciprocally_notify_handler = 0;
+        }
+        if (not_heard_recently_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, not_heard_recently_notify_handler))
+                SignalHandler.disconnect (spot, not_heard_recently_notify_handler);
+            not_heard_recently_notify_handler = 0;
+        }
+        if (was_hunted_today_notify_handler != 0) {
+            if (SignalHandler.is_connected (spot, was_hunted_today_notify_handler))
+                SignalHandler.disconnect (spot, was_hunted_today_notify_handler);
+            was_hunted_today_notify_handler = 0;
+        }
     }
 
     public void refresh_highlight () {
         populate_spot_badges (badge_box, spot);
 
-        this.remove_css_class ("dimmed");
-        if (spot.was_hunted_today) {
-            this.add_css_class ("dimmed");
-        }
+        this.remove_css_class ("spot-deprioritized");
+        if (spot_is_greyed_out (spot))
+            this.add_css_class ("spot-deprioritized");
 
     } /* refresh_highlight */
 } /* class SpotCard */

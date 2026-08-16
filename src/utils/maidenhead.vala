@@ -23,19 +23,9 @@ public errordomain MaidenheadLocatorError {
     INVALID_CHARACTER
 }
 
-public struct MaidenheadCenter {
-    public double latitude;
-    public double longitude;
-
-    public MaidenheadCenter (double latitude, double longitude) {
-        this.latitude = latitude;
-        this.longitude = longitude;
-    }
-}
-
 namespace Maidenhead {
     public string normalize (string grid) throws Error {
-        var normalized = grid.strip ().ascii_up ();
+        var normalized = strip_up (grid);
 
         if (normalized.length != 4 &&
             normalized.length != 6 &&
@@ -70,7 +60,11 @@ namespace Maidenhead {
         }
     }
 
-    public MaidenheadCenter center (string grid) throws Error {
+    public string grid4 (string grid) throws Error {
+        return normalize (grid).substring (0, 4);
+    }
+
+    public Coordinate center (string grid) throws Error {
         var loc = normalize (grid);
 
         double lon = -180.0;
@@ -107,7 +101,7 @@ namespace Maidenhead {
             lat += (loc[9] - 'A') * lat_width;
         }
 
-        return MaidenheadCenter (lat + (lat_width * 0.5), lon + (lon_width * 0.5));
+        return new Coordinate.full (lat + (lat_width * 0.5), lon + (lon_width * 0.5));
     }
 
     private void validate_pair (string grid, int offset, char min_char, char max_char) throws Error {

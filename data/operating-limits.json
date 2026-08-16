@@ -1,0 +1,229 @@
+{
+  "schemaVersion": 1,
+  "frequencyUnit": "kHz",
+  "reviewedSources": [
+    {
+      "countryCode": "US",
+      "title": "47 CFR Part 97, Subpart D",
+      "url": "https://www.ecfr.gov/current/title-47/part-97/subpart-D",
+      "reviewedDate": "2026-06-18"
+    },
+    {
+      "countryCode": "CA",
+      "title": "ISED RBR-4, Issue 3, July 2022",
+      "url": "https://ised-isde.canada.ca/site/spectrum-management-telecommunications/en/licences-and-certificates/regulations-reference-rbr/rbr-4-standards-operation-radio-stations-amateur-radio-service",
+      "reviewedDate": "2026-06-18"
+    }
+  ],
+  "modeGroups": {
+    "all": ["SSB", "CW", "FT8", "FT4", "FM", "AM", "RTTY", "JT65"],
+    "cw": ["CW"],
+    "data": ["FT8", "FT4", "RTTY", "JT65"],
+    "data-cw": ["CW", "FT8", "FT4", "RTTY", "JT65"],
+    "phone": ["SSB", "AM", "FM"],
+    "phone-cw": ["CW", "SSB", "AM", "FM"],
+    "phone-hf": ["SSB", "AM"],
+    "phone-hf-cw": ["CW", "SSB", "AM"],
+    "phone-ssb": ["SSB"],
+    "phone-ssb-cw": ["CW", "SSB"],
+    "60m": ["CW", "SSB", "FT8", "FT4", "RTTY", "JT65"],
+    "canada-6khz": ["CW", "SSB", "AM", "FT8", "FT4", "RTTY", "JT65"],
+    "canada-1khz": ["CW", "FT8", "FT4", "RTTY", "JT65"]
+  },
+  "countries": [
+    {
+      "code": "US",
+      "name": "United States",
+      "complete": true,
+      "profiles": [
+        {
+          "id": "US_VHF_UHF",
+          "name": "VHF/UHF common privileges",
+          "hidden": true,
+          "rules": [
+            {"band": "6m", "minKHz": 50000.0, "maxKHz": 50100.0, "modeGroup": "cw"},
+            {"band": "6m", "minKHz": 50100.0, "maxKHz": 54000.0, "modeGroup": "all"},
+            {"band": "2m", "minKHz": 144000.0, "maxKHz": 144100.0, "modeGroup": "cw"},
+            {"band": "2m", "minKHz": 144100.0, "maxKHz": 148000.0, "modeGroup": "all"},
+            {"band": "70cm", "minKHz": 420000.0, "maxKHz": 450000.0, "modeGroup": "all"}
+          ]
+        },
+        {
+          "id": "US_NOVICE",
+          "name": "Novice",
+          "rules": [
+            {"band": "80m", "minKHz": 3525.0, "maxKHz": 3600.0, "modeGroup": "cw"},
+            {"band": "40m", "minKHz": 7025.0, "maxKHz": 7125.0, "modeGroup": "cw"},
+            {"band": "15m", "minKHz": 21025.0, "maxKHz": 21200.0, "modeGroup": "cw"},
+            {"band": "10m", "minKHz": 28000.0, "maxKHz": 28300.0, "modeGroup": "data-cw"},
+            {"band": "10m", "minKHz": 28300.0, "maxKHz": 28500.0, "modeGroup": "phone-ssb-cw"}
+          ]
+        },
+        {
+          "id": "US_TECHNICIAN",
+          "name": "Technician",
+          "inherits": ["US_VHF_UHF"],
+          "rules": [
+            {"band": "80m", "minKHz": 3525.0, "maxKHz": 3600.0, "modeGroup": "cw"},
+            {"band": "40m", "minKHz": 7025.0, "maxKHz": 7125.0, "modeGroup": "cw"},
+            {"band": "15m", "minKHz": 21025.0, "maxKHz": 21200.0, "modeGroup": "cw"},
+            {"band": "10m", "minKHz": 28000.0, "maxKHz": 28300.0, "modeGroup": "data-cw"},
+            {"band": "10m", "minKHz": 28300.0, "maxKHz": 28500.0, "modeGroup": "phone-ssb-cw"}
+          ]
+        },
+        {
+          "id": "US_GENERAL",
+          "name": "General",
+          "inherits": ["US_VHF_UHF"],
+          "rules": [
+            {"band": "160m", "minKHz": 1800.0, "maxKHz": 2000.0, "modeGroup": "all"},
+            {"band": "80m", "minKHz": 3525.0, "maxKHz": 3600.0, "modeGroup": "data-cw"},
+            {"band": "80m", "minKHz": 3800.0, "maxKHz": 4000.0, "modeGroup": "phone-hf-cw"},
+            {"band": "60m", "minKHz": 5332.0, "maxKHz": 5332.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5348.0, "maxKHz": 5348.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5351.5, "maxKHz": 5366.5, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5373.0, "maxKHz": 5373.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5405.0, "maxKHz": 5405.0, "modeGroup": "60m"},
+            {"band": "40m", "minKHz": 7025.0, "maxKHz": 7125.0, "modeGroup": "data-cw"},
+            {"band": "40m", "minKHz": 7075.0, "maxKHz": 7100.0, "modeGroup": "phone-hf-cw"},
+            {"band": "40m", "minKHz": 7175.0, "maxKHz": 7300.0, "modeGroup": "phone-hf-cw"},
+            {"band": "30m", "minKHz": 10100.0, "maxKHz": 10150.0, "modeGroup": "data-cw"},
+            {"band": "20m", "minKHz": 14025.0, "maxKHz": 14150.0, "modeGroup": "data-cw"},
+            {"band": "20m", "minKHz": 14225.0, "maxKHz": 14350.0, "modeGroup": "phone-hf-cw"},
+            {"band": "17m", "minKHz": 18068.0, "maxKHz": 18110.0, "modeGroup": "data-cw"},
+            {"band": "17m", "minKHz": 18110.0, "maxKHz": 18168.0, "modeGroup": "phone-hf-cw"},
+            {"band": "15m", "minKHz": 21025.0, "maxKHz": 21200.0, "modeGroup": "data-cw"},
+            {"band": "15m", "minKHz": 21275.0, "maxKHz": 21450.0, "modeGroup": "phone-hf-cw"},
+            {"band": "12m", "minKHz": 24890.0, "maxKHz": 24930.0, "modeGroup": "data-cw"},
+            {"band": "12m", "minKHz": 24930.0, "maxKHz": 24990.0, "modeGroup": "phone-hf-cw"},
+            {"band": "10m", "minKHz": 28000.0, "maxKHz": 28300.0, "modeGroup": "data-cw"},
+            {"band": "10m", "minKHz": 28300.0, "maxKHz": 29000.0, "modeGroup": "phone-hf-cw"},
+            {"band": "10m", "minKHz": 29000.0, "maxKHz": 29700.0, "modeGroup": "phone-cw"}
+          ]
+        },
+        {
+          "id": "US_ADVANCED",
+          "name": "Advanced",
+          "inherits": ["US_VHF_UHF"],
+          "rules": [
+            {"band": "160m", "minKHz": 1800.0, "maxKHz": 2000.0, "modeGroup": "all"},
+            {"band": "80m", "minKHz": 3525.0, "maxKHz": 3600.0, "modeGroup": "data-cw"},
+            {"band": "80m", "minKHz": 3700.0, "maxKHz": 4000.0, "modeGroup": "phone-hf-cw"},
+            {"band": "60m", "minKHz": 5332.0, "maxKHz": 5332.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5348.0, "maxKHz": 5348.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5351.5, "maxKHz": 5366.5, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5373.0, "maxKHz": 5373.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5405.0, "maxKHz": 5405.0, "modeGroup": "60m"},
+            {"band": "40m", "minKHz": 7025.0, "maxKHz": 7125.0, "modeGroup": "data-cw"},
+            {"band": "40m", "minKHz": 7075.0, "maxKHz": 7100.0, "modeGroup": "phone-hf-cw"},
+            {"band": "40m", "minKHz": 7125.0, "maxKHz": 7300.0, "modeGroup": "phone-hf-cw"},
+            {"band": "30m", "minKHz": 10100.0, "maxKHz": 10150.0, "modeGroup": "data-cw"},
+            {"band": "20m", "minKHz": 14025.0, "maxKHz": 14150.0, "modeGroup": "data-cw"},
+            {"band": "20m", "minKHz": 14175.0, "maxKHz": 14350.0, "modeGroup": "phone-hf-cw"},
+            {"band": "17m", "minKHz": 18068.0, "maxKHz": 18110.0, "modeGroup": "data-cw"},
+            {"band": "17m", "minKHz": 18110.0, "maxKHz": 18168.0, "modeGroup": "phone-hf-cw"},
+            {"band": "15m", "minKHz": 21025.0, "maxKHz": 21200.0, "modeGroup": "data-cw"},
+            {"band": "15m", "minKHz": 21225.0, "maxKHz": 21450.0, "modeGroup": "phone-hf-cw"},
+            {"band": "12m", "minKHz": 24890.0, "maxKHz": 24930.0, "modeGroup": "data-cw"},
+            {"band": "12m", "minKHz": 24930.0, "maxKHz": 24990.0, "modeGroup": "phone-hf-cw"},
+            {"band": "10m", "minKHz": 28000.0, "maxKHz": 28300.0, "modeGroup": "data-cw"},
+            {"band": "10m", "minKHz": 28300.0, "maxKHz": 29000.0, "modeGroup": "phone-hf-cw"},
+            {"band": "10m", "minKHz": 29000.0, "maxKHz": 29700.0, "modeGroup": "phone-cw"}
+          ]
+        },
+        {
+          "id": "US_EXTRA",
+          "name": "Amateur Extra",
+          "inherits": ["US_VHF_UHF"],
+          "rules": [
+            {"band": "160m", "minKHz": 1800.0, "maxKHz": 2000.0, "modeGroup": "all"},
+            {"band": "80m", "minKHz": 3500.0, "maxKHz": 3600.0, "modeGroup": "data-cw"},
+            {"band": "80m", "minKHz": 3600.0, "maxKHz": 4000.0, "modeGroup": "phone-hf-cw"},
+            {"band": "60m", "minKHz": 5332.0, "maxKHz": 5332.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5348.0, "maxKHz": 5348.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5351.5, "maxKHz": 5366.5, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5373.0, "maxKHz": 5373.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5405.0, "maxKHz": 5405.0, "modeGroup": "60m"},
+            {"band": "40m", "minKHz": 7000.0, "maxKHz": 7125.0, "modeGroup": "data-cw"},
+            {"band": "40m", "minKHz": 7075.0, "maxKHz": 7100.0, "modeGroup": "phone-hf-cw"},
+            {"band": "40m", "minKHz": 7125.0, "maxKHz": 7300.0, "modeGroup": "phone-hf-cw"},
+            {"band": "30m", "minKHz": 10100.0, "maxKHz": 10150.0, "modeGroup": "data-cw"},
+            {"band": "20m", "minKHz": 14000.0, "maxKHz": 14150.0, "modeGroup": "data-cw"},
+            {"band": "20m", "minKHz": 14150.0, "maxKHz": 14350.0, "modeGroup": "phone-hf-cw"},
+            {"band": "17m", "minKHz": 18068.0, "maxKHz": 18110.0, "modeGroup": "data-cw"},
+            {"band": "17m", "minKHz": 18110.0, "maxKHz": 18168.0, "modeGroup": "phone-hf-cw"},
+            {"band": "15m", "minKHz": 21000.0, "maxKHz": 21200.0, "modeGroup": "data-cw"},
+            {"band": "15m", "minKHz": 21200.0, "maxKHz": 21450.0, "modeGroup": "phone-hf-cw"},
+            {"band": "12m", "minKHz": 24890.0, "maxKHz": 24930.0, "modeGroup": "data-cw"},
+            {"band": "12m", "minKHz": 24930.0, "maxKHz": 24990.0, "modeGroup": "phone-hf-cw"},
+            {"band": "10m", "minKHz": 28000.0, "maxKHz": 28300.0, "modeGroup": "data-cw"},
+            {"band": "10m", "minKHz": 28300.0, "maxKHz": 29000.0, "modeGroup": "phone-hf-cw"},
+            {"band": "10m", "minKHz": 29000.0, "maxKHz": 29700.0, "modeGroup": "phone-cw"}
+          ]
+        }
+      ]
+    },
+    {
+      "code": "CA",
+      "name": "Canada",
+      "complete": true,
+      "profiles": [
+        {
+          "id": "CA_VHF_UHF",
+          "name": "Basic VHF/UHF",
+          "hidden": true,
+          "rules": [
+            {"band": "6m", "minKHz": 50000.0, "maxKHz": 54000.0, "modeGroup": "all"},
+            {"band": "2m", "minKHz": 144000.0, "maxKHz": 148000.0, "modeGroup": "all"},
+            {"band": "70cm", "minKHz": 430000.0, "maxKHz": 450000.0, "modeGroup": "all"}
+          ]
+        },
+        {
+          "id": "CA_HF_FULL",
+          "name": "Canada below-30 MHz privileges",
+          "hidden": true,
+          "rules": [
+            {"band": "160m", "minKHz": 1800.0, "maxKHz": 2000.0, "modeGroup": "canada-6khz"},
+            {"band": "80m", "minKHz": 3500.0, "maxKHz": 4000.0, "modeGroup": "canada-6khz"},
+            {"band": "60m", "minKHz": 5332.0, "maxKHz": 5332.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5348.0, "maxKHz": 5348.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5351.5, "maxKHz": 5366.5, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5373.0, "maxKHz": 5373.0, "modeGroup": "60m"},
+            {"band": "60m", "minKHz": 5405.0, "maxKHz": 5405.0, "modeGroup": "60m"},
+            {"band": "40m", "minKHz": 7000.0, "maxKHz": 7300.0, "modeGroup": "canada-6khz"},
+            {"band": "30m", "minKHz": 10100.0, "maxKHz": 10150.0, "modeGroup": "canada-1khz"},
+            {"band": "20m", "minKHz": 14000.0, "maxKHz": 14350.0, "modeGroup": "canada-6khz"},
+            {"band": "17m", "minKHz": 18068.0, "maxKHz": 18168.0, "modeGroup": "canada-6khz"},
+            {"band": "15m", "minKHz": 21000.0, "maxKHz": 21450.0, "modeGroup": "canada-6khz"},
+            {"band": "12m", "minKHz": 24890.0, "maxKHz": 24990.0, "modeGroup": "canada-6khz"},
+            {"band": "10m", "minKHz": 28000.0, "maxKHz": 29700.0, "modeGroup": "all"}
+          ]
+        },
+        {
+          "id": "CA_BASIC",
+          "name": "Basic",
+          "inherits": ["CA_VHF_UHF"],
+          "rules": []
+        },
+        {
+          "id": "CA_BASIC_MORSE",
+          "name": "Basic + Morse",
+          "inherits": ["CA_HF_FULL", "CA_VHF_UHF"],
+          "rules": []
+        },
+        {
+          "id": "CA_BASIC_HONOURS",
+          "name": "Basic with Honours",
+          "inherits": ["CA_HF_FULL", "CA_VHF_UHF"],
+          "rules": []
+        },
+        {
+          "id": "CA_BASIC_ADVANCED",
+          "name": "Basic + Advanced",
+          "inherits": ["CA_HF_FULL", "CA_VHF_UHF"],
+          "rules": []
+        }
+      ]
+    }
+  ]
+}

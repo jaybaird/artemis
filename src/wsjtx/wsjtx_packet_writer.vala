@@ -88,6 +88,14 @@ namespace Artemis.Wsjtx {
             write_u32 (value.msecs_since_midnight);
         }
 
+        public void write_qdatetime (WsjtxDateTime value) throws Error {
+            write_i64 (value.julian_day);
+            write_u32 (value.msecs_since_midnight);
+            write_u8 (value.time_spec);
+            if (value.time_spec == 2)
+                write_i32 (value.utc_offset_seconds);
+        }
+
         public void write_qcolor_rgb (
             uint8 red,
             uint8 green,

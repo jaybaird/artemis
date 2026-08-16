@@ -19,8 +19,10 @@
  */
 
 using Gee;
-public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
+
+public sealed class SpotRepo : Object, SpotLookup {
     private const int64 HEARD_CACHE_SECONDS = Spot.HEARD_RECENTLY_TIMEOUT_SECONDS;
+    private const int64 NOT_HEARD_CACHE_SECONDS = Spot.NOT_HEARD_RECENTLY_TIMEOUT_SECONDS;
 
     public GLib.ListStore store { get; construct; }
 
@@ -28,7 +30,8 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     public signal void refreshed (uint spots_updated);
     public signal void log_status_refreshed ();
     public signal void update_error (Error err);
-    public signal void current_spot_changed (Quark spot_hash);
+    public signal void spots_replacing ();
+    public signal void spots_replaced ();
 
     public Gtk.StringList program_model { get; private set; }
     public Gtk.StringList mode_model { get; private set; }
@@ -39,6 +42,8 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     private bool update_pending = false;
     private HashSet<uint> notified_alert_hashes;
     private HashMap<string, int64?> heard_callsign_times;
+    private HashMap<string, int64?> heard_reciprocal_callsign_times;
+    private HashMap<string, int64?> not_heard_callsign_times;
 
     public SpotRepo () {
         Object ();
@@ -51,6 +56,8 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
         band_counts = new HashMap<string, int> ();
         notified_alert_hashes = new HashSet<uint> ();
         heard_callsign_times = new HashMap<string, int64?> ();
+        heard_reciprocal_callsign_times = new HashMap<string, int64?> ();
+        not_heard_callsign_times = new HashMap<string, int64?> ();
     }
 
     public Spot? get_spot (Quark spot_hash) {
@@ -64,8 +71,8 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     }
 
     public Spot? get_spot_for_callsign (string callsign) {
-        var normalized_exact = callsign.strip ().up ();
-        var normalized_profile = pota_profile_callsign (callsign).strip ().up ();
+        var normalized_exact = normalize_callsign (callsign);
+        var normalized_profile = normalize_callsign (pota_profile_callsign (callsign));
         if ((normalized_exact == "") && (normalized_profile == ""))
             return null;
 
@@ -75,8 +82,8 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
             if (spot == null)
                 continue;
 
-            var spot_exact = spot.callsign.strip ().up ();
-            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
+            var spot_exact = normalize_callsign (spot.callsign);
+            var spot_profile = normalize_callsign (pota_profile_callsign (spot.callsign));
             if (spot_exact == normalized_exact)
                 return spot;
 
@@ -88,24 +95,25 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     }
 
     public Spot? get_spot_for_decode_text (string decode_text) {
-        var normalized_decode = decode_text.strip ().up ();
-        if (normalized_decode == "")
+        var heard_callsign = Artemis.Wsjtx.heard_callsign_from_decode_text (decode_text);
+        if (heard_callsign == "")
             return null;
 
+        var heard_profile = normalize_callsign (pota_profile_callsign (heard_callsign));
         Spot? profile_match = null;
         for (uint i = 0 ; i < store.get_n_items () ; i++) {
             var spot = store.get_item (i) as Spot;
             if (spot == null)
                 continue;
 
-            var spot_exact = spot.callsign.strip ().up ();
-            var spot_profile = pota_profile_callsign (spot.callsign).strip ().up ();
-            if ((spot_exact != "") && normalized_decode.contains (spot_exact))
+            var spot_exact = normalize_callsign (spot.callsign);
+            var spot_profile = normalize_callsign (pota_profile_callsign (spot.callsign));
+            if ((spot_exact != "") && spot_exact == heard_callsign)
                 return spot;
 
             if ((profile_match == null) &&
                 (spot_profile != "") &&
-                normalized_decode.contains (spot_profile)) {
+                (spot_profile == heard_callsign || spot_profile == heard_profile)) {
                 profile_match = spot;
             }
         }
@@ -142,8 +150,30 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
         spot.mark_heard_recently ();
     }
 
+    public void mark_spot_heard_reciprocally (Spot spot) {
+        mark_callsign_heard_reciprocally (spot.callsign);
+    }
+
+    public void mark_spot_not_heard (Spot spot) {
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign))
+            not_heard_callsign_times[key] = now;
+
+        spot.mark_not_heard_recently ();
+    }
+
+    public void mark_callsign_heard_reciprocally (string callsign) {
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (callsign))
+            heard_reciprocal_callsign_times[key] = now;
+
+        var spot = get_spot_for_callsign (callsign);
+        if (spot != null)
+            spot.mark_heard_reciprocally ();
+    }
+
     private void apply_heard_status (Spot spot) {
-        prune_heard_callsigns ();
+        prune_heard_callsigns (heard_callsign_times);
 
         var now = monotonic_seconds ();
         foreach (var key in callsign_cache_keys (spot.callsign)) {
@@ -155,6 +185,40 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
                 continue;
 
             spot.mark_heard_recently ((uint) (HEARD_CACHE_SECONDS - age));
+            return;
+        }
+    }
+
+    private void apply_reciprocal_heard_status (Spot spot) {
+        prune_heard_callsigns (heard_reciprocal_callsign_times);
+
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign)) {
+            if (!heard_reciprocal_callsign_times.has_key (key))
+                continue;
+
+            var age = now - heard_reciprocal_callsign_times[key];
+            if (age >= HEARD_CACHE_SECONDS)
+                continue;
+
+            spot.mark_heard_reciprocally ((uint) (HEARD_CACHE_SECONDS - age));
+            return;
+        }
+    }
+
+    private void apply_not_heard_status (Spot spot) {
+        prune_not_heard_callsigns ();
+
+        var now = monotonic_seconds ();
+        foreach (var key in callsign_cache_keys (spot.callsign)) {
+            if (!not_heard_callsign_times.has_key (key))
+                continue;
+
+            var age = now - not_heard_callsign_times[key];
+            if (age >= NOT_HEARD_CACHE_SECONDS)
+                continue;
+
+            spot.mark_not_heard_recently ((uint) (NOT_HEARD_CACHE_SECONDS - age));
             return;
         }
     }
@@ -214,22 +278,34 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
             log_status_refreshed ();
     }
 
-    private void prune_heard_callsigns () {
+    private void prune_heard_callsigns (HashMap<string, int64?> callsign_times) {
         var now = monotonic_seconds ();
         var expired = new ArrayList<string> ();
-        foreach (var entry in heard_callsign_times.entries) {
+        foreach (var entry in callsign_times.entries) {
             if (now - entry.value >= HEARD_CACHE_SECONDS)
                 expired.add (entry.key);
         }
 
         foreach (var key in expired)
-            heard_callsign_times.unset (key);
+            callsign_times.unset (key);
+    }
+
+    private void prune_not_heard_callsigns () {
+        var now = monotonic_seconds ();
+        var expired = new ArrayList<string> ();
+        foreach (var entry in not_heard_callsign_times.entries) {
+            if (now - entry.value >= NOT_HEARD_CACHE_SECONDS)
+                expired.add (entry.key);
+        }
+
+        foreach (var key in expired)
+            not_heard_callsign_times.unset (key);
     }
 
     private static ArrayList<string> callsign_cache_keys (string callsign) {
         var keys = new ArrayList<string> ();
-        var exact = callsign.strip ().up ();
-        var profile = pota_profile_callsign (callsign).strip ().up ();
+        var exact = normalize_callsign (callsign);
+        var profile = normalize_callsign (pota_profile_callsign (callsign));
         if (exact != "")
             keys.add (exact);
         if (profile != "" && profile != exact)
@@ -287,6 +363,8 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
                                 parsed_band_counts[spot.band] = 1;
                             }
                             apply_heard_status (spot);
+                            apply_reciprocal_heard_status (spot);
+                            apply_not_heard_status (spot);
                             parsed_spots.add (spot);
                         } catch (Error err) {
                             warning ("Skipping malformed POTA spot at index %u: %s",
@@ -353,7 +431,9 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
                 GLib.Object[] additions = new GLib.Object[parsed_spots.size];
                 for (int i = 0; i < parsed_spots.size; i++)
                     additions[i] = parsed_spots[i];
+                spots_replacing ();
                 store.splice (0, store.get_n_items (), additions);
+                spots_replaced ();
                 spots_updated = parsed_spots.size;
 
                 new_program_model.append (_("All"));
@@ -401,32 +481,12 @@ public sealed class SpotRepo : Object, Artemis.Wsjtx.SpotLookup {
     }
 
     private ArrayList<string> normalized_alert_keywords () {
-        var keywords = new ArrayList<string> ();
-        foreach (var keyword in Application.settings.get_strv ("spot-alert-keywords")) {
-            var normalized = keyword.strip ().down ();
-            if (normalized != "")
-                keywords.add (normalized);
-        }
-        return keywords;
+        return SpotAlerts.normalized_keywords (
+            Application.settings.get_strv ("spot-alert-keywords")
+        );
     }
 
     private bool spot_matches_keywords (Spot spot, ArrayList<string> keywords) {
-        var haystack = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s".printf (
-            spot.callsign,
-            spot.park_ref,
-            spot.park_name,
-            spot.location_desc,
-            spot.grid4,
-            spot.grid6,
-            spot.activator_comment,
-            spot.spotter_comment
-        ).down ();
-
-        foreach (var keyword in keywords) {
-            if (haystack.contains (keyword))
-                return true;
-        }
-
-        return false;
+        return SpotAlerts.spot_matches_keywords (spot, keywords);
     }
 }     /* class SpotRepo */

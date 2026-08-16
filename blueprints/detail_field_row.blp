@@ -1,0 +1,37 @@
+using Gtk 4.0;
+
+template $DetailFieldRow : ListBoxRow {
+  child: Box {
+    orientation: horizontal;
+    spacing: 16;
+    margin-top: 10;
+    margin-bottom: 10;
+    margin-start: 12;
+    margin-end: 12;
+    hexpand: true;
+
+    Image icon {
+      pixel-size: 16;
+      valign: center;
+      visible: false;
+      styles ["dim-label"]
+    }
+
+    Label title_label {
+      xalign: 0.0;
+      width-chars: 12;
+      styles ["caption", "dim-label"]
+    }
+
+    Label value_label {
+      xalign: 1.0;
+      justify: right;
+      wrap-mode: word_char;
+      max-width-chars: 18;
+      ellipsize: end;
+      selectable: true;
+      hexpand: true;
+      styles ["body"]
+    }
+  };
+}

@@ -1,0 +1,23 @@
+using Gtk 4.0;
+
+template $NotificationRow : ListBoxRow {
+  child: Box {
+    orientation: vertical;
+    spacing: 2;
+    margin-top: 8;
+    margin-bottom: 8;
+    margin-start: 10;
+    margin-end: 10;
+
+    Label time_label {
+      xalign: 0.0;
+      styles ["caption", "numeric", "dim-label"]
+    }
+
+    Label message_label {
+      xalign: 0.0;
+      wrap: true;
+      wrap-mode: word_char;
+    }
+  };
+}

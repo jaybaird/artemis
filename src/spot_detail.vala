@@ -18,9 +18,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/detail_field_row.ui")]
 public sealed class DetailFieldRow : Gtk.ListBoxRow {
-    private Gtk.Label title_label;
-    private Gtk.Label value_label;
+    [GtkChild]
+    private unowned Gtk.Image icon;
+    [GtkChild]
+    private unowned Gtk.Label title_label;
+    [GtkChild]
+    private unowned Gtk.Label value_label;
 
     public string title {
         set {
@@ -43,52 +48,30 @@ public sealed class DetailFieldRow : Gtk.ListBoxRow {
     public DetailFieldRow (string title, bool wrap = false, string? icon_name = null) {
         Object ();
 
-        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
-            margin_top = 10,
-            margin_bottom = 10,
-            margin_start = 12,
-            margin_end = 12,
-            hexpand = true
-        };
-
         if (icon_name != null) {
-            var icon = new Gtk.Image.from_icon_name (icon_name) {
-                pixel_size = 16,
-                valign = Gtk.Align.CENTER
-            };
-            icon.add_css_class ("dim-label");
-            box.append (icon);
+            icon.icon_name = icon_name;
+            icon.visible = true;
         }
 
-        title_label = new Gtk.Label (title) {
-            xalign = 0.0f,
-            width_chars = 12
-        };
-        title_label.add_css_class ("caption");
-        title_label.add_css_class ("dim-label");
-        box.append (title_label);
-
-        value_label = new Gtk.Label ("") {
-            xalign = 1.0f,
-            wrap = wrap,
-            wrap_mode = Pango.WrapMode.WORD_CHAR,
-            max_width_chars = wrap ? 28 : 18,
-            ellipsize = wrap ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END,
-            selectable = true,
-            hexpand = true
-        };
-        value_label.justify = Gtk.Justification.RIGHT;
-        value_label.add_css_class ("body");
-        box.append (value_label);
-
-        child = box;
+        title_label.label = title;
+        value_label.wrap = wrap;
+        value_label.max_width_chars = wrap ? 28 : 18;
+        value_label.ellipsize = wrap ? Pango.EllipsizeMode.NONE : Pango.EllipsizeMode.END;
     }
 }
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/detail_time_pair_row.ui")]
 public sealed class DetailTimePairRow : Gtk.ListBoxRow {
-    private Gtk.Label title_label;
-    private Gtk.Label first_value_label;
-    private Gtk.Label second_value_label;
+    [GtkChild]
+    private unowned Gtk.Label title_label;
+    [GtkChild]
+    private unowned Gtk.Image first_icon;
+    [GtkChild]
+    private unowned Gtk.Label first_value_label;
+    [GtkChild]
+    private unowned Gtk.Image second_icon;
+    [GtkChild]
+    private unowned Gtk.Label second_value_label;
 
     public string title {
         set {
@@ -115,83 +98,20 @@ public sealed class DetailTimePairRow : Gtk.ListBoxRow {
     ) {
         Object ();
 
-        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 16) {
-            margin_top = 10,
-            margin_bottom = 10,
-            margin_start = 12,
-            margin_end = 12,
-            hexpand = true
-        };
-
-        title_label = new Gtk.Label (title) {
-            xalign = 0.0f,
-            width_chars = 12
-        };
-        title_label.add_css_class ("caption");
-        title_label.add_css_class ("dim-label");
-        box.append (title_label);
-
-        var values_box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
-            hexpand = true
-        };
-        values_box.halign = Gtk.Align.END;
-
-        values_box.append (build_time_pair (first_icon_name, out first_value_label));
-        values_box.append (build_time_pair (second_icon_name, out second_value_label));
-
-        box.append (values_box);
-        child = box;
-    }
-
-    private Gtk.Box build_time_pair (string icon_name, out Gtk.Label value_label) {
-        var pair = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 4) {
-            halign = Gtk.Align.END
-        };
-
-        var icon = new Gtk.Image.from_icon_name (icon_name) {
-            valign = Gtk.Align.CENTER
-        };
-        icon.add_css_class ("detail-time-icon");
-        icon.add_css_class ("dim-label");
-        pair.append (icon);
-
-        value_label = new Gtk.Label ("") {
-            xalign = 1.0f,
-            selectable = true
-        };
-        value_label.add_css_class ("body");
-        pair.append (value_label);
-
-        return pair;
+        title_label.label = title;
+        first_icon.icon_name = first_icon_name;
+        second_icon.icon_name = second_icon_name;
     }
 }
 
+[GtkTemplate (ui = "/com/k0vcz/artemis/ui/detail_link_row.ui")]
 public sealed class DetailLinkRow : Gtk.ListBoxRow {
-    private Gtk.Label title_label;
+    [GtkChild]
+    private unowned Gtk.Label title_label;
 
     public DetailLinkRow (string title) {
         Object ();
-        activatable = true;
-
-        var box = new Gtk.Box (Gtk.Orientation.HORIZONTAL, 12) {
-            margin_top = 12,
-            margin_bottom = 12,
-            margin_start = 12,
-            margin_end = 12
-        };
-
-        title_label = new Gtk.Label (title) {
-            xalign = 0.0f,
-            hexpand = true
-        };
-        title_label.add_css_class ("accent");
-        box.append (title_label);
-
-        var arrow = new Gtk.Image.from_icon_name ("go-next-symbolic");
-        arrow.add_css_class ("dim-label");
-        box.append (arrow);
-
-        child = box;
+        title_label.label = title;
     }
 }
 
@@ -211,6 +131,15 @@ public sealed class SpotDetail : Gtk.Box {
 
     [GtkChild]
     private unowned Gtk.Label detail_park_name;
+
+    [GtkChild]
+    private unowned Gtk.Box detail_shift_badge;
+
+    [GtkChild]
+    private unowned Gtk.Image detail_shift_icon;
+
+    [GtkChild]
+    private unowned Gtk.Label detail_shift_label;
 
     [GtkChild]
     private unowned Gtk.Box weather_summary_card;
@@ -246,7 +175,16 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Button detail_spot_button;
 
     [GtkChild]
+    private unowned Gtk.Button detail_not_heard_button;
+
+    [GtkChild]
     private unowned Gtk.Button open_map_button;
+
+    [GtkChild]
+    private unowned Gtk.Stack detail_map_slot_stack;
+
+    [GtkChild]
+    private unowned Gtk.Box detail_map_badge_box;
 
     [GtkChild]
     private unowned Gtk.Revealer detail_buttons_revealer;
@@ -264,19 +202,25 @@ public sealed class SpotDetail : Gtk.Box {
     private unowned Gtk.Box weather_unavailable_card;
 
     private Spot? current_spot = null;
-    private string? park_url = null;
-    private string? activator_url = null;
+
     private ulong callsign_cache_handler = 0;
+    private ulong heard_recently_handler = 0;
+    private ulong heard_reciprocally_handler = 0;
+    private ulong not_heard_recently_handler = 0;
+    private ulong was_hunted_today_handler = 0;
     private ulong pota_locations_handler = 0;
     private ulong radio_connected_handler = 0;
     private ulong radio_disconnected_handler = 0;
     private ulong radio_error_handler = 0;
     private uint weather_request_serial = 0;
+    private bool open_map_button_visible = true;
 
     private DetailFieldRow detail_operator_name_row;
     private DetailFieldRow detail_operator_qth_row;
+    private DetailFieldRow detail_operator_awards_row;
     private DetailFieldRow detail_operator_endorsements_row;
     private DetailLinkRow detail_activator_link_row;
+    private DetailLinkRow detail_activator_qrz_row;
     private DetailFieldRow detail_frequency_row;
     private DetailFieldRow detail_mode_row;
     private DetailFieldRow detail_spot_count_row;
@@ -293,6 +237,7 @@ public sealed class SpotDetail : Gtk.Box {
     private DetailFieldRow detail_spot_time_row;
     private DetailFieldRow detail_spotter_comment_row;
     private DetailLinkRow detail_history_row;
+    private DetailFieldRow detail_localtime_row;
 
     public SpotDetail () {
         Object ();
@@ -306,6 +251,7 @@ public sealed class SpotDetail : Gtk.Box {
         build_detail_lists ();
         detail_tune_button.clicked.connect (on_tune_clicked);
         detail_spot_button.clicked.connect (on_spot_clicked);
+        detail_not_heard_button.clicked.connect (on_not_heard_clicked);
         open_map_button.clicked.connect (on_open_map_clicked);
         detail_buttons_revealer.reveal_child = false;
 
@@ -320,6 +266,8 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_list.row_activated.connect ((row) => {
             if (row == detail_activator_link_row)
                 on_activator_clicked ();
+            if (row == detail_activator_qrz_row)
+                on_qrz_clicked ();
         });
         pota_locations_handler = Application.pota_client.locations_updated.connect (() => {
             if (current_spot != null)
@@ -334,17 +282,30 @@ public sealed class SpotDetail : Gtk.Box {
         radio_error_handler = Application.radio_control.radio_error.connect ((err) => {
             update_tune_button_state ();
         });
+
+        var click = new Gtk.GestureClick ();
+        detail_avatar.add_controller (click);
+        detail_avatar.cursor = new Gdk.Cursor.from_name ("pointer", null);
+        click.released.connect (() => {
+            show_avatar_detail_dialog ();
+        });
     }
 
     private void build_detail_lists () {
         detail_operator_name_row = new DetailFieldRow (_("Activator Name"), true);
         detail_operator_qth_row = new DetailFieldRow (_("QTH"), true);
+        detail_operator_awards_row = new DetailFieldRow (_("Awards"), true);
+        detail_operator_awards_row.add_css_class ("numeric");
         detail_operator_endorsements_row = new DetailFieldRow (_("Endorsements"), true);
+        detail_operator_endorsements_row.add_css_class ("numeric");
         detail_activator_link_row = new DetailLinkRow (_("View Activator Details"));
+        detail_activator_qrz_row = new DetailLinkRow (_("View on QRZ"));
         detail_activator_list.append (detail_operator_name_row);
         detail_activator_list.append (detail_operator_qth_row);
+        detail_activator_list.append (detail_operator_awards_row);
         detail_activator_list.append (detail_operator_endorsements_row);
         detail_activator_list.append (detail_activator_link_row);
+        detail_activator_list.append (detail_activator_qrz_row);
 
         detail_frequency_row = new DetailFieldRow (_("Frequency"));
         detail_frequency_row.add_css_class ("numeric");
@@ -366,6 +327,8 @@ public sealed class SpotDetail : Gtk.Box {
         detail_grid_row.add_css_class ("numeric");
         detail_coordinate_row = new DetailFieldRow (_("Coordinates"));
         detail_coordinate_row.add_css_class ("numeric");
+        detail_localtime_row = new DetailFieldRow (_("Local time"));
+        detail_localtime_row.add_css_class ("numeric");
         detail_sun_row = new DetailTimePairRow (
             _("Sun"),
             "daytime-sunrise-symbolic",
@@ -378,6 +341,7 @@ public sealed class SpotDetail : Gtk.Box {
         );
         detail_park_row = new DetailLinkRow (_("View Park Details"));
         detail_location_list.append (detail_location_row);
+        detail_location_list.append (detail_localtime_row);
         detail_location_list.append (detail_bearing_row);
         detail_location_list.append (detail_distance_row);
         detail_location_list.append (detail_grid_row);
@@ -402,11 +366,41 @@ public sealed class SpotDetail : Gtk.Box {
                 SignalHandler.disconnect (Application.callsign_cache, callsign_cache_handler);
             callsign_cache_handler = 0;
         }
+        if (heard_recently_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, heard_recently_handler)) {
+                SignalHandler.disconnect (current_spot, heard_recently_handler);
+            }
+            heard_recently_handler = 0;
+        }
+        if (heard_reciprocally_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, heard_reciprocally_handler)) {
+                SignalHandler.disconnect (current_spot, heard_reciprocally_handler);
+            }
+            heard_reciprocally_handler = 0;
+        }
+        if (not_heard_recently_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, not_heard_recently_handler)) {
+                SignalHandler.disconnect (current_spot, not_heard_recently_handler);
+            }
+            not_heard_recently_handler = 0;
+        }
+        if (was_hunted_today_handler != 0) {
+            if ((current_spot != null) &&
+                SignalHandler.is_connected (current_spot, was_hunted_today_handler)) {
+                SignalHandler.disconnect (current_spot, was_hunted_today_handler);
+            }
+            was_hunted_today_handler = 0;
+        }
 
         current_spot = spot;
 
         if (spot == null) {
             weather_request_serial++;
+            update_map_slot ();
+            refresh_visual_state ();
             detail_stack.visible_child_name = "empty";
             return;
         }
@@ -420,22 +414,39 @@ public sealed class SpotDetail : Gtk.Box {
             if (cs == spot.callsign)
                 update_avatar_from_cache (cs);
         });
+        heard_recently_handler = spot.notify["heard-recently"].connect (() => {
+            refresh_map_badges ();
+        });
+        heard_reciprocally_handler = spot.notify["heard-reciprocally"].connect (() => {
+            refresh_map_badges ();
+        });
+        not_heard_recently_handler = spot.notify["not-heard-recently"].connect (() => {
+            refresh_visual_state ();
+        });
+        was_hunted_today_handler = spot.notify["was-hunted-today"].connect (() => {
+            refresh_map_badges ();
+            refresh_visual_state ();
+        });
     }
 
     private void populate (Spot spot) {
         weather_request_serial++;
-        detail_avatar.text = spot.callsign;
-        detail_callsign.label = "%s @ %s".printf (spot.callsign, spot.park_ref);
+        var display_name = display_callsign (spot.callsign);
+        detail_avatar.text = display_name;
+        detail_callsign.label = "%s @ %s".printf (display_name, spot.park_ref);
         var cached_activator = Application.callsign_cache.peek_callsign (spot.callsign);
         update_activator_profile (cached_activator);
         detail_park_name.label = spot.park_name;
+        update_shift_badge (spot);
+        refresh_map_badges ();
+        refresh_visual_state ();
         set_weather_loading ();
 
         detail_frequency_row.value = "%s kHz".printf (
             format_frequency_khz (spot.frequency_khz)
         );
         detail_mode_row.value = spot.mode;
-        detail_spot_count_row.value = ngettext ("%d spot", "%d spots", spot.spot_count)
+        detail_spot_count_row.value = ngettext ("%'d spot", "%'d spots", spot.spot_count)
             .printf (spot.spot_count);
 
         var locations = spot.location_desc.split (",", -1);
@@ -452,20 +463,23 @@ public sealed class SpotDetail : Gtk.Box {
         }
         detail_location_row.value = loc_str;
 
-        detail_grid_row.visible = has_text (spot.grid6) || has_text (spot.grid4);
-        if (detail_grid_row.visible) {
-            detail_grid_row.value = ((spot.grid6 ?? "") != "") ? spot.grid6 : (spot.grid4 ?? "");
-        }
+        var grid = spot.grid ();
+        detail_grid_row.visible = grid != "";
+        if (detail_grid_row.visible)
+            detail_grid_row.value = grid;
 
-        detail_coordinate_row.visible = spot.coordinate != null;
-        if (detail_coordinate_row.visible) {
+        update_local_time_row ();
+
+        var coordinate = spot.coordinate;
+        detail_coordinate_row.visible = coordinate != null;
+        if (coordinate != null) {
             detail_coordinate_row.value = "%.4f, %.4f".printf (
-                spot.coordinate.latitude,
-                spot.coordinate.longitude
+                coordinate.latitude,
+                coordinate.longitude
             );
             var now = new DateTime.now_utc ();
-            var sun_times = Astronomy.sun_rise_set_times (now, spot.coordinate);
-            var moon_times = Astronomy.moon_rise_set_times (now, spot.coordinate);
+            var sun_times = Astronomy.sun_rise_set_times (now, coordinate);
+            var moon_times = Astronomy.moon_rise_set_times (now, coordinate);
 
             detail_sun_row.visible = (sun_times.rise != null) || (sun_times.set != null);
             detail_sun_row.first_value = format_time_label (sun_times.rise);
@@ -496,7 +510,7 @@ public sealed class SpotDetail : Gtk.Box {
                 bearing_to_compass (spot.bearing));
         }
 
-        detail_spotter_row.value = spot.spotter;
+        detail_spotter_row.value = display_callsign (spot.spotter);
         detail_spot_time_row.value = humanize_ago (spot.spot_time);
 
         var has_spotter_comment = (spot.spotter_comment ?? "").strip () != "";
@@ -506,15 +520,106 @@ public sealed class SpotDetail : Gtk.Box {
         detail_activator_comment_row.visible = (spot.activator_comment ?? "").strip () != "";
         detail_activator_comment_row.value = detail_activator_comment_row.visible ?
             spot.activator_comment : "";
+    }
 
-        var escaped = GLib.Uri.escape_string (spot.park_ref, null, false);
-        park_url = @"https://pota.app/#/park/$escaped";
-        var escaped_callsign = GLib.Uri.escape_string (
-            pota_profile_callsign (spot.callsign),
-            null,
-            false
+    public void update_local_time_row () {
+        detail_localtime_row.visible = false;
+        detail_localtime_row.value = "";
+
+        if (current_spot == null)
+            return;
+
+        if (current_spot.coordinate == null || !Application.tz_db_available)
+            return;
+
+        var tzid = timezone_id_for_coordinate (current_spot.coordinate);
+        if (tzid == null)
+            return;
+
+        TimeZone timezone;
+        try {
+            timezone = new TimeZone.identifier (tzid);
+        } catch (Error err) {
+            warning ("ZoneDetect returned unusable timezone id %s for %s @ %s: %s",
+                tzid, current_spot.callsign, current_spot.park_ref, err.message);
+            return;
+        }
+
+        var local_time = new DateTime.now_utc ().to_timezone (timezone);
+        detail_localtime_row.value = format_local_time_label (local_time);
+        detail_localtime_row.tooltip_text = tzid;
+        detail_localtime_row.visible = true;
+    }
+
+    private string format_local_time_label (DateTime local_time) {
+        var offset_seconds = local_time.get_utc_offset () / TimeSpan.SECOND;
+        var offset_sign = offset_seconds < 0 ? "-" : "+";
+        var offset_abs = offset_seconds < 0 ? -offset_seconds : offset_seconds;
+        var offset_hours = offset_abs / 3600;
+        var offset_minutes = (offset_abs % 3600) / 60;
+
+        return "%s %s (UTC%s%02d:%02d)".printf (
+            local_time.format ("%R"),
+            local_time.format ("%Z"),
+            offset_sign,
+            (int) offset_hours,
+            (int) offset_minutes
         );
-        activator_url = @"https://pota.app/#/profile/$escaped_callsign";
+    }
+
+    private string? timezone_id_for_coordinate (Coordinate coordinate) {
+        unowned ZoneDetect.Database? tz_db = Application.tz_db;
+        if (tz_db == null)
+            return null;
+
+        char* raw_tzid = tz_db.simple_lookup_string_raw (
+            (float) coordinate.latitude,
+            (float) coordinate.longitude
+        );
+        if (raw_tzid == null)
+            return null;
+
+        var tzid = ((string) raw_tzid).dup ().strip ();
+        ZoneDetect.free_simple_lookup_string (raw_tzid);
+
+        return tzid != "" ? tzid : null;
+    }
+
+    private void update_shift_badge (Spot spot) {
+        Astronomy.Shift shift = spot_shift (spot);
+
+        switch (shift) {
+            case Astronomy.Shift.EARLY:
+                set_shift_badge (
+                    "sunrise-outline-symbolic",
+                    "",
+                    _("Early Shift")
+                );
+                break;
+            case Astronomy.Shift.LATE:
+                set_shift_badge (
+                    "moon-outline-symbolic",
+                    "",
+                    _("Late Shift")
+                );
+                break;
+            default:
+                break;
+        }
+
+        var visible = shift != Astronomy.Shift.NORMAL;
+        detail_shift_badge.visible = visible;
+    }
+
+    private void set_shift_badge (
+        string icon_name,
+        string label,
+        string tooltip
+    ) {
+        detail_shift_icon.icon_name = icon_name;
+        detail_shift_label.label = label;
+        detail_shift_badge.tooltip_text = tooltip;
+        detail_shift_badge.visible = true;
     }
 
     private string format_time_label (DateTime? time) {
@@ -631,20 +736,49 @@ public sealed class SpotDetail : Gtk.Box {
             activator.qth : "—";
 
         if (activator != null) {
-            detail_operator_endorsements_row.value = activator.endorsements.to_string ();
+            detail_operator_awards_row.value = activator.awards.to_string ("%'u");
+            detail_operator_endorsements_row.value = activator.endorsements.to_string ("%'u");
         } else {
             detail_operator_endorsements_row.value = "—";
+            detail_operator_awards_row.value = "—";
         }
     }
 
     public void set_action_buttons_visible (bool visible) {
         detail_buttons_revealer.reveal_child = visible;
         detail_tune_button.visible = visible && Application.is_radio_configured;
+        detail_spot_button.visible = visible;
+        detail_not_heard_button.visible = visible;
         update_tune_button_state ();
     }
 
     public void set_open_map_button_visible (bool visible) {
-        open_map_revealer.reveal_child = visible;
+        open_map_button_visible = visible;
+        update_map_slot ();
+    }
+
+    private void update_map_slot () {
+        if (current_spot == null) {
+            open_map_revealer.reveal_child = false;
+            return;
+        }
+
+        if (open_map_button_visible) {
+            detail_map_slot_stack.visible_child_name = "open-map";
+            open_map_revealer.reveal_child = true;
+            return;
+        }
+
+        detail_map_slot_stack.visible_child_name = "badges";
+        open_map_revealer.reveal_child = detail_map_badge_box.get_first_child () != null;
+    }
+
+    private void refresh_map_badges () {
+        if (current_spot == null)
+            return;
+
+        populate_spot_badges (detail_map_badge_box, current_spot, false);
+        update_map_slot ();
     }
 
     private void update_tune_button_state () {
@@ -665,7 +799,7 @@ public sealed class SpotDetail : Gtk.Box {
     private void on_tune_clicked () {
         if (current_spot == null)
             return;
-        Application.radio_control.tune_to_spot (current_spot);
+        tune_spot_with_operating_limit_warning (current_spot, this);
     }
 
     private void on_spot_clicked () {
@@ -674,14 +808,23 @@ public sealed class SpotDetail : Gtk.Box {
         new AddSpot.from_spot (current_spot).present (get_root ());
     }
 
-    private void on_history_clicked () {
-        var spot = current_spot;
-        if (spot == null)
+    private void on_not_heard_clicked () {
+        if (current_spot == null)
             return;
-        var dlg = new SpotHistoryDialog (spot.callsign, spot.park_ref);
+        Application.spot_repo.mark_spot_not_heard (current_spot);
+    }
+
+    private void refresh_visual_state () {
+        remove_css_class ("spot-deprioritized");
+    }
+
+    private void on_history_clicked () {
+        if (current_spot == null)
+            return;
+        var dlg = new SpotHistoryDialog (current_spot.callsign, current_spot.park_ref);
         dlg.show_loading (true);
         dlg.present (get_root ());
-        Application.pota_client.fetch_spot_history.begin (spot.callsign, spot.park_ref, (
+        Application.pota_client.fetch_spot_history.begin (current_spot.callsign, current_spot.park_ref, (
                 obj, res) => {
             try {
                 dlg.show_history (Application.pota_client.fetch_spot_history.end (res));
@@ -691,30 +834,45 @@ public sealed class SpotDetail : Gtk.Box {
         });
     }
 
+    private void show_avatar_detail_dialog () {
+        var dlg = new AvatarDetailDialog (current_spot.callsign);
+        dlg.present (get_root ());
+    }
+
     private void on_park_clicked () {
-        if (park_url == null)
+        if (current_spot == null)
             return;
-        var parent = get_root () as Gtk.Window;
-        if (parent == null)
-            return;
-#if ARTEMIS_UNIX
-        new ParkDetailsView (parent, _("Park Details"), park_url).present ();
-#else
-        GLib.AppInfo.launch_default_for_uri (park_url, null);
-#endif
+
+        var escaped = GLib.Uri.escape_string (current_spot.park_ref, null, false);
+        var park_url = @"https://pota.app/#/park/$escaped";
+
+        open_uri (this, park_url, _("Unable to Open Park Details"));
     }
 
     private void on_activator_clicked () {
-        if (activator_url == null)
+        if (current_spot == null)
             return;
-#if ARTEMIS_UNIX
-        var parent = get_root () as Gtk.Window;
-        if (parent == null)
+
+        var escaped_callsign = GLib.Uri.escape_string (
+            pota_profile_callsign (current_spot.callsign),
+            null,
+            false
+        );
+        var activator_url = @"https://pota.app/#/profile/$escaped_callsign";
+        open_uri (this, activator_url, _("Unable to Open Activator Details"));
+    }
+
+    private void on_qrz_clicked () {
+        if (current_spot == null)
             return;
-        new ParkDetailsView (parent, _("Activator Details"), activator_url).present ();
-#else
-        GLib.AppInfo.launch_default_for_uri (activator_url, null);
-#endif
+
+        var escaped_callsign = GLib.Uri.escape_string (
+            pota_profile_callsign (current_spot.callsign),
+            null,
+            false
+        );
+        var qrz_url = @"https://qrz.com/db/$escaped_callsign";
+        open_uri (this, qrz_url, _(@"Unable to open QRZ page for $current_spot.callsign"));
     }
 
     ~SpotDetail () {

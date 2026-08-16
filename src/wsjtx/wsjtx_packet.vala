@@ -156,6 +156,26 @@ namespace Artemis.Wsjtx {
         public string adif;
     }
 
+    public struct QsoLoggedPacket {
+        public Header header;
+        public WsjtxDateTime time_off;
+        public string dx_call;
+        public string dx_grid;
+        public uint64 tx_frequency_hz;
+        public string mode;
+        public string report_sent;
+        public string report_received;
+        public string tx_power;
+        public string comments;
+        public string name;
+        public WsjtxDateTime time_on;
+        public string operator_call;
+        public string my_call;
+        public string my_grid;
+        public string exchange_sent;
+        public string exchange_received;
+    }
+
     public struct UnknownPacket {
         public Header header;
         public uint32 raw_type;
@@ -173,6 +193,7 @@ namespace Artemis.Wsjtx {
         private DecodePacket decode_packet;
         private ClearPacket clear_packet;
         private LoggedAdifPacket logged_adif_packet;
+        private QsoLoggedPacket qso_logged_packet;
         private UnknownPacket unknown_packet;
 
         public Packet.heartbeat (HeartbeatPacket packet) {
@@ -205,6 +226,12 @@ namespace Artemis.Wsjtx {
             logged_adif_packet = packet;
         }
 
+        public Packet.qso_logged (QsoLoggedPacket packet) {
+            type = MessageType.QSO_LOGGED;
+            header = packet.header;
+            qso_logged_packet = packet;
+        }
+
         public Packet.unknown (UnknownPacket packet) {
             type = packet.header.type;
             header = packet.header;
@@ -230,6 +257,10 @@ namespace Artemis.Wsjtx {
 
         public LoggedAdifPacket get_logged_adif () {
             return logged_adif_packet;
+        }
+
+        public QsoLoggedPacket get_qso_logged () {
+            return qso_logged_packet;
         }
 
         public UnknownPacket get_unknown () {

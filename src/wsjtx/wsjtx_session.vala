@@ -231,6 +231,12 @@ namespace Artemis.Wsjtx {
                     dx_call = "";
                     last_selected_tx_callsign = "";
                     break;
+                case MessageType.QSO_LOGGED:
+                    var qso_logged = packet.get_qso_logged ();
+                    logged_adif_handler.handle_qso_logged.begin (qso_logged, (obj, res) => {
+                        logged_adif_handler.handle_qso_logged.end (res);
+                    });
+                    break;
                 case MessageType.LOGGED_ADIF:
                     var logged_adif = packet.get_logged_adif ();
                     logged_adif_received (logged_adif);
@@ -326,7 +332,7 @@ namespace Artemis.Wsjtx {
         }
 
         private void highlight_spot_callsign (Spot spot) {
-            var callsign = spot.callsign.strip ().up ();
+            var callsign = normalize_callsign (spot.callsign);
             if (callsign == "" || callsign == last_highlighted_callsign)
                 return;
 
@@ -350,7 +356,7 @@ namespace Artemis.Wsjtx {
         }
 
         private void select_transmitting_spot_if_needed () {
-            var callsign = dx_call.strip ().up ();
+            var callsign = normalize_callsign (dx_call);
             if (!transmitting || callsign == "") {
                 last_selected_tx_callsign = "";
                 return;
@@ -363,7 +369,7 @@ namespace Artemis.Wsjtx {
             if (spot == null)
                 return;
 
-            Application.state.current_spot_hash = spot.hash;
+            Application.state.select_spot (spot.hash);
             last_selected_tx_callsign = callsign;
         }
 

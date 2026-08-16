@@ -1,0 +1,96 @@
+/* blueprints/preferences/operating_limits_page.blp
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+using Gtk 4.0;
+using Adw 1;
+
+template $OperatingLimitsPreferencesPage : Adw.PreferencesPage {
+  title: _("Operating Limits");
+  icon-name: "object-layout-symbolic";
+
+  Adw.PreferencesGroup {
+    title: _("Behavior");
+
+    Adw.SwitchRow row_spot_filter_enabled {
+      title: _("Filter Spots");
+      subtitle: _("Hide spots outside the active advisory ranges");
+      accessibility {
+        label: _("Filter Spots");
+        role-description: _("switch");
+      }
+    }
+
+    Adw.SwitchRow row_tune_warning_enabled {
+      title: _("Warn Before Tuning");
+      subtitle: _("Ask for confirmation before tuning outside the active advisory ranges");
+      accessibility {
+        label: _("Warn Before Tuning");
+        role-description: _("switch");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup {
+    title: _("Template");
+
+    Adw.ComboRow row_country {
+      title: _("Country");
+      accessibility {
+        label: _("Country");
+        role-description: _("combo box");
+      }
+    }
+
+    Adw.ComboRow row_profile {
+      title: _("License");
+      accessibility {
+        label: _("License");
+        role-description: _("combo box");
+      }
+    }
+
+    Adw.ActionRow custom_notice_row {
+      title: _("Custom Operating Limits");
+      subtitle: _("Use this when your country is not listed, then enter your local ranges below.");
+      visible: false;
+    }
+
+    Adw.ButtonRow apply_template_button {
+      title: _("Apply Template");
+      tooltip-text: _("Replace the active editable ranges with the selected template");
+      styles ["suggested-action"]
+      accessibility {
+        label: _("Apply Template");
+        role-description: _("button");
+      }
+    }
+  }
+
+  Adw.PreferencesGroup ranges_group {
+    title: _("Band Edges");
+
+    Adw.ButtonRow add_rule_button {
+      title: _("Add Range");
+      tooltip-text: _("Add Range");
+      end-icon-name: "list-add-symbolic";
+      accessibility {
+        label: _("Add Range");
+        role-description: _("button");
+      }
+    }
+
+    Adw.ButtonRow save_button {
+      title: _("Save Changes");
+      tooltip-text: _("Save Ranges");
+      end-icon-name: "document-save-symbolic";
+      visible: false;
+      styles ["suggested-action"]
+      accessibility {
+        label: _("Save Ranges");
+        role-description: _("button");
+      }
+    }
+  }
+}

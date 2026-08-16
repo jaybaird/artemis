@@ -45,18 +45,20 @@ install_data(
     'hicolor/symbolic/actions/snow-outline-symbolic.svg',
     'hicolor/symbolic/actions/storm-outline-symbolic.svg',
     'hicolor/symbolic/actions/sun-outline-symbolic.svg',
+    'hicolor/symbolic/actions/sunrise-outline-symbolic.svg',
     'hicolor/symbolic/actions/windy-symbolic.svg',
     'hicolor/symbolic/actions/thermometer-symbolic.svg',
     'hicolor/symbolic/actions/drop-hollow-symbolic.svg',
     'hicolor/symbolic/actions/encoder-knob-symbolic.svg',
     'hicolor/symbolic/actions/headphones-symbolic.svg',
+    'hicolor/symbolic/actions/horizontal-arrows-symbolic.svg',
     'hicolor/symbolic/actions/daytime-sunrise-symbolic.svg',
 	    'hicolor/symbolic/actions/daytime-sunset-symbolic.svg',
 	    'hicolor/symbolic/actions/moonrise-symbolic.svg',
 	    'hicolor/symbolic/actions/moonset-symbolic.svg',
 	    'hicolor/symbolic/actions/logs-symbolic.svg',
 	    'hicolor/symbolic/actions/cloud-disabled-symbolic.svg',
-	    'hicolor/symbolic/actions/sun-with-moon-symbolic.svg'
+    'hicolor/symbolic/actions/object-layout-symbolic.svg'
   ],
   install_dir: get_option('datadir') / application_id / 'icons/hicolor/scalable/actions'
 )

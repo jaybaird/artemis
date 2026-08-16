@@ -39,13 +39,6 @@ public sealed class Application : Adw.Application {
     public static LoggingService logging_service { get; private set; }
     public static LogbookImportService logbook_import_service { get; private set; }
 
-    public static Quark current_spot_hash {
-        get {
-            return state.current_spot_hash;
-        } set {
-            state.current_spot_hash = value;
-        }
-    }
     public static CallsignCache callsign_cache { get; private set; }
     public static SpotDb spot_database { get; private set; }
     public static SpotRepo spot_repo { get; private set; }
@@ -55,38 +48,27 @@ public sealed class Application : Adw.Application {
     public static QrzClient qrz_client { get; private set; }
     public static WeatherCache weather_cache { get; private set; }
     public static Artemis.Wsjtx.WsjtxSession wsjtx_session { get; private set; }
+    private static ZoneDetect.Database? _tz_db = null;
+    public static unowned ZoneDetect.Database? tz_db {
+        get { return _tz_db; }
+    }
+    private static Bytes? tz_db_bytes = null;
     private AlertsWindow? alerts_window = null;
     private HelpWindow? help_window = null;
     private LogbookWindow? logbook_window = null;
     private bool setup_dialog_active = false;
     private GLib.ListStore notification_history_store;
+    private RadioDbusService? radio_dbus_service = null;
     private const uint MAX_NOTIFICATION_HISTORY = 25;
 
     public static RadioControl? radio_control { get; private set; default = null; }
     public static bool is_radio_connected { get; set; default = false; }
+    public static bool tz_db_available {
+        get { return _tz_db != null; }
+    }
 
     public static Application app;
     public static Gtk.Window win;
-
-    public static string? current_mode_filter {
-        get { return state.current_mode_filter; }
-        set { state.current_mode_filter = value; }
-    }
-    public static string? current_program_filter {
-        get { return state.current_program_filter; }
-        set { state.current_program_filter = value; }
-    }
-    public static string? current_search_text {
-        get { return state.current_search_text; }
-        set { state.current_search_text = value; }
-    }
-    public static string? current_band_filter {
-        get { return state.current_band_filter; }
-        set { state.current_band_filter = value ?? "All"; }
-    }
-#if ARTEMIS_WINDOWS
-    private static string? windows_bundle_root = null;
-#endif
 
     public static bool is_radio_configured {
         get {
@@ -103,7 +85,9 @@ public sealed class Application : Adw.Application {
         { "about", about_activated },
         { "preferences", on_preferences_action },
         { "refresh", refresh_activated },
+        { "not-heard", mark_current_spot_not_heard },
         { "tune", tune_current_spot },
+        { "toggle-inspector-auto-open", toggle_inspector_auto_open },
         { "quit", quit_activated }
     };
 
@@ -121,7 +105,9 @@ public sealed class Application : Adw.Application {
         set_accels_for_action ("app.shortcuts", { "<primary>question" });
         set_accels_for_action ("app.preferences", { "<primary>comma" });
         set_accels_for_action ("app.refresh", {"<Ctrl>R", "F5"});
+        set_accels_for_action ("app.not-heard", { "<primary>m" });
         set_accels_for_action ("app.tune", { "<primary>t" });
+        set_accels_for_action ("app.toggle-inspector-auto-open", { "<primary>i" });
         set_accels_for_action ("app.quit", { "<primary>q" });
         set_accels_for_action ("win.search", { "<Ctrl>F" });
         set_accels_for_action ("win.toggle-sidebar", { "F9" });
@@ -129,10 +115,6 @@ public sealed class Application : Adw.Application {
 
         state = new AppState ();
         notification_history_store = new GLib.ListStore (typeof (AppNotification));
-        state.current_spot_changed.connect ((spot_hash) => {
-            if (spot_repo != null)
-                spot_repo.current_spot_changed (spot_hash);
-        });
 
         settings = new Settings (Build.DOMAIN);
         settings.changed["show-logbook"].connect (sync_logbook_ui);
@@ -140,6 +122,7 @@ public sealed class Application : Adw.Application {
         pota_client = new PotaClient ();
         park_details_cache = new ParkDetailsCache (pota_client);
         qrz_client = new QrzClient ();
+        load_tz_db ();
 
         spot_database = new SpotDb ();
         Error err;
@@ -161,16 +144,18 @@ public sealed class Application : Adw.Application {
         logbook_import_service = new LogbookImportService (spot_database);
         weather_cache = new WeatherCache (new SettingsWeatherUnitsProvider (settings));
         wsjtx_session = new Artemis.Wsjtx.WsjtxSession ();
-        radio_control = new RadioControl ();
-        radio_control.radio_connected.connect (() => {
+        var radio = new RadioControl ();
+        radio_control = radio;
+        radio_dbus_service = new RadioDbusService (radio);
+        radio.radio_connected.connect (() => {
             is_radio_connected = true;
             radio_connection_state_changed ();
         });
-        radio_control.radio_disconnected.connect (() => {
+        radio.radio_disconnected.connect (() => {
             is_radio_connected = false;
             radio_connection_state_changed ();
         });
-        radio_control.radio_error.connect ((err) => {
+        radio.radio_error.connect ((err) => {
             is_radio_connected = false;
             radio_connection_state_changed ();
         });
@@ -183,6 +168,28 @@ public sealed class Application : Adw.Application {
         }
 
         sync_logbook_ui ();
+    }
+
+    private static void load_tz_db () {
+        try {
+            tz_db_bytes = GLib.resources_lookup_data (
+                "/com/k0vcz/artemis/tz/timezone21.bin",
+                GLib.ResourceLookupFlags.NONE
+            );
+
+            unowned uint8[] data = tz_db_bytes.get_data ();
+            _tz_db = ZoneDetect.Database.open_from_memory (
+                (void*) data,
+                data.length
+            );
+
+            if (_tz_db == null)
+                warning ("Unable to load ZoneDetect timezone database from resources");
+        } catch (Error err) {
+            tz_db_bytes = null;
+            _tz_db = null;
+            warning ("Unable to load ZoneDetect timezone database resource: %s", err.message);
+        }
     }
 
     public static void show_toast (string message, bool log_message = true) {
@@ -220,11 +227,6 @@ public sealed class Application : Adw.Application {
         // Add application icon directory to icon theme search path
         var icon_theme = Gtk.IconTheme.get_for_display (Gdk.Display.get_default ());
         string data_dir = Build.DATADIR;
-#if ARTEMIS_WINDOWS
-        if (windows_bundle_root != null) {
-            data_dir = Path.build_filename (windows_bundle_root, "share");
-        }
-#endif
         var icon_dir = File.new_for_path (Path.build_filename (data_dir, Build.DOMAIN)).get_child ("icons");
         debug (icon_dir.get_path ());
         icon_theme.add_resource_path ("/com/k0vcz/artemis/icons");
@@ -252,8 +254,34 @@ public sealed class Application : Adw.Application {
         maybe_show_first_run_setup ();
     }
 
+    public override bool dbus_register (
+        DBusConnection connection,
+        string object_path
+    ) throws Error {
+        if (!base.dbus_register (connection, object_path))
+            return false;
+
+        try {
+            if (radio_dbus_service != null)
+                radio_dbus_service.export (connection);
+        } catch (Error err) {
+            warning ("Unable to export radio D-Bus interface: %s", err.message);
+        }
+
+        return true;
+    }
+
+    public override void dbus_unregister (
+        DBusConnection connection,
+        string object_path
+    ) {
+        if (radio_dbus_service != null)
+            radio_dbus_service.unexport ();
+        base.dbus_unregister (connection, object_path);
+    }
+
     public void send_spot_alert (Spot spot) {
-        var title = _("Spot alert: %s").printf (spot.callsign);
+        var title = _("Spot alert: %s").printf (display_callsign (spot.callsign));
         var body = _("%s on %s %s").printf (spot.park_ref, spot.band, spot.mode);
         var notification = new GLib.Notification (title);
         notification.set_body (body);
@@ -394,6 +422,14 @@ public sealed class Application : Adw.Application {
             null
         );
         dialog.add_legal_section (
+            _("ZoneDetect"),
+            "Copyright © 2018 Bertold Van den Bergh\n" +
+            "Licensed under the 3-clause BSD license.\n" +
+            "https://github.com/BertoldVdb/ZoneDetect",
+            Gtk.License.BSD_3,
+            null
+        );
+        dialog.add_legal_section (
             _("Map Tiles"),
             "© Mapbox © OpenStreetMap contributors",
             Gtk.License.CUSTOM,
@@ -414,10 +450,12 @@ public sealed class Application : Adw.Application {
         general.add (new Adw.ShortcutsItem.from_action (_("Add Spot"), "app.add-spot"));
         general.add (new Adw.ShortcutsItem.from_action (_("Search"), "win.search"));
         general.add (new Adw.ShortcutsItem.from_action (_("Refresh"), "app.refresh"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Mark Not Heard"), "app.not-heard"));
         general.add (new Adw.ShortcutsItem.from_action (_("Tune"), "app.tune"));
         if (settings.get_boolean ("show-logbook"))
             general.add (new Adw.ShortcutsItem.from_action (_("Logbook"), "app.logbook"));
         general.add (new Adw.ShortcutsItem.from_action (_("Toggle Sidebar"), "win.toggle-sidebar"));
+        general.add (new Adw.ShortcutsItem.from_action (_("Toggle Inspector Auto-open"), "app.toggle-inspector-auto-open"));
         dialog.add (general);
 
         var application = new Adw.ShortcutsSection (_("Application"));
@@ -439,8 +477,18 @@ public sealed class Application : Adw.Application {
     private void tune_current_spot () {
         Spot? spot = _spot_repo.get_spot (_state.current_spot_hash);
         if (spot != null) {
-            _radio_control.tune_to_spot (spot);
+            tune_spot_with_operating_limit_warning (spot, win);
         }
+    }
+
+    private void toggle_inspector_auto_open () {
+        settings.set_boolean ("auto-open-inspector", !settings.get_boolean ("auto-open-inspector"));
+    }
+
+    private void mark_current_spot_not_heard () {
+        Spot? spot = _spot_repo.get_spot (_state.current_spot_hash);
+        if (spot != null)
+            _spot_repo.mark_spot_not_heard (spot);
     }
 
     private void quit_activated () {
@@ -458,81 +506,7 @@ public sealed class Application : Adw.Application {
         preferences.present (win);
     }
 
-#if ARTEMIS_WINDOWS
-    private static string? find_existing_file (string[] candidates) {
-        foreach (var path in candidates) {
-            if (FileUtils.test (path, FileTest.IS_REGULAR)) {
-                return path;
-            }
-        }
-        return null;
-    }
-
-    private static string resolve_windows_bundle_root (string[] args) {
-        var cwd = Environment.get_current_dir ();
-        var exe_dir = cwd;
-
-        if (args.length > 0) {
-            var exe_path = args[0];
-            if (!Path.is_absolute (exe_path)) {
-                exe_path = Path.build_filename (cwd, exe_path);
-            }
-
-            exe_dir = Path.get_dirname (exe_path);
-            if (!Path.is_absolute (exe_dir)) {
-                exe_dir = Path.build_filename (cwd, exe_dir);
-            }
-        }
-
-        string[] candidate_roots = {
-            Path.get_dirname (exe_dir),
-            exe_dir,
-            cwd,
-            Path.get_dirname (cwd)
-        };
-
-        foreach (var root in candidate_roots) {
-            var schema_dir = Path.build_filename (root, "share", "glib-2.0", "schemas");
-            var gio_modules_dir = Path.build_filename (root, "lib", "gio", "modules");
-            if (FileUtils.test (schema_dir, FileTest.IS_DIR) &&
-                FileUtils.test (gio_modules_dir, FileTest.IS_DIR)) {
-                return root;
-            }
-        }
-
-        return Path.get_dirname (exe_dir);
-    }
-
-    private static void configure_windows_runtime_environment (string[] args) {
-        var bundle_root = resolve_windows_bundle_root (args);
-        windows_bundle_root = bundle_root;
-        var schema_dir = Path.build_filename (bundle_root, "share", "glib-2.0", "schemas");
-        var cert_dir = Path.build_filename (bundle_root, "etc", "ssl", "certs");
-        var gio_modules_dir = Path.build_filename (bundle_root, "lib", "gio", "modules");
-
-        Environment.set_variable ("GSETTINGS_SCHEMA_DIR", schema_dir, false);
-        Environment.set_variable ("GIO_USE_TLS", "gnutls", false);
-        Environment.set_variable ("SSL_CERT_DIR", cert_dir, false);
-        Environment.set_variable ("GIO_MODULE_DIR", gio_modules_dir, false);
-        Environment.set_variable ("GIO_EXTRA_MODULES", gio_modules_dir, false);
-
-        var cert_file = find_existing_file ({
-            Path.build_filename (cert_dir, "ca-bundle.crt"),
-            Path.build_filename (cert_dir, "ca-certificates.crt"),
-            Path.build_filename (cert_dir, "ca-bundle.trust.crt")
-        });
-
-        if (cert_file != null) {
-            var db = TlsFileDatabase.@new (cert_file);
-            TlsBackend.get_default ().set_default_database (db);
-        }
-    }
-#endif
-
     public static int main (string[] args) {
-#if ARTEMIS_WINDOWS
-        configure_windows_runtime_environment (args);
-#endif
         Environment.set_prgname (Build.NAME);
         Environment.set_application_name (Build.NAME);
         Intl.setlocale (LocaleCategory.ALL, "");

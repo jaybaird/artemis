@@ -28,6 +28,36 @@ template $SpotListRow : Box {
   margin-start: 8;
   margin-end: 12;
 
+  Box {
+    orientation: horizontal;
+    spacing: 4;
+    valign: center;
+
+    Button spot_button {
+      icon-name: "bullseye-symbolic";
+      tooltip-text: _("Add your spot for this park");
+      valign: center;
+      visible: false;
+      styles ["suggested-action", "spot-list-icon-button"]
+    }
+
+    Button tune_button {
+      icon-name: "encoder-knob-symbolic";
+      tooltip-text: _("Tune your radio to this frequency");
+      valign: center;
+      visible: false;
+      styles ["flat", "spot-list-icon-button"]
+    }
+
+    Button not_heard_button {
+      icon-name: "headphones-muted-symbolic";
+      tooltip-text: _("Mark this spot as not heard for 10 minutes");
+      valign: center;
+      visible: false;
+      styles ["flat", "spot-list-icon-button"]
+    }
+  }
+
   $BandStrip band_marker {
     valign: center;
     margin-end: 4;
@@ -85,6 +115,7 @@ template $SpotListRow : Box {
       orientation: horizontal;
       spacing: 4;
       valign: center;
+      styles ["spot-badge-drawer"]
     }
 
     Label time_label {
@@ -92,20 +123,5 @@ template $SpotListRow : Box {
       styles ["dim-label"]
     }
 
-    Button tune_button {
-      icon-name: "encoder-knob-symbolic";
-      tooltip-text: _("Tune your radio to this frequency");
-      valign: center;
-      visible: false;
-      styles ["flat", "spot-list-icon-button"]
-    }
-
-    Button spot_button {
-      icon-name: "bullseye-symbolic";
-      tooltip-text: _("Add your spot for this park");
-      valign: center;
-      visible: false;
-      styles ["suggested-action", "spot-list-icon-button"]
-    }
   }
 }

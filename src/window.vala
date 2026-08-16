@@ -109,6 +109,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private bool radio_connect_inflight = false;
     private uint auto_radio_start_id = 0;
     private Quark map_centered_spot_hash = BLANK_HASH;
+    private Quark preserved_refresh_spot_hash = BLANK_HASH;
     private string? pending_initial_band = null;
     private bool initial_band_applied = false;
 
@@ -133,6 +134,24 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             set_sidebar_visible (!sidebar_split.show_sidebar);
         });
         add_action (toggle_sidebar_action);
+
+        var sort_action = new SimpleAction.stateful (
+            "sort-by",
+            GLib.VariantType.STRING,
+            new Variant.string (Application.settings.get_string ("spot-sort-order"))
+        );
+        sort_action.activate.connect ((param) => {
+            if (param == null)
+                return;
+            Application.settings.set_string ("spot-sort-order", param.get_string ());
+            sort_action.set_state (param);
+        });
+        Application.settings.changed["spot-sort-order"].connect (() => {
+            sort_action.set_state (
+                new Variant.string (Application.settings.get_string ("spot-sort-order"))
+            );
+        });
+        add_action (sort_action);
 
         var search_action = new SimpleAction ("search", null);
         search_action.activate.connect (() => {
@@ -186,9 +205,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
 
         search_entry.search_changed.connect (() => {
-            var text = search_entry.text.strip ();
-            Application.state.current_search_text = text != "" ? text : null;
-            refresh_spot_views ();
+            Application.state.set_search_text (search_entry.text);
         });
 
         inspector_toggle.toggled.connect (() => {
@@ -219,7 +236,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             if (!initial_band_applied && Application.state.current_mode_filter == null) {
                 var preferred_mode = Application.settings.get_string ("default-mode");
                 if (preferred_mode != "" && preferred_mode != "All")
-                    Application.state.current_mode_filter = preferred_mode;
+                    Application.state.set_mode_filter (preferred_mode);
             }
 
             if ((Application.state.current_mode_filter != null) &&
@@ -227,7 +244,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
                     Application.spot_repo.mode_model,
                     Application.state.current_mode_filter
                 )) {
-                Application.state.current_mode_filter = null;
+                Application.state.set_mode_filter (null);
             }
 
             left_sidebar.update_bands (
@@ -246,7 +263,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
             if (Application.state.current_spot_hash != BLANK_HASH &&
                 !current_spot_matches_filters ()) {
-                Application.state.current_spot_hash = BLANK_HASH;
+                Application.state.clear_spot_selection ();
             }
 
             if (!refresh_in_progress) {
@@ -271,9 +288,19 @@ public sealed class AppWindow : Adw.ApplicationWindow {
             update_status_bar ();
         });
 
-        Application.spot_repo.current_spot_changed.connect ((spot_hash) => {
-            sync_selected_spot (spot_hash, true);
+        Application.spot_repo.spots_replacing.connect (() => {
+            preserved_refresh_spot_hash = Application.state.current_spot_hash;
         });
+
+        Application.spot_repo.spots_replaced.connect (() => {
+            restore_refresh_spot_selection ();
+        });
+
+        Application.state.current_spot_changed.connect ((spot_hash) => {
+            sync_selected_spot (spot_hash, Application.settings.get_boolean ("auto-open-inspector"));
+        });
+
+        Application.state.filters_changed.connect (on_filters_changed);
 
         Application.spot_repo.update_error.connect ((error) => {
             var error_key = "%s:%d".printf (error.domain.to_string (), error.code);
@@ -313,10 +340,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
 
         pending_initial_band = Application.settings.get_string ("default-band");
-        Application.state.current_band_filter = "All";
-        Application.state.current_mode_filter = null;
-        Application.state.current_program_filter = null;
-        Application.state.current_search_text = null;
+        Application.state.reset_filters ();
         band_view.set_band_filter (Application.state.current_band_filter);
         start_spot_updates ();
 
@@ -325,13 +349,11 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         });
 
         left_sidebar.mode_changed.connect ((mode) => {
-            Application.state.current_mode_filter = mode;
-            refresh_spot_views ();
+            Application.state.set_mode_filter (mode);
         });
 
         left_sidebar.program_changed.connect ((program) => {
-            Application.state.current_program_filter = program;
-            refresh_spot_views ();
+            Application.state.set_program_filter (program);
         });
 
         left_sidebar.update_bands (
@@ -363,6 +385,12 @@ public sealed class AppWindow : Adw.ApplicationWindow {
         Application.settings.changed["hide-qrt"].connect (refresh_spot_views);
         Application.settings.changed["hide-hunted"].connect (refresh_spot_views);
         Application.settings.changed["hide-older-than"].connect (refresh_spot_views);
+        Application.settings.changed["operating-limits-spot-filter-enabled"].connect (
+            refresh_spot_views
+        );
+        Application.settings.changed["operating-limits-country-code"].connect (refresh_spot_views);
+        Application.settings.changed["operating-limits-profile-id"].connect (refresh_spot_views);
+        Application.settings.changed["operating-limits-custom-rules-json"].connect (refresh_spot_views);
     }
 
     private void set_search_content_margin (int margin) {
@@ -541,7 +569,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     private void update_status_bar () {
-        var current_band = Application.state.current_band_filter ?? "All";
+        var current_band = Application.state.current_band_filter;
         int total_available = 0;
         if (current_band == "All") {
             total_available = (int)Application.spot_repo.store.get_n_items ();
@@ -558,7 +586,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     private int count_visible_spots () {
-        var current_band = Application.state.current_band_filter ?? "All";
+        var current_band = Application.state.current_band_filter;
         var count = 0;
         for (uint i = 0; i < Application.spot_repo.store.get_n_items (); i++) {
             var spot = Application.spot_repo.store.get_item (i) as Spot;
@@ -592,7 +620,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
         return spot_matches_current_filters (
             spot,
-            Application.state.current_band_filter ?? "All"
+            Application.state.current_band_filter
         );
     }
 
@@ -635,10 +663,39 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
         if (Application.state.current_spot_hash != BLANK_HASH &&
             !current_spot_matches_filters ()) {
-            Application.state.current_spot_hash = BLANK_HASH;
+            Application.state.clear_spot_selection ();
         }
 
         update_status_bar ();
+    }
+
+    private void on_filters_changed () {
+        var band = Application.state.current_band_filter;
+        left_sidebar.set_selected_band (band);
+        band_view.set_band_filter (band);
+        if (map_view != null)
+            map_view.set_band_filter (band);
+
+        if (list_view != null)
+            list_view.bounce_filter ();
+
+        if (Application.state.current_spot_hash != BLANK_HASH &&
+            !current_spot_matches_filters ()) {
+            Application.state.clear_spot_selection ();
+        }
+
+        update_status_bar ();
+    }
+
+    private void restore_refresh_spot_selection () {
+        var restored_spot_hash = BLANK_HASH;
+        if (preserved_refresh_spot_hash != BLANK_HASH &&
+            Application.spot_repo.get_spot (preserved_refresh_spot_hash) != null) {
+            restored_spot_hash = preserved_refresh_spot_hash;
+        }
+
+        preserved_refresh_spot_hash = BLANK_HASH;
+        Application.state.restore_spot_selection (restored_spot_hash);
     }
 
     private void initial_update () {
@@ -769,7 +826,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
 
     private string get_initial_sidebar_band () {
         if (initial_band_applied)
-            return Application.state.current_band_filter ?? "All";
+            return Application.state.current_band_filter;
 
         var preferred_band = pending_initial_band ?? "All";
         if (Application.spot_repo.band_counts.size == 0)
@@ -792,10 +849,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     }
 
     private void set_current_band_filter (string band) {
-        Application.state.current_band_filter = band;
-        left_sidebar.set_selected_band (band);
-        band_view.set_band_filter (band);
-        refresh_spot_views ();
+        Application.state.set_band_filter (band);
     }
 
     private void power_off_radio () {
@@ -940,6 +994,7 @@ public sealed class AppWindow : Adw.ApplicationWindow {
     private void update_clock_label () {
         var now = new GLib.DateTime.now_utc ().format ("%R UTC");
         status_bar.set_time (now);
+        spot_detail.update_local_time_row ();
     }
 
     private void on_add_button_clicked () {

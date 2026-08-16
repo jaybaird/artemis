@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentVersion": 3,
+  "contentVersion": 7,
   "sections": [
     {
       "id": "getting-started",
@@ -56,6 +56,7 @@
           "paragraphs": [
             "Open Preferences to choose your default band, default mode, refresh interval, stale-spot limit, units, map scale, and whether Trailwave highlights unhunted parks. Those settings shape the main window when Trailwave opens.",
             "During a session, use the sidebar to filter by band, mode, and POTA program. Use Search to match callsigns, park references, or park names, and switch between Cards, List, and Map depending on whether you want scanning density or geographic context.",
+            "Use the Sort By menu to order spots by time, activator callsign, or frequency. The selected order applies to the Cards and List views; Map remains spatially arranged.",
             "Use Pause when you want the feed to stop changing while you review a park or work a contact. Use Refresh from the application menu, Ctrl+R, or F5 when you want a manual reload."
           ],
           "keywords": [
@@ -73,12 +74,13 @@
         {
           "id": "keyboard-shortcuts",
           "title": "What keyboard shortcuts are available?",
-          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, and tuning.",
+          "summary": "Use shortcuts for common actions such as adding a spot, searching, refreshing, tuning, and marking a spot Not Heard.",
           "icon": null,
           "badge": null,
           "paragraphs": [
             "Open Keyboard Shortcuts from the application menu to see the current shortcut list.",
-            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Toggle Sidebar, Help, Preferences, and Quit.",
+            "Trailwave includes shortcuts for Add Spot, Search, Refresh, Tune, Mark Not Heard, Toggle Sidebar, Help, Preferences, and Quit.",
+            "Mark Not Heard uses Ctrl+M and temporarily pushes the selected spot to the bottom of the visible list for about 10 minutes.",
             "Shortcuts follow the same rules as the visible controls. For example, Tune still requires a selected spot and a connected radio."
           ],
           "keywords": [
@@ -87,7 +89,9 @@
             "search",
             "refresh",
             "tune",
-            "spot"
+            "spot",
+            "not heard",
+            "mute"
           ]
         }
       ]
@@ -103,9 +107,9 @@
           "icon": null,
           "badge": null,
           "paragraphs": [
-            "Cards is the main scanning view. It groups each spot into an easy-to-read card with the activator, park reference, park name, location, grid, frequency, mode, age, spot count, and badges.",
-            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune and Spot actions.",
-            "Map places spots with usable grid information on the map. Selecting a card, row, or marker selects the same spot everywhere and opens the Park Detail View."
+            "Cards is the main scanning view. It groups each spot into an easy-to-read card with the activator, park reference, park name, location, grid, frequency, mode, age, spot count, and badges. Each card also includes a quick Not Heard button in the upper-right corner.",
+            "List shows the same feed in a denser row format. When the Park Detail View is hidden, rows also show quick Tune, Spot, and Not Heard actions.",
+            "Map places spots with usable grid information on the map. Selecting a card, row, or marker selects the same spot everywhere and opens the Park Detail View, where the same Not Heard action is available beside the main operating buttons."
           ],
           "keywords": [
             "cards",
@@ -113,7 +117,9 @@
             "map",
             "views",
             "spot list",
-            "markers"
+            "markers",
+            "not heard",
+            "mute"
           ]
         },
         {
@@ -125,7 +131,8 @@
           "paragraphs": [
             "Use the sidebar to filter by band, mode, and POTA program. Program filtering uses the prefix in the park reference, such as K or VE.",
             "Use Search to match visible spots by callsign, park reference, or park name. Search is combined with the active band, mode, program, and display filters.",
-            "Preferences can hide spots marked QRT, parks you have already hunted today, and spots older than the stale-spot limit. If a view is empty, Trailwave tells you whether there are no spots on that band or no spots matching your filters."
+            "Preferences can hide spots marked QRT, parks you have already hunted today, and spots older than the stale-spot limit. If a view is empty, Trailwave tells you whether there are no spots on that band or no spots matching your filters.",
+            "When QRT and hunted-today spots are still visible, Trailwave sorts them below normal spots. Spots you mark Not Heard are also greyed out and moved to that lower-priority group for about 10 minutes before returning to normal automatically."
           ],
           "keywords": [
             "search",
@@ -135,13 +142,38 @@
             "program",
             "qrt",
             "stale",
-            "hunted"
+            "hunted",
+            "not heard",
+            "sorting"
+          ]
+        },
+        {
+          "id": "band-limits",
+          "title": "How do band limits work?",
+          "summary": "Set advisory frequency ranges by band and mode to filter spots and check tuning decisions.",
+          "icon": null,
+          "badge": null,
+          "paragraphs": [
+            "Open Preferences and choose Operating Limits. Enable Filter Spots to hide spots outside the active ranges, or enable Warn Before Tuning to ask for confirmation before tuning outside them. These controls work independently.",
+            "Choose your country and license template, then select Apply Template to load its editable ranges. Each range has a band, minimum and maximum frequency in kHz, and one or more modes. Add, edit, or remove ranges as needed, then save your changes.",
+            "If your country or license is not listed, choose Custom and enter your own ranges. The limits are advisory operating guidance; verify them against the regulations and band plan that apply to your station before transmitting."
+          ],
+          "keywords": [
+            "band limits",
+            "operating limits",
+            "frequency",
+            "ranges",
+            "bands",
+            "modes",
+            "license",
+            "filter spots",
+            "tune warning"
           ]
         },
         {
           "id": "spot-badges",
           "title": "What do the spot badges mean?",
-          "summary": "Badges summarize local hunting history and recent WSJT-X activity.",
+          "summary": "Badges summarize local hunting history, shift windows, and recent digital-mode activity.",
           "icon": null,
           "badge": null,
           "content": [
@@ -154,7 +186,7 @@
             },
             {
               "type": "paragraph",
-              "text": "Badge availability depends on your local hunted history, display preferences, and WSJT-X activity. Heard recently fades automatically after a short time."
+              "text": "Badge availability depends on your local hunted history, display preferences, park shift windows, WSJT-X activity, and optional PSKReporter signal reports. Heard recently and Two-way copy fade automatically after a short time."
             }
           ],
           "keywords": [
@@ -164,6 +196,9 @@
             "previously hunted",
             "new band",
             "heard recently",
+            "two-way copy",
+            "pskreporter",
+            "signal report",
             "wsjt-x"
           ]
         },
@@ -201,7 +236,9 @@
           "badge": null,
           "paragraphs": [
             "Select a spot to open the Park Detail View. The top section identifies the activator and park, then shows weather when it can be loaded for the park.",
-            "Operating Details includes frequency, mode, spot count, and activator comments when present. Location includes the park location, coordinates, distance, direction, sun times, moon times, and a link to park details when data is available.",
+            "Operating Details includes frequency, mode, spot count, and activator comments when present. It also includes quick actions for Not Heard, Tune, and Spot.",
+            "Enable Auto-open Inspector in General preferences if you want the Park Detail View to appear automatically when you select a spot. Turn it off when you prefer to keep the main view full width.",
+            "Location includes the park location, coordinates, distance, direction, local time, sun times, moon times, and a link to park details when data is available. Shift badges can indicate whether an activation is in an early or late operating window.",
             "Last Spot shows the spotter, age, spotter comment, and a Spot History link. The activator section can show profile details and a link to the activator profile when Trailwave can retrieve them."
           ],
           "keywords": [
@@ -213,7 +250,10 @@
             "bearing",
             "history",
             "activator",
-            "park"
+            "park",
+            "not heard",
+            "tune",
+            "spot"
           ]
         },
         {
@@ -442,7 +482,7 @@
           "badge": null,
           "paragraphs": [
             "Enable WSJT-X integration in Preferences and make sure Trailwave is listening on the same IP address and port that WSJT-X sends to.",
-            "When Trailwave receives decode text that matches an activator in the live spot feed, it marks that spot as Heard recently and can ask WSJT-X to highlight the matching callsign.",
+            "When Trailwave receives decode text that matches an activator in the live spot feed, it marks that spot as Heard recently and can ask WSJT-X to highlight the matching callsign. If optional PSKReporter signal reports also show that activator recently heard your station, Trailwave shows the Two-way copy badge.",
             "When WSJT-X reports that you are transmitting to a DX callsign that matches a visible activator, Trailwave can select the matching spot so the Park Detail View stays focused on the right park.",
             "When WSJT-X reports that a POTA QSO was logged, Trailwave can use that logged contact with its local logging workflow. The WSJT-X preferences page shows whether the listener is inactive, listening, connected, or in an error state."
           ],
@@ -453,6 +493,8 @@
             "udp",
             "decode",
             "heard recently",
+            "two-way copy",
+            "pskreporter",
             "adif"
           ]
         },
@@ -465,7 +507,7 @@
           "paragraphs": [
             "The live spot feed, park details, spot history, and location names come from POTA services. Trailwave also caches some location data so labels can be more readable.",
             "Activator profile details and avatars come from the callsign lookup path used by the app. QRZ upload only runs when external logging is enabled and an API key is configured.",
-            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access."
+            "Weather appears when it can be loaded for the selected park. Map tiles and the optional PSKReporter signal report overlay require network access. PSKReporter signal reports can also contribute to the Two-way copy spot badge when WSJT-X has recently decoded the activator."
           ],
           "keywords": [
             "data",
@@ -474,6 +516,8 @@
             "weather",
             "map",
             "pskreporter",
+            "two-way copy",
+            "signal report",
             "network"
           ]
         }

@@ -899,7 +899,12 @@ public class SpotDb : Object, QsoStore, ParkStore {
         return st.column_int (0);
     }
 
-    public bool add_qso_from_spot (Spot spot, out Error ? error) {
+    public bool add_qso_from_spot (
+        Spot spot,
+        out bool inserted,
+        out Error ? error
+    ) {
+        inserted = false;
         error = null;
 
         if (db == null) {
@@ -1015,9 +1020,11 @@ public class SpotDb : Object, QsoStore, ParkStore {
                         ()));
             return false;
         }
+        inserted = db.changes () > 0;
 
         if (db.exec ("COMMIT;") != Sqlite.OK) {
             db.exec ("ROLLBACK;");
+            inserted = false;
             error = new DatabaseError.SQLITE_FAILED ("COMMIT failed: %s".printf (db.errmsg ()));
             return false;
         }
@@ -1427,7 +1434,7 @@ public class SpotDb : Object, QsoStore, ParkStore {
             error = new DatabaseError.SQLITE_FAILED ("Failed to prepare park details lookup: %s".printf (db.errmsg ()));
             return null;
         }
-        st.bind_text (1, reference.strip ().up ());
+        st.bind_text (1, strip_up (reference));
 
         if (st.step () != Sqlite.ROW)
             return null;

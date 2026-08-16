@@ -90,22 +90,23 @@ public class RadioControl : GLib.Object {
 
     // Helpers
     public static RadioMode mode_for_spot (Spot spot) {
-        var text_mode = spot.mode.strip ().ascii_up ();
-        if (text_mode == "LSB")
-            return RadioMode.LSB;
-        if (text_mode == "USB")
-            return RadioMode.USB;
-        if (text_mode == "SSB")
-            return (spot.frequency_khz >= 10000) ? RadioMode.USB : RadioMode.LSB;
-        if (is_digital_spot_mode (text_mode))
-            return RadioMode.DIGITAL_U;
-        if (text_mode == "FM")
-            return RadioMode.FM;
-        if (text_mode == "AM")
-            return RadioMode.AM;
-        if (text_mode == "CW")
-            return RadioMode.CW;
-        return RadioMode.UNKNOWN;
+        var text_mode = strip_up (spot.mode);
+        switch (text_mode) {
+            case "LSB":
+                return RadioMode.LSB;
+            case "USB":
+                return RadioMode.USB;
+            case "SSB":
+                return (spot.frequency_khz >= 10000) ? RadioMode.USB : RadioMode.LSB;
+            case "FM":
+                return RadioMode.FM;
+            case "AM":
+                return RadioMode.AM;
+            case "CW":
+                return RadioMode.CW;
+            default:
+                return is_digital_spot_mode (text_mode) ? RadioMode.DIGITAL_U : RadioMode.UNKNOWN;
+        }
     }
 
     private static bool is_digital_spot_mode (string text_mode) {

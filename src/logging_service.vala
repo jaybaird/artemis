@@ -31,7 +31,11 @@ public enum QrzUploadMode {
 }
 
 public interface QsoStore : Object {
-    public abstract bool add_qso_from_spot (Spot spot, out Error? error);
+    public abstract bool add_qso_from_spot (
+        Spot spot,
+        out bool inserted,
+        out Error? error
+    );
     public abstract bool update_qso_delivery_status (
         Spot spot,
         bool local_adif_saved,
@@ -235,11 +239,27 @@ public sealed class LoggingService : Object {
         validate_spot_qso (spot);
 
         Error? db_error = null;
-        if (!qso_store.add_qso_from_spot (spot, out db_error)) {
+        bool inserted = false;
+        if (!qso_store.add_qso_from_spot (spot, out inserted, out db_error)) {
             throw new LoggingError.LOCAL_SAVE_FAILED (
                 db_error != null ? db_error.message : "Unable to save QSO locally"
             );
         }
+
+        if (!inserted) {
+            message (
+                "Skipping QRZ upload for %s @ %s: QSO already exists locally",
+                spot.callsign,
+                spot.park_ref
+            );
+            return new LoggingResult (
+                false,
+                false,
+                false,
+                false
+            );
+        }
+
         qso_changed ();
         qso_added (spot);
 
@@ -277,12 +297,36 @@ public sealed class LoggingService : Object {
             }
         }
 
-        if (should_upload_to_qrz (qrz_upload_mode)) {
+        var upload_to_qrz = should_upload_to_qrz (qrz_upload_mode);
+        message (
+            "QRZ upload decision for %s @ %s: mode=%s global_enabled=%s wsjtx_forward=%s api_key_configured=%s upload=%s source=%s",
+            spot.callsign,
+            spot.park_ref,
+            qrz_upload_mode.to_string (),
+            preferences.enable_qrz_logging.to_string (),
+            preferences.forward_wsjtx_qsos_to_qrz.to_string (),
+            (preferences.qrz_api_key != "").to_string (),
+            upload_to_qrz.to_string (),
+            has_text (qrz_adif) ? "adif" : "spot"
+        );
+
+        if (upload_to_qrz) {
             try {
-                if (has_text (qrz_adif))
+                if (has_text (qrz_adif)) {
+                    message (
+                        "Uploading ADIF QSO to QRZ for %s @ %s",
+                        spot.callsign,
+                        spot.park_ref
+                    );
                     yield qrz_uploader.upload_adif_record (qrz_adif);
-                else
+                } else {
+                    message (
+                        "Uploading spot QSO to QRZ for %s @ %s",
+                        spot.callsign,
+                        spot.park_ref
+                    );
                     yield qrz_uploader.upload_spot_qso (spot);
+                }
                 qrz_uploaded = true;
             } catch (Error err) {
                 qrz_error = err.message;

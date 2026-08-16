@@ -1,7 +1,7 @@
 <p align="center">
-  <img alt="The logo for Artemis, showing a retrowave sunset with shilouetted trees with a stylized IC-7300 in the foreground" width="160" src="./data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg">
+  <img alt="The logo for Trailwave, showing a retrowave sunset with shilouetted trees with a stylized IC-7300 in the foreground" width="160" src="./data/icons/hicolor/scalable/apps/com.k0vcz.Artemis.svg">
 </p>
-<h1 align="center">Artemis</h1>
+<h1 align="center">Trailwave</h1>
 <h3 align="center">A Parks on the Air® Spotting Tool</h3>
 <p align="center">
   <br />
@@ -9,9 +9,9 @@
     <a href='https://stopthemingmy.app'><img width='193.455' alt='Please do not theme this app' src='https://stopthemingmy.app/badge.svg'/></a>
 </p>
 
-**Artemis** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track hunted parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
+**Trailwave** is a desktop application designed for amateur radio operators participating in **Parks On The Air (POTA)**. It helps hunters track hunted parks, fetch and add spots, and control their radio to aid hunting. Built with **Vala**, **GTK4**, **Libadwaita**, **Shumate**, and **SQLite**.
 
-Artemis is designed to be cross-platform, lightweight, and easy to use.
+Trailwave is designed to be lightweight and easy to use on Linux.
 
 ## Screenshots
 
@@ -61,9 +61,6 @@ flatpak install flathub com.k0vcz.Artemis
 flatpak run com.k0vcz.Artemis
 ```
 
-### Windows
-Run `Artemis-Setup-<version>.msi`
-
 ## Usage
 
 1. Configure your callsign, location, and radio settings via Preferences.
@@ -79,16 +76,20 @@ Run `Artemis-Setup-<version>.msi`
 **Dependencies**
 - Vala
 - GTK 4
-- Libadwaita
+- Libadwaita 1.4+
 - GLib
 - Gio
 - Gee
 - Hamlib
 - JSON-GLib
-- Dex
-- WebKitGtk
+- libsoup 3.0
+- libxml 2.0
+- Dex (libdex-1)
 - SQLite3
 - Shumate
+- paho.mqtt.c (libpaho-mqtt3a)
+- Glycin 2 *(optional, for image loading)*
+- libgudev *(Linux only, for radio USB device detection)*
 
 **Build using Meson**
 ```bash
@@ -111,14 +112,6 @@ bash scripts/release-flatpak.sh
 Artifact output:
 - `dist/flatpak/com.k0vcz.Artemis.flatpak`
 
-### Windows
-Requires the Msys32 UCRT64 toolchain to be installed in your Windows environment with the above dependencies. To build the installer you will need to have the Wix v6 tool chain installed as well.
-
-```bash
-bash scripts/build-windows-bundle.sh
-base scripts/build-windows-installer.sh
-```
-
 ## License
 
-Artemis is licensed under GPL-3.0-or-later. See LICENSE for details. Parks on the Air ® is a registered service mark of Parks on the Air, Inc.
+Trailwave is licensed under GPL-3.0-or-later. See LICENSE for details. Parks on the Air ® is a registered service mark of Parks on the Air, Inc.

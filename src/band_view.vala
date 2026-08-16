@@ -52,8 +52,12 @@ public sealed class BandView : Gtk.Box {
     private Gtk.SortListModel sorted;
 
     private bool just_selected = false;
+    private SelectionSyncGuard selection_sync = new SelectionSyncGuard ();
     private uint sync_selection_idle_id = 0;
     private Quark pending_selection_hash = BLANK_HASH;
+    private Gee.ArrayList<Spot> watched_spots = new Gee.ArrayList<Spot> ();
+    private Gee.ArrayList<ulong> watched_not_heard_handlers = new Gee.ArrayList<ulong> ();
+    private Gee.ArrayList<ulong> watched_hunted_handlers = new Gee.ArrayList<ulong> ();
 
     public BandView (string band_label, string icon) {
         Object (
@@ -69,7 +73,7 @@ public sealed class BandView : Gtk.Box {
             if (spot == null)
                 return false;
 
-            var band_filter = Application.state.current_band_filter ?? "All";
+            var band_filter = Application.state.current_band_filter;
             return spot_matches_current_filters (spot, band_filter);
         });
 
@@ -78,17 +82,7 @@ public sealed class BandView : Gtk.Box {
         sorter = new Gtk.CustomSorter ((item_a, item_b) => {
             var spot_a = item_a as Spot;
             var spot_b = item_b as Spot;
-
-            if ((spot_a == null) || (spot_b == null))
-                return Gtk.Ordering.EQUAL;
-
-            int cmp = spot_a.spot_time.compare (spot_b.spot_time);
-            if (cmp > 0)
-                return Gtk.Ordering.SMALLER;
-            else if (cmp < 0)
-                return Gtk.Ordering.LARGER;
-            else
-                return Gtk.Ordering.EQUAL;
+            return compare_spots_for_display (spot_a, spot_b);
         });
         sorted = new Gtk.SortListModel (filtered, sorter);
 
@@ -101,8 +95,8 @@ public sealed class BandView : Gtk.Box {
             if ((spot_card != null) &&
                 !just_selected &&
                 (spot_card.spot.hash == Application.state.current_spot_hash)) {
-                Application.state.current_spot_hash = BLANK_HASH;
-                band_spot_cards.unselect_all ();
+                Application.state.clear_spot_selection ();
+                select_current_child (null);
             }
             if (just_selected) {
                 Idle.add (() => {
@@ -112,6 +106,9 @@ public sealed class BandView : Gtk.Box {
             }
         });
         band_spot_cards.selected_children_changed.connect (() => {
+            if (selection_sync.should_ignore_changes)
+                return;
+
             var selected = band_spot_cards.get_selected_children ();
             if ((selected != null) && (selected.length () > 0)) {
                 var child = selected.nth_data (0) as Gtk.FlowBoxChild;
@@ -119,7 +116,7 @@ public sealed class BandView : Gtk.Box {
                 if (spot_card != null) {
                     var spot_hash = spot_card.spot.hash;
                     if (spot_hash != Application.state.current_spot_hash) {
-                        Application.state.current_spot_hash = spot_hash;
+                        Application.state.select_spot (spot_hash);
                         just_selected = true;
                     }
                     sync_card_selection (spot_hash);
@@ -133,14 +130,26 @@ public sealed class BandView : Gtk.Box {
             update_visible_state ();
             count_changed (sorted.get_n_items ());
         });
+        Application.spot_repo.store.items_changed.connect ((position, removed, added) => {
+            reconnect_sort_watchers ();
+            refresh_sorting ();
+        });
+        Application.spot_repo.spots_replacing.connect (() => {
+            begin_model_selection_sync ();
+        });
+        Application.spot_repo.spots_replaced.connect (() => {
+            finish_model_selection_sync ();
+        });
 
         update_visible_state ();
+        reconnect_sort_watchers ();
 
         settings.changed["hide-qrt"].connect (bounce_filter);
         settings.changed["hide-hunted"].connect (bounce_filter);
         settings.changed["hide-older-than"].connect (bounce_filter);
         settings.changed["use-metric"].connect (_refresh_cards);
         settings.changed["highlight-unhunted-parks"].connect (_refresh_cards);
+        settings.changed["spot-sort-order"].connect (refresh_sorting);
     }
 
     public void set_current_spot (Quark spot_hash) {
@@ -154,13 +163,13 @@ public sealed class BandView : Gtk.Box {
 
             if (current_hash == BLANK_HASH) {
                 sync_card_selection (BLANK_HASH);
-                band_spot_cards.unselect_all ();
+                select_current_child (null);
                 return Source.REMOVE;
             }
 
             var selected_child = sync_card_selection (current_hash);
             if (selected_child != null) {
-                band_spot_cards.select_child (selected_child);
+                select_current_child (selected_child);
                 Idle.add (() => {
                     scroll_to_child (selected_child);
                     return Source.REMOVE;
@@ -168,8 +177,17 @@ public sealed class BandView : Gtk.Box {
                 return Source.REMOVE;
             }
 
-            band_spot_cards.unselect_all ();
+            select_current_child (null);
             return Source.REMOVE;
+        });
+    }
+
+    private void select_current_child (Gtk.FlowBoxChild? child) {
+        selection_sync.run_programmatic_sync (() => {
+            if (child != null)
+                band_spot_cards.select_child (child);
+            else
+                band_spot_cards.unselect_all ();
         });
     }
 
@@ -236,12 +254,64 @@ public sealed class BandView : Gtk.Box {
     }
 
     public void bounce_filter (string? key = null) {
+        begin_model_selection_sync ();
         filter.changed (Gtk.FilterChange.DIFFERENT);
+        finish_model_selection_sync ();
+    }
+
+    private void refresh_sorting () {
+        begin_model_selection_sync ();
+        sorter.changed (Gtk.SorterChange.DIFFERENT);
+        finish_model_selection_sync ();
+    }
+
+    private void begin_model_selection_sync () {
+        selection_sync.begin_model_sync ();
+    }
+
+    private void finish_model_selection_sync () {
+        selection_sync.finish_model_sync (() => {
+            set_current_spot (Application.state.current_spot_hash);
+        });
+    }
+
+    private void reconnect_sort_watchers () {
+        disconnect_sort_watchers ();
+
+        for (uint i = 0; i < Application.spot_repo.store.get_n_items (); i++) {
+            var spot = Application.spot_repo.store.get_item (i) as Spot;
+            if (spot == null)
+                continue;
+
+            watched_spots.add (spot);
+            watched_not_heard_handlers.add (spot.notify["not-heard-recently"].connect (() => {
+                refresh_sorting ();
+            }));
+            watched_hunted_handlers.add (spot.notify["was-hunted-today"].connect (() => {
+                refresh_sorting ();
+            }));
+        }
+    }
+
+    private void disconnect_sort_watchers () {
+        for (int i = 0; i < watched_spots.size; i++) {
+            var spot = watched_spots[i];
+            var not_heard_handler = watched_not_heard_handlers[i];
+            var hunted_handler = watched_hunted_handlers[i];
+            if (SignalHandler.is_connected (spot, not_heard_handler))
+                SignalHandler.disconnect (spot, not_heard_handler);
+            if (SignalHandler.is_connected (spot, hunted_handler))
+                SignalHandler.disconnect (spot, hunted_handler);
+        }
+
+        watched_spots.clear ();
+        watched_not_heard_handlers.clear ();
+        watched_hunted_handlers.clear ();
     }
 
     private void update_visible_state () {
         var items = sorted.get_n_items ();
-        var band = Application.state.current_band_filter ?? "All";
+        var band = Application.state.current_band_filter;
         band_label = band;
         icon_name = @"band-$band";
 
@@ -260,5 +330,13 @@ public sealed class BandView : Gtk.Box {
             status_page.description = _("No spots on %s match your current filters").printf (band_label);
         else
             status_page.description = _("There are no spots currently on %s").printf (band_label);
+    }
+
+    ~BandView () {
+        if (sync_selection_idle_id != 0) {
+            Source.remove (sync_selection_idle_id);
+            sync_selection_idle_id = 0;
+        }
+        disconnect_sort_watchers ();
     }
 } /* class BandView */

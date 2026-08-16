@@ -18,47 +18,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-using Shumate;
-
 namespace Distance {
-    public errordomain MaidenheadError {
-        TOO_SHORT,
-    }
-
     public inline static double to_radians (double degrees) {
         return degrees * (Math.PI / 180.0);
     }
 
     public inline static double to_degrees (double radians) {
         return radians * (180.0 / Math.PI);
-    }
-
-    public static Coordinate maidenhead_to_latlon (string grid) throws Error {
-        if (grid.length < 4)
-            throw new MaidenheadError.TOO_SHORT ("Grid locator %s is too short", grid);
-
-        var loc = grid.ascii_down ();
-        double lon = (loc[0] - 'a') * 20.0 - 180.0;
-        double lat = (loc[1] - 'a') * 10.0 - 90.0;
-
-        lon += (loc[2] - '0') * 2.0;
-        lat += (loc[3] - '0') * 1.0;
-
-        if (loc.length >= 6) {
-            lon += (loc[4] - 'a') * (5.0 / 60.0);
-            lat += (loc[5] - 'a') * (2.5 / 60.0);
-            lon += 2.5 / 60.0;
-            lat += 1.25 / 60.0;
-        } else {
-            lon += 1.0;
-            lat += 0.5;
-        }
-
-        return new Coordinate.full (lat, lon);
-    }
-
-    public static double haversine_distance_km (Coordinate a, Coordinate b) {
-        return a.distance (b) / 1000.0;
     }
 
     public static double bearing (Coordinate a, Coordinate b) {
@@ -73,4 +39,5 @@ namespace Distance {
         brng = to_degrees (brng);
         return (brng + 360) % 360;
     }
+
 } /* namespace Distance */

@@ -1,0 +1,25 @@
+using Gtk 4.0;
+
+template $DetailLinkRow : ListBoxRow {
+  activatable: true;
+
+  child: Box {
+    orientation: horizontal;
+    spacing: 12;
+    margin-top: 12;
+    margin-bottom: 12;
+    margin-start: 12;
+    margin-end: 12;
+
+    Label title_label {
+      xalign: 0.0;
+      hexpand: true;
+      styles ["accent"]
+    }
+
+    Image {
+      icon-name: "go-next-symbolic";
+      styles ["dim-label"]
+    }
+  };
+}
